@@ -1,6 +1,23 @@
-/* Upcoming = Level A; weekly = B; session actions = C (see _onrep-surfaces.scss) */
+/* Schedule: calm operational column — summary → upcoming → weekly → advanced */
 
 .schedule-page {
+  padding-bottom: 2.5rem;
+
+  .schedule-page__section-weekly {
+    margin-bottom: 2.5rem !important;
+  }
+
+  .schedule-page__toolbar-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .schedule-page__summary {
+    border-radius: var(--onrep-radius-md);
+    box-shadow: var(--onrep-shadow-sm);
+  }
+
   .schedule-page__section-title {
     font-size: 0.6875rem;
     font-weight: 700;
@@ -9,54 +26,22 @@
     color: var(--cui-secondary-color);
   }
 
-  .schedule-page__section-title--config {
-    opacity: 0.85;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-  }
-
   .schedule-page__section-upcoming .schedule-page__section-title {
     color: var(--cui-body-color);
     opacity: 0.88;
   }
 
-  .schedule-page__toolbar strong {
-    font-size: 1.125rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+  .schedule-page__upcoming-card {
+    border-radius: var(--onrep-radius-lg);
+    box-shadow: var(--onrep-shadow-md);
   }
 
-  .schedule-page__session-time {
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1.35;
-    color: var(--cui-body-color);
+  .schedule-page__pattern-editor {
+    max-width: 36rem;
   }
 
-  .schedule-page__session-place {
-    margin-top: 0.2rem;
-    color: var(--cui-secondary-color);
-    font-weight: 400;
-  }
-
-  .schedule-page__upcoming-card .border-bottom {
-    border-color: rgba(15, 23, 42, 0.07) !important;
-  }
-
-  .schedule-page__section-weekly {
-    .card-header strong {
-      font-weight: 500;
-      font-size: 0.9375rem;
-    }
-  }
-
-  .schedule-session-actions {
-    max-width: 42rem;
-    font-size: 0.9375rem;
-
-    .card-header {
-      border-bottom: none;
-    }
+  .schedule-page__section-advanced .onrep-surface-c {
+    border-radius: var(--onrep-radius-md);
+    box-shadow: var(--onrep-shadow-sm);
   }
 }

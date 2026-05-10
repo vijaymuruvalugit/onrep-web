@@ -61,7 +61,12 @@ export const fetchBatchUpcomingClasses = createAsyncThunk(
   'batches/fetchBatchUpcomingClasses',
   async ({ batchId, fromDate, toDate } = {}, thunkApi) => {
     try {
-      const response = await batchesApi.listClasses({ batchId, fromDate, toDate })
+      const response = await batchesApi.listClasses({
+        batchId,
+        fromDate,
+        toDate,
+        includeCancelled: true,
+      })
       return response.sessions || []
     } catch (error) {
       return thunkApi.rejectWithValue(normalizeApiError(error))

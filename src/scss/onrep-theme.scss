@@ -33,7 +33,13 @@ h3,
 
 .sidebar.sidebar-light .sidebar-nav .nav-link.active {
   font-weight: 700;
-  box-shadow: inset 4px 0 0 0 #{onrep.$onrep-coral};
+  border-radius: 0.5rem;
+  margin-inline: 0.25rem;
+  padding-inline: calc(var(--cui-sidebar-nav-link-padding-x, 0.75rem) - 0.15rem);
+  box-shadow:
+    inset 4px 0 0 0 #{onrep.$onrep-coral},
+    0 1px 0 rgba(15, 23, 42, 0.04);
+  background: rgba(255, 107, 91, 0.14);
 }
 
 .sidebar.sidebar-light.onrep-sidebar-light .sidebar-brand {

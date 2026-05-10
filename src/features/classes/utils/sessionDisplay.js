@@ -107,6 +107,44 @@ export function formatOperationalSessionRange(isoDate, startTime, endTime, today
   return `${day} · ${range}`
 }
 
+/** Clock range only: "6:00 PM – 7:30 PM" */
+export function formatSessionClockRange(startTime, endTime) {
+  const start = formatSessionClock(startTime)
+  const end = formatSessionClock(endTime)
+  if (start !== '—' && end !== '—') return `${start} – ${end}`
+  if (start !== '—') return start
+  if (end !== '—') return end
+  return '—'
+}
+
+/** Wall-clock range from recorded actual session timestamps (ISO). */
+export function formatActualSessionRange(actualStart, actualEnd) {
+  const fmt = (iso) => {
+    if (iso == null || iso === '') return '—'
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return '—'
+    return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(d)
+  }
+  const a = fmt(actualStart)
+  const b = fmt(actualEnd)
+  if (a === '—' && b === '—') return null
+  return `${a} – ${b}`
+}
+
+/**
+ * Neutral calendar date line for compact lists (avoids repeating Today/Tomorrow in every row).
+ */
+export function formatSessionScheduleDateLine(isoDate) {
+  const ymd = normalizeSessionDateYmd(isoDate)
+  const d = parseSessionLocalDate(ymd)
+  if (!d) return '—'
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(d)
+}
+
 /** @param {string} isoDate YYYY-MM-DD */
 export function parseSessionLocalDate(isoDate) {
   const ymd = normalizeSessionDateYmd(isoDate)

@@ -190,6 +190,11 @@ export const batchesApi = {
     return data || {}
   },
 
+  async getSession(sessionId) {
+    const { data } = await http.get(`/sessions/${encodeURIComponent(sessionId)}`)
+    return data || {}
+  },
+
   async createSession(payload) {
     const { data } = await http.post('/sessions', payload)
     return data || {}

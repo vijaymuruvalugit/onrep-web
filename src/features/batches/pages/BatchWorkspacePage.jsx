@@ -23,7 +23,7 @@ import {
 import { useBatches } from '../hooks/useBatches'
 import useClasses from '../../classes/hooks/useClasses'
 import CompactSessionRow from '../../schedule/components/CompactSessionRow'
-import { useIsScheduleWide } from '../../../hooks/useMediaQuery'
+import SessionDetailDrawer from '../../schedule/components/SessionDetailDrawer'
 import { stripDemoSuffix } from '../utils/batchDisplayUtils'
 import {
   computeOperationalFocus,
@@ -51,8 +51,7 @@ const BatchWorkspacePage = () => {
   const { batchId } = useParams()
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState('schedule')
-  const isWide = useIsScheduleWide()
-  const timelineCap = isWide ? 4 : 2
+  const timelineCap = 3
   const settingsFormRef = useRef(null)
   const didAutoLeadCoachRef = useRef(false)
 
@@ -63,6 +62,8 @@ const BatchWorkspacePage = () => {
   const [places, setPlaces] = useState([])
   const [placesLoading, setPlacesLoading] = useState(false)
   const [defaultPlaceId, setDefaultPlaceId] = useState('')
+  const [drawerSessionId, setDrawerSessionId] = useState(null)
+  const [drawerSeedRow, setDrawerSeedRow] = useState(null)
 
   const {
     selectedBatch,
@@ -217,7 +218,9 @@ const BatchWorkspacePage = () => {
     return [...staffCoaches]
       .filter((c) => roles.has(String(c.role).toLowerCase()))
       .sort((a, b) =>
-        String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }),
+        String(a.name || '').localeCompare(String(b.name || ''), undefined, {
+          sensitivity: 'base',
+        }),
       )
   }, [staffCoaches])
 
@@ -249,8 +252,7 @@ const BatchWorkspacePage = () => {
 
   const primaryPlaceSingle = useMemo(() => {
     const fromSchedule = schedules.find((s) => s.placeName)?.placeName
-    const fromBatchDefault =
-      selectedBatch?.defaultPlaceName ?? selectedBatch?.default_place_name
+    const fromBatchDefault = selectedBatch?.defaultPlaceName ?? selectedBatch?.default_place_name
     const raw =
       fromSchedule ||
       fromBatchDefault ||
@@ -338,12 +340,30 @@ const BatchWorkspacePage = () => {
 
   return (
     <>
+      <SessionDetailDrawer
+        key={drawerSessionId || 'closed'}
+        visible={Boolean(drawerSessionId)}
+        sessionId={drawerSessionId}
+        initialRow={drawerSeedRow}
+        todayIso={todayIso}
+        onClose={() => {
+          setDrawerSessionId(null)
+          setDrawerSeedRow(null)
+        }}
+        onUpdated={() => {
+          fetchBatchUpcomingClasses({ batchId })
+          fetchTodayClasses()
+        }}
+      />
+
       <CCard className="mb-3">
         <CCardHeader className="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-start gap-3">
           <div className="onrep-batch-header flex-grow-1 min-w-0">
             <div className="onrep-batch-header__primary text-break">{batchTitle}</div>
             {headerOperational.whenLine ? (
-              <div className="onrep-batch-header__operational text-break">{headerOperational.whenLine}</div>
+              <div className="onrep-batch-header__operational text-break">
+                {headerOperational.whenLine}
+              </div>
             ) : (
               <div className="onrep-batch-header__operational onrep-batch-header__operational--empty text-break">
                 {headerOperational.emptyMessage}
@@ -356,14 +376,18 @@ const BatchWorkspacePage = () => {
             ) : null}
             <div className="onrep-batch-header__tertiary-block">
               {primaryPlaceSingle ? (
-                <div className="onrep-batch-header__tertiary-line text-break">{primaryPlaceSingle}</div>
+                <div className="onrep-batch-header__tertiary-line text-break">
+                  {primaryPlaceSingle}
+                </div>
               ) : (
                 <div className="onrep-batch-header__tertiary-line onrep-batch-header__tertiary-line--muted text-break">
                   Add a default place in Settings.
                 </div>
               )}
               {activityDisciplineLine ? (
-                <div className="onrep-batch-header__tertiary-line text-break">{activityDisciplineLine}</div>
+                <div className="onrep-batch-header__tertiary-line text-break">
+                  {activityDisciplineLine}
+                </div>
               ) : null}
             </div>
           </div>
@@ -440,19 +464,21 @@ const BatchWorkspacePage = () => {
                   const rowDate =
                     String(row.sessionDate || '').match(/(\d{4}-\d{2}-\d{2})/)?.[1] || ''
                   const isToday = rowDate === todayIso
-                  const canStartToday = isToday && !row.attendanceMarked
+                  const canStartToday = isToday && !row.attendanceMarked && !row.isCancelled
                   return (
                     <CompactSessionRow
                       key={sid || row.sessionDate}
                       row={row}
                       todayIso={todayIso}
                       placeFallback={primaryPlaceSingle || ''}
-                      openLabel={canStartToday ? 'Start' : 'Open'}
+                      canStartToday={canStartToday}
                       attendancePath={
-                        sid
-                          ? `/coach/attendance/class/${encodeURIComponent(sid)}`
-                          : undefined
+                        sid ? `/coach/attendance/class/${encodeURIComponent(sid)}` : undefined
                       }
+                      onViewSession={(id, r) => {
+                        setDrawerSessionId(id)
+                        setDrawerSeedRow(r)
+                      }}
                     />
                   )
                 })}
@@ -470,7 +496,12 @@ const BatchWorkspacePage = () => {
             </CCard>
 
             <div className="d-flex justify-content-end mb-4">
-              <CButton color="link" className="text-decoration-none px-0" as={Link} to={schedulePageHref}>
+              <CButton
+                color="link"
+                className="text-decoration-none px-0"
+                as={Link}
+                to={schedulePageHref}
+              >
                 Open full schedule →
               </CButton>
             </div>
@@ -524,7 +555,8 @@ const BatchWorkspacePage = () => {
                           ))}
                         </CFormSelect>
                         <div className="small text-body-secondary mt-1">
-                          Used when no venue is set on a schedule row or session. Manage venues under Places.
+                          Used when no venue is set on a schedule row or session. Manage venues
+                          under Places.
                         </div>
                       </>
                     )}
@@ -532,8 +564,8 @@ const BatchWorkspacePage = () => {
                   <CCol xs={12}>
                     <CFormLabel className="d-block">Coaches on this batch</CFormLabel>
                     <div className="small text-body-secondary mb-2">
-                      Select everyone who teaches or assists this group. Session scheduling can still assign a specific
-                      coach per class.
+                      Select everyone who teaches or assists this group. Session scheduling can
+                      still assign a specific coach per class.
                     </div>
                     {directoryLoading ? (
                       <div className="py-2">

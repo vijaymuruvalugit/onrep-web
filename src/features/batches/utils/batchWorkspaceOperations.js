@@ -24,6 +24,13 @@ export function todayIsoLocal() {
  * @param {string} todayIso YYYY-MM-DD
  * @param {number} maxRows
  */
+/** Next session that counts for operations (skips cancelled rows). */
+export function firstNonCancelledSession(mergedTimeline) {
+  const list = mergedTimeline || []
+  const hit = list.find((r) => !r.isCancelled)
+  return hit || null
+}
+
 export function mergeBatchSessionInstances(
   batchId,
   todayBatchSessions,
@@ -97,7 +104,7 @@ export function formatHeaderOperationalWhen(mergedTimeline, todayIso) {
   if (!mergedTimeline?.length) {
     return { whenLine: null, emptyMessage: 'No upcoming session scheduled.' }
   }
-  const next = mergedTimeline[0]
+  const next = firstNonCancelledSession(mergedTimeline) || mergedTimeline[0]
   const end = next.endTime ?? next.end_time
   const whenLine = formatOperationalSessionRange(next.sessionDate, next.startTime, end, todayIso)
   return { whenLine, emptyMessage: null }
@@ -116,7 +123,8 @@ export function computeOperationalFocus({
     return String(a.startTime || '').localeCompare(String(b.startTime || ''))
   })
 
-  const pendingToday = todayList.filter((s) => !s.attendanceMarked)
+  const todayActive = todayList.filter((s) => !s.isCancelled)
+  const pendingToday = todayActive.filter((s) => !s.attendanceMarked)
   if (pendingToday.length > 0) {
     const idx = getNextSessionHighlightIndex(pendingToday, now)
     const s = idx >= 0 ? pendingToday[idx] : pendingToday[0]
@@ -128,8 +136,9 @@ export function computeOperationalFocus({
     }
   }
 
-  if (todayList.length > 0) {
+  if (todayActive.length > 0) {
     const nextFuture = mergedTimeline.find((row) => {
+      if (row.isCancelled) return false
       const sd = String(row.sessionDate || '').slice(0, 10)
       if (sd > todayIso) return true
       if (sd === todayIso) {
@@ -143,11 +152,13 @@ export function computeOperationalFocus({
       message: 'Attendance complete.',
       nextHint:
         nextFuture ||
-        mergedTimeline.find((r) => String(r.sessionDate || '').slice(0, 10) > todayIso),
+        mergedTimeline.find(
+          (r) => !r.isCancelled && String(r.sessionDate || '').slice(0, 10) > todayIso,
+        ),
     }
   }
 
-  const next = mergedTimeline[0]
+  const next = firstNonCancelledSession(mergedTimeline) || mergedTimeline[0]
   return {
     kind: 'no_session_today',
     message: 'No session today.',

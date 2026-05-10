@@ -3,6 +3,9 @@ export function normalizeTrainingSessionRow(row) {
   const id = row.id ?? row._id ?? null
   const scheduleId = row.scheduleId ?? row.schedule_id ?? null
   const batchId = row.batchId ?? row.batch_id ?? null
+  const statusRaw = row.status ?? row.session_status ?? null
+  const status = statusRaw != null ? String(statusRaw).toUpperCase() : ''
+  const isCancelled = status === 'CANCELLED'
   return {
     ...row,
     sessionId: row.sessionId ?? id,
@@ -17,9 +20,18 @@ export function normalizeTrainingSessionRow(row) {
     batchId,
     batchName: row.batchName ?? row.batch_name ?? null,
     title: row.title ?? null,
+    status: statusRaw ?? null,
+    isCancelled,
+    sessionComments: row.sessionComments ?? row.session_comments ?? null,
+    cancelledAt: row.cancelledAt ?? row.cancelled_at ?? null,
+    cancelReason: row.cancelReason ?? row.cancel_reason ?? null,
+    actualStartTime: row.actualStartTime ?? row.actual_start_time ?? null,
+    actualEndTime: row.actualEndTime ?? row.actual_end_time ?? null,
+    timeOverrideReason: row.timeOverrideReason ?? row.time_override_reason ?? null,
     attendanceMarked: Boolean(row.attendanceMarked ?? row.attendance_marked),
     expectedStudentCount: row.expectedStudentCount ?? row.expected_student_count ?? null,
     /** Heuristic: batch session without a schedule link is usually an extra / manual instance */
     isExtraSession: Boolean(batchId) && !scheduleId,
+    updatedAt: row.updatedAt ?? row.updated_at ?? null,
   }
 }

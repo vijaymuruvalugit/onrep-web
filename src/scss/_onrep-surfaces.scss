@@ -88,6 +88,115 @@
   color: var(--cui-secondary-color);
 }
 
+.onrep-type-level2 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  color: var(--cui-body-color);
+}
+
+/* Compact session rows — grid keeps Open aligned without stacking tall rows */
+.onrep-session-row {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.onrep-session-row--today {
+  margin-inline: -0.35rem;
+  padding-inline: 0.55rem;
+  border-radius: var(--onrep-radius-md);
+  border-bottom-color: transparent;
+  margin-bottom: 0.15rem;
+  background: color-mix(in srgb, var(--onrep-surface-a-muted) 65%, transparent);
+  border-left: 3px solid var(--onrep-hero-accent);
+
+  .onrep-session-row__date {
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--cui-body-color);
+  }
+}
+
+.onrep-session-row--cancelled {
+  opacity: 0.72;
+
+  .onrep-session-row__date,
+  .onrep-session-row__title {
+    text-decoration: line-through;
+    text-decoration-color: rgba(15, 23, 42, 0.35);
+  }
+}
+
+.onrep-session-row__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto;
+  column-gap: 0.75rem;
+  align-items: start;
+}
+
+.onrep-session-row__stack {
+  grid-column: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.onrep-session-row__date {
+  font-size: 0.9375rem;
+}
+
+.onrep-session-row__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-top: 0.1rem;
+}
+
+.onrep-session-row__meta {
+  font-size: 0.8125rem;
+}
+
+.onrep-session-row__time {
+  font-weight: 600;
+  color: var(--cui-body-color);
+}
+
+.onrep-session-row__place,
+.onrep-session-row__extra {
+  font-weight: 400;
+}
+
+.onrep-session-row__actions {
+  grid-column: 2;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.onrep-session-row__cta {
+  font-weight: 600;
+}
+
+.onrep-session-drawer.offcanvas-end {
+  width: min(100vw - 1rem, 520px) !important;
+}
+
+.onrep-adv-modal__section-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cui-secondary-color);
+}
+
 /* Batches grid: lift cards off canvas without harsh borders */
 .onrep-batch-grid .card {
   border: 1px solid rgba(15, 23, 42, 0.06);
