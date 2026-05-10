@@ -11,6 +11,7 @@ import {
   CFormInput,
   CFormLabel,
   CFormSelect,
+  CFormCheck,
   CNav,
   CNavItem,
   CNavLink,
@@ -36,6 +37,7 @@ import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
 import { getCoachUiConfig } from '../../academy/api/academyUiApi'
 import BatchStudentsTab from '../components/batchStudents/BatchStudentsTab'
+import placesApi from '../../places/api/placesApi'
 import './BatchWorkspacePage.scss'
 
 const VALID_TABS = new Set(['schedule', 'students', 'settings'])
@@ -57,7 +59,10 @@ const BatchWorkspacePage = () => {
   const [staffCoaches, setStaffCoaches] = useState([])
   const [coachUiConfig, setCoachUiConfig] = useState({})
   const [directoryLoading, setDirectoryLoading] = useState(false)
-  const [leadCoachUserId, setLeadCoachUserId] = useState('')
+  const [selectedCoachIds, setSelectedCoachIds] = useState(() => new Set())
+  const [places, setPlaces] = useState([])
+  const [placesLoading, setPlacesLoading] = useState(false)
+  const [defaultPlaceId, setDefaultPlaceId] = useState('')
 
   const {
     selectedBatch,
@@ -135,13 +140,55 @@ const BatchWorkspacePage = () => {
   }, [batchId])
 
   useEffect(() => {
-    const id = selectedBatch?.leadCoachUserId ?? selectedBatch?.lead_coach_user_id
-    setLeadCoachUserId(id ? String(id) : '')
-  }, [selectedBatch?.id, selectedBatch?.leadCoachUserId, selectedBatch?.lead_coach_user_id])
+    const ids = selectedBatch?.coachUserIds
+    if (Array.isArray(ids)) {
+      setSelectedCoachIds(new Set(ids.map(String)))
+      return
+    }
+    const legacy = selectedBatch?.leadCoachUserId ?? selectedBatch?.lead_coach_user_id
+    if (legacy) {
+      setSelectedCoachIds(new Set([String(legacy)]))
+      return
+    }
+    setSelectedCoachIds(new Set())
+  }, [
+    selectedBatch?.id,
+    selectedBatch?.coachUserIds?.join(','),
+    selectedBatch?.leadCoachUserId,
+    selectedBatch?.lead_coach_user_id,
+  ])
+
+  useEffect(() => {
+    const pid = selectedBatch?.defaultPlaceId ?? selectedBatch?.default_place_id
+    setDefaultPlaceId(pid ? String(pid) : '')
+  }, [selectedBatch?.id, selectedBatch?.defaultPlaceId, selectedBatch?.default_place_id])
+
+  useEffect(() => {
+    if (!activeActivityId) return
+    let cancelled = false
+    setPlacesLoading(true)
+    placesApi
+      .listPlaces({ status: 'active' })
+      .then((data) => {
+        if (!cancelled) setPlaces(Array.isArray(data?.places) ? data.places : [])
+      })
+      .catch(() => {
+        if (!cancelled) setPlaces([])
+      })
+      .finally(() => {
+        if (!cancelled) setPlacesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeActivityId])
 
   useEffect(() => {
     if (!batchId || directoryLoading || detailLoading || !selectedBatch) return
-    const existing = selectedBatch.leadCoachUserId ?? selectedBatch.lead_coach_user_id
+    const existing =
+      (selectedBatch.coachUserIds && selectedBatch.coachUserIds.length > 0) ||
+      selectedBatch.leadCoachUserId ||
+      selectedBatch.lead_coach_user_id
     if (existing) return
     const coachesOnly = staffCoaches.filter((c) => String(c.role).toLowerCase() === 'coach')
     const defRaw = coachUiConfig?.defaultLeadCoachUserId
@@ -153,8 +200,8 @@ const BatchWorkspacePage = () => {
     }
     if (!pick || didAutoLeadCoachRef.current) return
     didAutoLeadCoachRef.current = true
-    setLeadCoachUserId(pick)
-    saveBatchSettings(batchId, { leadCoachUserId: pick })
+    setSelectedCoachIds(new Set([pick]))
+    saveBatchSettings(batchId, { coachUserIds: [pick] })
   }, [
     batchId,
     coachUiConfig,
@@ -165,10 +212,24 @@ const BatchWorkspacePage = () => {
     staffCoaches,
   ])
 
-  const assignableCoaches = useMemo(
-    () => staffCoaches.filter((c) => String(c.role).toLowerCase() === 'coach'),
-    [staffCoaches],
-  )
+  const assignableBatchStaff = useMemo(() => {
+    const roles = new Set(['coach', 'academy_owner', 'admin'])
+    return [...staffCoaches]
+      .filter((c) => roles.has(String(c.role).toLowerCase()))
+      .sort((a, b) =>
+        String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' }),
+      )
+  }, [staffCoaches])
+
+  const toggleCoachSelection = (coachId) => {
+    const sid = String(coachId)
+    setSelectedCoachIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(sid)) next.delete(sid)
+      else next.add(sid)
+      return next
+    })
+  }
 
   useEffect(() => {
     const tab = (searchParams.get('tab') || '').toLowerCase()
@@ -188,7 +249,14 @@ const BatchWorkspacePage = () => {
 
   const primaryPlaceSingle = useMemo(() => {
     const fromSchedule = schedules.find((s) => s.placeName)?.placeName
-    const raw = fromSchedule || selectedBatch?.location || selectedBatch?.placeName || null
+    const fromBatchDefault =
+      selectedBatch?.defaultPlaceName ?? selectedBatch?.default_place_name
+    const raw =
+      fromSchedule ||
+      fromBatchDefault ||
+      selectedBatch?.location ||
+      selectedBatch?.placeName ||
+      null
     return raw ? stripDemoSuffix(raw) : null
   }, [schedules, selectedBatch])
 
@@ -252,7 +320,8 @@ const BatchWorkspacePage = () => {
     const formData = new FormData(settingsFormRef.current)
     saveBatchSettings(batchId, {
       name: String(formData.get('name') || ''),
-      leadCoachUserId: leadCoachUserId ? leadCoachUserId : null,
+      coachUserIds: [...selectedCoachIds],
+      defaultPlaceId: defaultPlaceId ? defaultPlaceId : null,
     })
   }
 
@@ -434,43 +503,68 @@ const BatchWorkspacePage = () => {
                     <CFormInput name="name" defaultValue={selectedBatch?.name || ''} />
                   </CCol>
                   <CCol md={6}>
-                    <CFormLabel>Default place</CFormLabel>
-                    <CFormInput
-                      name="location"
-                      defaultValue={selectedBatch?.location || selectedBatch?.placeName || ''}
-                    />
-                  </CCol>
-                  <CCol md={6}>
-                    <CFormLabel htmlFor="batch-lead-coach">Lead coach / instructor</CFormLabel>
-                    {directoryLoading ? (
+                    <CFormLabel htmlFor="batch-default-place">Default place</CFormLabel>
+                    {placesLoading ? (
                       <div className="py-2">
                         <CSpinner size="sm" />
                       </div>
                     ) : (
                       <>
                         <CFormSelect
-                          id="batch-lead-coach"
-                          aria-label="Lead coach or instructor"
-                          value={leadCoachUserId}
-                          onChange={(e) => setLeadCoachUserId(e.target.value)}
+                          id="batch-default-place"
+                          aria-label="Default place for this batch"
+                          value={defaultPlaceId}
+                          onChange={(e) => setDefaultPlaceId(e.target.value)}
                         >
-                          <option value="">Not assigned</option>
-                          {assignableCoaches.map((c) => (
-                            <option key={c.id} value={String(c.id)}>
-                              {c.name}
+                          <option value="">No default place</option>
+                          {places.map((p) => (
+                            <option key={p.id} value={String(p.id)}>
+                              {p.name}
                             </option>
                           ))}
                         </CFormSelect>
-                        {assignableCoaches.length === 0 ? (
-                          <div className="small text-body-secondary mt-1">
-                            No coach accounts yet. Invite coaches under Owner → Coaches.
-                          </div>
-                        ) : (
-                          <div className="small text-body-secondary mt-1">
-                            Set an academy-wide default under Academy activities (owner).
-                          </div>
-                        )}
+                        <div className="small text-body-secondary mt-1">
+                          Used when no venue is set on a schedule row or session. Manage venues under Places.
+                        </div>
                       </>
+                    )}
+                  </CCol>
+                  <CCol xs={12}>
+                    <CFormLabel className="d-block">Coaches on this batch</CFormLabel>
+                    <div className="small text-body-secondary mb-2">
+                      Select everyone who teaches or assists this group. Session scheduling can still assign a specific
+                      coach per class.
+                    </div>
+                    {directoryLoading ? (
+                      <div className="py-2">
+                        <CSpinner size="sm" />
+                      </div>
+                    ) : assignableBatchStaff.length === 0 ? (
+                      <div className="small text-body-secondary">
+                        No staff accounts yet. Invite coaches under Owner → Coaches.
+                      </div>
+                    ) : (
+                      <div className="d-flex flex-column gap-2">
+                        {assignableBatchStaff.map((c) => {
+                          const id = String(c.id)
+                          const role = String(c.role).toLowerCase()
+                          const suffix =
+                            role === 'coach'
+                              ? ''
+                              : role === 'academy_owner'
+                                ? ' (owner)'
+                                : ` (${role})`
+                          return (
+                            <CFormCheck
+                              key={id}
+                              id={`batch-coach-${id}`}
+                              checked={selectedCoachIds.has(id)}
+                              onChange={() => toggleCoachSelection(id)}
+                              label={`${c.name}${suffix}`}
+                            />
+                          )
+                        })}
+                      </div>
                     )}
                   </CCol>
                 </CRow>

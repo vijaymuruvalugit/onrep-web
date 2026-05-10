@@ -21,6 +21,32 @@ function formatListScheduleSnapshot(snap) {
   return [dayPart, timePart].filter(Boolean).join(' · ') || null
 }
 
+function parseBatchCoachesJson(batch) {
+  const raw = batch.batchCoaches ?? batch.batch_coaches
+  if (Array.isArray(raw)) {
+    return raw.map((r) => ({
+      id: String(r.id ?? r.user_id ?? ''),
+      name: r.name != null ? String(r.name) : '',
+    })).filter((r) => r.id)
+  }
+  if (raw && typeof raw === 'string') {
+    try {
+      const p = JSON.parse(raw)
+      return Array.isArray(p)
+        ? p
+            .map((r) => ({
+              id: String(r.id ?? ''),
+              name: r.name != null ? String(r.name) : '',
+            }))
+            .filter((r) => r.id)
+        : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 function normalizeBatch(batch) {
   if (!batch) return batch
   const activeScheduleCount = Number(batch.activeScheduleCount ?? batch.active_schedule_count ?? 0)
@@ -39,6 +65,25 @@ function normalizeBatch(batch) {
     batch.todaySessionSnapshot ?? batch.today_session_snapshot ?? null
   const nextSessionSnapshot = batch.nextSessionSnapshot ?? batch.next_session_snapshot ?? null
 
+  const batchCoaches = parseBatchCoachesJson(batch)
+  const coachUserIdsRaw = batch.coachUserIds ?? batch.coach_user_ids
+  let coachUserIds = []
+  if (Array.isArray(coachUserIdsRaw)) {
+    coachUserIds = coachUserIdsRaw.map((id) => String(id)).filter(Boolean)
+  } else if (batchCoaches.length > 0) {
+    coachUserIds = batchCoaches.map((c) => c.id)
+  }
+  const leadCoachUserId =
+    batch.leadCoachUserId ??
+    batch.lead_coach_user_id ??
+    (coachUserIds.length ? coachUserIds[0] : null)
+  const leadCoachName =
+    batch.leadCoachName ??
+    batch.lead_coach_name ??
+    (batchCoaches.length ? batchCoaches[0].name : null)
+  const coachNamesJoined =
+    batchCoaches.length > 0 ? batchCoaches.map((c) => c.name).filter(Boolean).join(', ') : null
+
   return {
     ...batch,
     activityWorkspaceId: batch.activityWorkspaceId ?? batch.activity_workspace_id ?? null,
@@ -48,15 +93,25 @@ function normalizeBatch(batch) {
     studentIds: batch.studentIds ?? batch.student_ids ?? [],
     activeStudentsCount: batch.activeStudentsCount ?? batch.active_students_count ?? 0,
     activeStudentIds: batch.activeStudentIds ?? batch.active_student_ids ?? [],
-    leadCoachUserId: batch.leadCoachUserId ?? batch.lead_coach_user_id ?? null,
-    leadCoachName: batch.leadCoachName ?? batch.lead_coach_name ?? null,
+    batchCoaches,
+    coachUserIds,
+    leadCoachUserId,
+    leadCoachName,
     coachName:
       batch.coachName ??
       batch.coach_name ??
-      batch.leadCoachName ??
-      batch.lead_coach_name ??
+      coachNamesJoined ??
+      leadCoachName ??
       null,
-    location: batch.location ?? batch.place_name ?? batch.placeName ?? null,
+    defaultPlaceId: batch.defaultPlaceId ?? batch.default_place_id ?? null,
+    defaultPlaceName: batch.defaultPlaceName ?? batch.default_place_name ?? null,
+    location:
+      batch.location ??
+      batch.place_name ??
+      batch.placeName ??
+      batch.defaultPlaceName ??
+      batch.default_place_name ??
+      null,
     activeScheduleCount,
     upcomingSessionsCount,
     listScheduleSnapshot: snap ?? null,
