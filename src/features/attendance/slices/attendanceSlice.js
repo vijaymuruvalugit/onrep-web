@@ -28,8 +28,10 @@ export const saveAttendance = createAsyncThunk(
   'attendance/saveAttendance',
   async ({ classId, marks }, thunkApi) => {
     try {
-      await attendanceApi.markBulkAttendance(classId, marks)
-      return marks
+      const draftMarks = thunkApi.getState().attendance.draftMarks
+      const finalMarks = marks ?? Object.values(draftMarks)
+      await attendanceApi.markBulkAttendance(classId, finalMarks)
+      return finalMarks
     } catch (error) {
       return thunkApi.rejectWithValue(normalizeApiError(error))
     }

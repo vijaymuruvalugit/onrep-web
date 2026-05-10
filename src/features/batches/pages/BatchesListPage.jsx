@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
+import CIcon from '@coreui/icons-react'
+import { cilGrid, cilList } from '@coreui/icons'
 import {
   CAlert,
   CBadge,
   CButton,
+  CButtonGroup,
   CCard,
   CCardBody,
   CCardHeader,
@@ -33,6 +36,307 @@ import subActivitiesApi from '../api/subActivitiesApi'
 import { bootstrapWorkspace, setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { useCoachLikeRole } from '../../workspace/hooks/useCoachLikeRole'
 import './BatchesListPage.scss'
+
+const BATCHES_VIEW_STORAGE_KEY = 'onrep-batches-view'
+
+function buildBatchRowModel(batch, todayIso) {
+  const id = batch.id || batch._id
+  const base = `/coach/batches/${encodeURIComponent(id)}`
+  const scheduleHref = `/coach/schedule?batchId=${encodeURIComponent(id)}`
+  const students = getBatchStudentCount(batch)
+  const needSchedule = batchNeedsSchedule(batch)
+  const needCoach = batchNeedsCoach(batch)
+  const summary = batch.weeklySummary
+  const coachLabel = batch.coachName ?? batch.coach_name
+  const rawPlace = batch.location || batch.placeName
+  const placeLabel = rawPlace ? stripDemoSuffix(rawPlace) : ''
+  const todaySnap = batch.todaySessionSnapshot
+  const nextSnap = batch.nextSessionSnapshot
+  const ac = Number(batch.activeScheduleCount ?? 0)
+  const upcomingN = Number(batch.upcomingSessionsCount ?? 0)
+  const needsAttention = ac > 0 && upcomingN === 0 && !todaySnap && !nextSnap
+
+  const formatSnap = (snap) =>
+    formatOperationalSessionRange(
+      snap.sessionDate ?? snap.session_date,
+      snap.startTime ?? snap.start_time,
+      snap.endTime ?? snap.end_time,
+      todayIso,
+    )
+
+  const batchNameOnly = stripDemoSuffix(batch.name || 'Untitled batch')
+  const subActivityLabel = batch.subActivityName ? stripDemoSuffix(batch.subActivityName) : null
+
+  let nextSessionDisplay = { variant: 'none' }
+  if (todaySnap) {
+    nextSessionDisplay = {
+      variant: 'today',
+      when: formatSnap(todaySnap),
+      place: stripDemoSuffix(todaySnap.placeName || todaySnap.place_name || ''),
+    }
+  } else if (nextSnap) {
+    nextSessionDisplay = {
+      variant: 'next',
+      when: formatSnap(nextSnap),
+      place: stripDemoSuffix(nextSnap.placeName || nextSnap.place_name || ''),
+    }
+  }
+
+  const coachDisplay =
+    coachLabel || todaySnap?.coachName || nextSnap?.coachName || null
+
+  return {
+    id,
+    base,
+    scheduleHref,
+    batchNameOnly,
+    subActivityLabel,
+    students,
+    placeLabel,
+    summary,
+    needSchedule,
+    needCoach,
+    needsAttention,
+    isInactive: batch.isActive === false,
+    emptyBatch: students === 0,
+    nextSessionDisplay,
+    coachDisplay,
+  }
+}
+
+function BatchStatusBadges({ m }) {
+  return (
+    <div className="d-flex gap-2 flex-wrap justify-content-end align-items-start">
+      {m.isInactive ? (
+        <CBadge color="secondary" className="fw-normal">
+          Inactive
+        </CBadge>
+      ) : null}
+      {m.emptyBatch ? (
+        <CBadge color="warning" className="fw-normal">
+          Empty batch
+        </CBadge>
+      ) : null}
+      {m.needSchedule ? (
+        <CBadge color="info" className="fw-normal">
+          Needs schedule
+        </CBadge>
+      ) : null}
+      {m.needCoach ? (
+        <CBadge color="warning" className="fw-normal">
+          Coach missing
+        </CBadge>
+      ) : null}
+      {m.needsAttention ? (
+        <CBadge color="danger" className="fw-normal">
+          Needs attention
+        </CBadge>
+      ) : null}
+    </div>
+  )
+}
+
+function BatchTileCard({ m }) {
+  const d = m.nextSessionDisplay
+
+  return (
+    <CCard className="h-100 border onrep-batch-tile onrep-surface-b shadow-sm">
+      <CCardBody className="d-flex flex-column onrep-batch-tile__body">
+        <div className="onrep-batch-tile__header">
+          <Link
+            to={`${m.base}?tab=schedule`}
+            className="onrep-batch-tile__title text-decoration-none text-body"
+          >
+            {m.batchNameOnly}
+          </Link>
+          <BatchStatusBadges m={m} />
+        </div>
+
+        <p className="onrep-batch-tile__meta">
+          {m.subActivityLabel ? (
+            <>
+              <span className="onrep-batch-tile__stream">{m.subActivityLabel}</span>
+              <span className="onrep-batch-tile__dot">·</span>
+            </>
+          ) : null}
+          <span>{m.students === 1 ? '1 student' : `${m.students} students`}</span>
+          {m.placeLabel ? (
+            <>
+              <span className="onrep-batch-tile__dot">·</span>
+              <span>{m.placeLabel}</span>
+            </>
+          ) : null}
+        </p>
+
+        <div className="onrep-batch-tile__block">
+          <div className="onrep-batch-tile__label">Weekly pattern</div>
+          <div className="onrep-batch-tile__value">
+            {m.needSchedule ? (
+              <>
+                <span className="text-body-secondary">Not set.</span>{' '}
+                <Link to={m.scheduleHref} className="text-primary text-decoration-none">
+                  Add schedule
+                </Link>
+              </>
+            ) : (
+              <span>{m.summary || '—'}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="onrep-batch-tile__block">
+          <div className="onrep-batch-tile__label">
+            {d.variant === 'today' ? 'Today' : 'Next session'}
+          </div>
+          <div className="onrep-batch-tile__value">
+            {d.variant === 'today' || d.variant === 'next' ? (
+              <>
+                <div className="onrep-batch-tile__when">{d.when}</div>
+                {d.place ? (
+                  <div className="onrep-batch-tile__place text-body-secondary">{d.place}</div>
+                ) : null}
+              </>
+            ) : (
+              <span className="text-body-secondary">No upcoming session.</span>
+            )}
+          </div>
+        </div>
+
+        <div className="onrep-batch-tile__block onrep-batch-tile__block--last">
+          <div className="onrep-batch-tile__label">Coach</div>
+          <div className="onrep-batch-tile__value">
+            {m.needCoach ? (
+              <>
+                <span className="text-body-secondary">Not assigned.</span>{' '}
+                <Link to={`${m.base}?tab=settings`} className="text-primary text-decoration-none">
+                  Assign
+                </Link>
+              </>
+            ) : (
+              <span>{m.coachDisplay || '—'}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="onrep-batch-tile__actions mt-auto pt-3">
+          <Link to={`${m.base}?tab=schedule`} className="onrep-batch-tile__action-link">
+            Open batch
+          </Link>
+          <span className="onrep-batch-tile__action-sep" aria-hidden>
+            |
+          </span>
+          <Link to={m.scheduleHref} className="onrep-batch-tile__action-link">
+            Full schedule
+          </Link>
+          {m.needCoach ? (
+            <>
+              <span className="onrep-batch-tile__action-sep" aria-hidden>
+                |
+              </span>
+              <Link to={`${m.base}?tab=settings`} className="onrep-batch-tile__action-link">
+                Assign coach
+              </Link>
+            </>
+          ) : null}
+        </div>
+      </CCardBody>
+    </CCard>
+  )
+}
+
+function BatchListRow({ m }) {
+  const d = m.nextSessionDisplay
+
+  return (
+    <div className="onrep-batch-list-row border-bottom">
+      <div className="onrep-batch-list-row__batch">
+        <Link
+          to={`${m.base}?tab=schedule`}
+          className="onrep-batch-list-row__title text-decoration-none text-body fw-semibold"
+        >
+          {m.batchNameOnly}
+        </Link>
+        <div className="onrep-batch-list-row__badges d-lg-none mt-2">
+          <BatchStatusBadges m={m} />
+        </div>
+      </div>
+
+      <div className="onrep-batch-list-row__badges d-none d-lg-flex justify-content-center">
+        <BatchStatusBadges m={m} />
+      </div>
+
+      <div className="onrep-batch-list-row__detail">
+        <span className="onrep-batch-list-row__mobile-label d-lg-none">Details</span>
+        <div className="text-body-secondary small">
+          {m.subActivityLabel ? (
+            <>
+              <span className="text-body">{m.subActivityLabel}</span>
+              <span className="mx-1">·</span>
+            </>
+          ) : null}
+          {m.students === 1 ? '1 student' : `${m.students} students`}
+          {m.placeLabel ? (
+            <>
+              <span className="mx-1">·</span>
+              {m.placeLabel}
+            </>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="onrep-batch-list-row__schedule">
+        <span className="onrep-batch-list-row__mobile-label d-lg-none">Weekly pattern</span>
+        {m.needSchedule ? (
+          <>
+            <span className="text-body-secondary small">Not set.</span>{' '}
+            <Link to={m.scheduleHref} className="small text-primary text-decoration-none">
+              Add schedule
+            </Link>
+          </>
+        ) : (
+          <span className="small">{m.summary || '—'}</span>
+        )}
+      </div>
+
+      <div className="onrep-batch-list-row__next">
+        <span className="onrep-batch-list-row__mobile-label d-lg-none">Next</span>
+        {d.variant === 'today' || d.variant === 'next' ? (
+          <div>
+            <div className="small fw-semibold">{d.when}</div>
+            {d.place ? (
+              <div className="small text-body-secondary">{d.place}</div>
+            ) : null}
+          </div>
+        ) : (
+          <span className="small text-body-secondary">None scheduled</span>
+        )}
+      </div>
+
+      <div className="onrep-batch-list-row__coach">
+        <span className="onrep-batch-list-row__mobile-label d-lg-none">Coach</span>
+        {m.needCoach ? (
+          <Link to={`${m.base}?tab=settings`} className="small text-primary text-decoration-none">
+            Assign coach
+          </Link>
+        ) : (
+          <span className="small">{m.coachDisplay || '—'}</span>
+        )}
+      </div>
+
+      <div className="onrep-batch-list-row__links">
+        <span className="onrep-batch-list-row__mobile-label d-lg-none">Actions</span>
+        <div className="d-flex flex-wrap gap-2 align-items-center">
+          <Link to={`${m.base}?tab=schedule`} className="small text-primary text-decoration-none">
+            Open
+          </Link>
+          <Link to={m.scheduleHref} className="small text-primary text-decoration-none">
+            Schedule
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const BatchesListPage = () => {
   const dispatch = useDispatch()
@@ -63,12 +367,29 @@ const BatchesListPage = () => {
   const [subActivitiesRows, setSubActivitiesRows] = useState([])
   const [subActivitiesLoading, setSubActivitiesLoading] = useState(false)
   const [selectedSubActivityId, setSelectedSubActivityId] = useState('')
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const v = localStorage.getItem(BATCHES_VIEW_STORAGE_KEY)
+      if (v === 'list' || v === 'tiles') return v
+    } catch {
+      /* ignore */
+    }
+    return 'tiles'
+  })
 
   const todayIso = todayIsoLocal()
 
   const workspaceBootstrapping =
     coachLike && (!bootstrapComplete || workspaceStatus === 'idle' || workspaceStatus === 'loading')
   const workspaceFailed = bootstrapComplete && workspaceStatus === 'failed'
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(BATCHES_VIEW_STORAGE_KEY, viewMode)
+    } catch {
+      /* ignore */
+    }
+  }, [viewMode])
 
   useEffect(() => {
     if (!coachLike) {
@@ -127,6 +448,11 @@ const BatchesListPage = () => {
     return items.filter((b) => String(b.activityWorkspaceId || '') === String(activeActivityId))
   }, [activeActivityId, items])
 
+  const rowModels = useMemo(
+    () => displayItems.map((b) => buildBatchRowModel(b, todayIso)),
+    [displayItems, todayIso],
+  )
+
   const openAddModal = () => {
     clearErrors()
     setNewName('')
@@ -161,19 +487,49 @@ const BatchesListPage = () => {
 
   return (
     <CCard className="onrep-batches-shell border-0 shadow-none bg-transparent">
-      <CCardHeader className="d-flex justify-content-between align-items-center flex-wrap gap-2 border-0 pb-0 px-0 pt-1 bg-transparent">
-        <strong>Batches</strong>
-        <CButton
-          color="primary"
-          type="button"
-          onClick={openAddModal}
-          disabled={!activeActivityId}
-          title={!activeActivityId ? 'Choose where you’re working in the header first' : undefined}
-        >
-          Add batch
-        </CButton>
+      <CCardHeader className="onrep-batches-toolbar border-0 pb-0 px-0 pt-1 bg-transparent">
+        <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3">
+          <strong className="onrep-batches-toolbar__title fs-5">Batches</strong>
+          <div className="d-flex flex-wrap align-items-center gap-2 justify-content-md-end">
+            <CButtonGroup role="group" aria-label="Batches layout" className="onrep-batches-view-toggle">
+              <CButton
+                type="button"
+                color="secondary"
+                variant="outline"
+                size="sm"
+                active={viewMode === 'tiles'}
+                onClick={() => setViewMode('tiles')}
+                title="Tiled cards"
+              >
+                <CIcon icon={cilGrid} size="sm" className="me-1" aria-hidden />
+                Tiles
+              </CButton>
+              <CButton
+                type="button"
+                color="secondary"
+                variant="outline"
+                size="sm"
+                active={viewMode === 'list'}
+                onClick={() => setViewMode('list')}
+                title="List"
+              >
+                <CIcon icon={cilList} size="sm" className="me-1" aria-hidden />
+                List
+              </CButton>
+            </CButtonGroup>
+            <CButton
+              color="primary"
+              type="button"
+              onClick={openAddModal}
+              disabled={!activeActivityId}
+              title={!activeActivityId ? 'Choose where you’re working in the header first' : undefined}
+            >
+              Add batch
+            </CButton>
+          </div>
+        </div>
       </CCardHeader>
-      <CCardBody className="px-0 pt-3">
+      <CCardBody className="px-0 pt-4">
         {workspaceBootstrapping ? (
           <div className="text-center py-5 text-body-secondary">
             <CSpinner color="primary" className="mb-3" />
@@ -227,191 +583,32 @@ const BatchesListPage = () => {
         ) : null}
 
         {!workspaceBootstrapping && !workspaceFailed && !listLoading && displayItems.length ? (
-          <CRow className="g-3 onrep-batch-grid">
-            {displayItems.map((batch) => {
-              const id = batch.id || batch._id
-              const base = `/coach/batches/${encodeURIComponent(id)}`
-              const scheduleHref = `/coach/schedule?batchId=${encodeURIComponent(id)}`
-              const students = getBatchStudentCount(batch)
-              const needSchedule = batchNeedsSchedule(batch)
-              const needCoach = batchNeedsCoach(batch)
-              const summary = batch.weeklySummary
-              const coachLabel = batch.coachName ?? batch.coach_name
-              const rawPlace = batch.location || batch.placeName
-              const placeLabel = rawPlace ? stripDemoSuffix(rawPlace) : ''
-              const todaySnap = batch.todaySessionSnapshot
-              const nextSnap = batch.nextSessionSnapshot
-              const ac = Number(batch.activeScheduleCount ?? 0)
-              const upcomingN = Number(batch.upcomingSessionsCount ?? 0)
-              const needsAttention =
-                ac > 0 && upcomingN === 0 && !todaySnap && !nextSnap
-
-              const formatSnap = (snap) =>
-                formatOperationalSessionRange(
-                  snap.sessionDate ?? snap.session_date,
-                  snap.startTime ?? snap.start_time,
-                  snap.endTime ?? snap.end_time,
-                  todayIso,
-                )
-
-              const batchNameOnly = stripDemoSuffix(batch.name || 'Untitled batch')
-              const subActivityLabel = batch.subActivityName
-                ? stripDemoSuffix(batch.subActivityName)
-                : null
-
-              return (
-                <CCol key={id || batch.name} xs={12} md={6} xl={4}>
-                  <CCard className="h-100 border-0 onrep-surface-b shadow-none onrep-batch-list-card">
-                    <CCardBody className="d-flex flex-column gap-1 py-3 px-3">
-                      <div className="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                        <Link
-                          to={`${base}?tab=schedule`}
-                          className="onrep-batch-list-card__title text-decoration-none text-body text-break"
-                        >
-                          {batchNameOnly}
-                        </Link>
-                        <div className="d-flex gap-1 flex-wrap justify-content-end">
-                          {batch.isActive === false ? (
-                            <CBadge color="secondary" className="fw-normal">
-                              Inactive
-                            </CBadge>
-                          ) : null}
-                          {students === 0 ? (
-                            <CBadge color="warning" className="fw-normal">
-                              Empty batch
-                            </CBadge>
-                          ) : null}
-                          {needSchedule ? (
-                            <CBadge color="info" className="fw-normal">
-                              Needs schedule
-                            </CBadge>
-                          ) : null}
-                          {needCoach ? (
-                            <CBadge color="warning" className="fw-normal">
-                              Coach missing
-                            </CBadge>
-                          ) : null}
-                          {needsAttention ? (
-                            <CBadge color="danger" className="fw-normal">
-                              Needs attention
-                            </CBadge>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className="onrep-batch-list-card__meta text-body-secondary">
-                        {subActivityLabel ? (
-                          <>
-                            <span className="onrep-batch-list-card__stream">{subActivityLabel}</span>
-                            <span className="onrep-batch-list-card__meta-sep"> · </span>
-                          </>
-                        ) : null}
-                        {students === 1 ? '1 student' : `${students} students`}
-                        {placeLabel ? (
-                          <>
-                            {' · '}
-                            {placeLabel}
-                          </>
-                        ) : null}
-                      </div>
-
-                      <div className="onrep-batch-list-card__schedule">
-                        {needSchedule ? (
-                          <>
-                            <span className="text-body-secondary">No schedule added yet.</span>{' '}
-                            <Link to={scheduleHref} className="text-primary text-decoration-none">
-                              Add schedule
-                            </Link>
-                          </>
-                        ) : (
-                          <span>{summary || '—'}</span>
-                        )}
-                      </div>
-
-                      <div className="onrep-batch-list-card__next text-body-secondary">
-                        {todaySnap ? (
-                          <>
-                            <div className="onrep-batch-list-card__next-row">
-                              <span className="onrep-batch-list-card__next-label">Today</span>
-                              <span className="onrep-batch-list-card__next-when text-body">
-                                {formatSnap(todaySnap)}
-                              </span>
-                            </div>
-                            {(todaySnap.placeName || todaySnap.place_name) ? (
-                              <div className="onrep-batch-list-card__next-place text-body-secondary">
-                                {stripDemoSuffix(
-                                  todaySnap.placeName || todaySnap.place_name || '',
-                                )}
-                              </div>
-                            ) : null}
-                          </>
-                        ) : nextSnap ? (
-                          <>
-                            <div className="onrep-batch-list-card__next-row">
-                              <span className="onrep-batch-list-card__next-label">Next</span>
-                              <span className="onrep-batch-list-card__next-when text-body">
-                                {formatSnap(nextSnap)}
-                              </span>
-                            </div>
-                            {(nextSnap.placeName || nextSnap.place_name) ? (
-                              <div className="onrep-batch-list-card__next-place text-body-secondary">
-                                {stripDemoSuffix(
-                                  nextSnap.placeName || nextSnap.place_name || '',
-                                )}
-                              </div>
-                            ) : null}
-                          </>
-                        ) : (
-                          <span className="small">No upcoming session.</span>
-                        )}
-                      </div>
-
-                      <div className="onrep-batch-list-card__coach">
-                        {needCoach ? (
-                          <>
-                            <span className="text-body-secondary">Coach not assigned.</span>{' '}
-                            <Link
-                              to={`${base}?tab=settings`}
-                              className="text-primary text-decoration-none"
-                            >
-                              Assign coach
-                            </Link>
-                          </>
-                        ) : (
-                          <span>
-                            Coach:{' '}
-                            <span className="text-body">
-                              {coachLabel || todaySnap?.coachName || nextSnap?.coachName || '—'}
-                            </span>
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="onrep-batch-list-card__actions d-flex flex-wrap gap-2 pt-1 mt-auto">
-                        <Link
-                          to={`${base}?tab=schedule`}
-                          className="small text-primary text-decoration-none"
-                        >
-                          Open batch
-                        </Link>
-                        <Link to={scheduleHref} className="small text-primary text-decoration-none">
-                          Open full schedule
-                        </Link>
-                        {needCoach ? (
-                          <Link
-                            to={`${base}?tab=settings`}
-                            className="small text-primary text-decoration-none"
-                          >
-                            Assign coach
-                          </Link>
-                        ) : null}
-                      </div>
-                    </CCardBody>
-                  </CCard>
+          viewMode === 'tiles' ? (
+            <CRow className="g-4 onrep-batch-grid">
+              {rowModels.map((m) => (
+                <CCol key={m.id} xs={12} md={6} xl={4}>
+                  <BatchTileCard m={m} />
                 </CCol>
-              )
-            })}
-          </CRow>
+              ))}
+            </CRow>
+          ) : (
+            <div className="onrep-batch-list-table border rounded-3 overflow-hidden bg-body">
+              <div className="onrep-batch-list-head d-none d-lg-grid text-body-secondary small fw-semibold text-uppercase">
+                <span>Batch</span>
+                <span className="text-center justify-self-center">Status</span>
+                <span>Details</span>
+                <span>Weekly pattern</span>
+                <span>Next session</span>
+                <span>Coach</span>
+                <span className="text-end">Actions</span>
+              </div>
+              <div className="onrep-batch-list-body">
+                {rowModels.map((m) => (
+                  <BatchListRow key={m.id} m={m} />
+                ))}
+              </div>
+            </div>
+          )
         ) : null}
       </CCardBody>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   CAlert,
@@ -21,7 +21,6 @@ const AttendanceEntryPage = () => {
     rosterError,
     saving,
     saveError,
-    saveSuccess,
     fetchRoster,
     setMark,
     save,
@@ -31,8 +30,6 @@ const AttendanceEntryPage = () => {
     if (classId) fetchRoster(classId)
   }, [classId, fetchRoster])
 
-  const marks = useMemo(() => Object.values(draftMarks), [draftMarks])
-
   return (
     <CCard>
       <CCardHeader>
@@ -41,7 +38,9 @@ const AttendanceEntryPage = () => {
       <CCardBody>
         {rosterError ? <CAlert color="danger">{rosterError.message}</CAlert> : null}
         {saveError ? <CAlert color="danger">{saveError.message}</CAlert> : null}
-        {saveSuccess ? <CAlert color="success">Attendance saved.</CAlert> : null}
+        {saving ? (
+          <div className="text-body-secondary small mb-2">Saving…</div>
+        ) : null}
 
         {loadingRoster ? (
           <div className="text-center py-4">
@@ -67,18 +66,20 @@ const AttendanceEntryPage = () => {
                       <CButton
                         color={current.status === 'present' ? 'success' : 'secondary'}
                         size="sm"
-                        onClick={() =>
+                        onClick={() => {
                           setMark({ studentId, status: 'present', notes: current.notes })
-                        }
+                          save(classId)
+                        }}
                       >
                         Present
                       </CButton>
                       <CButton
                         color={current.status === 'absent' ? 'danger' : 'secondary'}
                         size="sm"
-                        onClick={() =>
+                        onClick={() => {
                           setMark({ studentId, status: 'absent', notes: current.notes })
-                        }
+                          save(classId)
+                        }}
                       >
                         Absent
                       </CButton>
@@ -95,34 +96,26 @@ const AttendanceEntryPage = () => {
                         notes: event.target.value,
                       })
                     }
+                    onBlur={() => save(classId)}
                   />
                 </div>
               )
             })
           : null}
 
-        <div className="position-sticky bottom-0 bg-body pt-2 mt-3 border-top d-flex flex-column flex-sm-row gap-2 justify-content-sm-end align-items-stretch align-items-sm-center">
-          {saveError ? (
+        {saveError ? (
+          <div className="position-sticky bottom-0 bg-body pt-2 mt-3 border-top d-flex flex-column flex-sm-row gap-2 justify-content-sm-end align-items-stretch align-items-sm-center">
             <CButton
               color="warning"
               variant="outline"
               size="sm"
-              className="order-1 order-sm-0"
               disabled={saving || !classId}
-              onClick={() => save(classId, marks)}
+              onClick={() => save(classId)}
             >
               Retry save
             </CButton>
-          ) : null}
-          <CButton
-            color="primary"
-            className="w-100 w-sm-auto"
-            disabled={saving || !classId}
-            onClick={() => save(classId, marks)}
-          >
-            {saving ? 'Saving…' : 'Save attendance'}
-          </CButton>
-        </div>
+          </div>
+        ) : null}
       </CCardBody>
     </CCard>
   )
