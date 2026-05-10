@@ -1,0 +1,51 @@
+/**
+ * Canonical paths and breadcrumb names for OnRep routes.
+ */
+
+export const ONREP_ROUTE_DEFS = [
+  { path: '/coach', name: 'Coach', exact: true },
+  { path: '/parent', name: 'Parent', exact: true },
+  { path: '/student', name: 'Student', exact: true },
+
+  { path: '/coach/dashboard', name: 'Dashboard', exact: true },
+  { path: '/coach/skating', name: 'Skating ops', exact: true },
+  { path: '/coach/batches', name: 'Batches', exact: true },
+  { path: '/coach/batches/:batchId', name: 'Batch Workspace', exact: true },
+  { path: '/coach/schedule', name: 'Schedule', exact: true },
+  { path: '/coach/classes/upcoming', name: 'Upcoming Classes', exact: true },
+  { path: '/coach/attendance', name: 'Attendance', exact: true },
+  { path: '/coach/attendance/class/:classId', name: 'Mark Attendance', exact: true },
+  { path: '/coach/students', name: 'Students', exact: true },
+  { path: '/coach/students/new', name: 'Add Student', exact: true },
+  { path: '/coach/students/:studentId', name: 'Student Profile', exact: true },
+  { path: '/coach/students/:studentId/edit', name: 'Edit Student', exact: true },
+  { path: '/coach/places', name: 'Places', exact: true },
+  { path: '/coach/places/new', name: 'Add Place', exact: true },
+  { path: '/coach/places/:placeId/edit', name: 'Edit Place', exact: true },
+  { path: '/coach/places/:placeId', name: 'Place', exact: true },
+  { path: '/coach/payments', name: 'Payments', exact: true },
+  { path: '/coach/parents', name: 'Parents', exact: true },
+  { path: '/coach/activities', name: 'Academy activities', exact: true },
+  { path: '/coach/onboarding/coaches', name: 'Coaches', exact: true },
+  { path: '/onboarding/setup', name: 'Payment setup', exact: true },
+  { path: '/onboarding/complete', name: 'Setup complete', exact: true },
+
+  { path: '/parent/home', name: 'Home', exact: true },
+  { path: '/parent/schedule', name: 'Schedule', exact: true },
+  { path: '/parent/attendance', name: 'Attendance', exact: true },
+  { path: '/parent/fees', name: 'Fees', exact: true },
+  { path: '/parent/competitions', name: 'Competitions', exact: true },
+  { path: '/parent/competitions/:competitionId/leaderboard', name: 'Leaderboard', exact: true },
+  { path: '/parent/notifications', name: 'Notifications', exact: true },
+  { path: '/parent/payments/history', name: 'Payment History', exact: true },
+  { path: '/parent/profile', name: 'Profile', exact: true },
+
+  { path: '/student/home', name: 'Home', exact: true },
+  { path: '/student/schedule', name: 'Schedule', exact: true },
+  { path: '/student/attendance', name: 'Attendance', exact: true },
+  { path: '/student/progress', name: 'Progress', exact: true },
+  { path: '/student/competitions', name: 'Competitions', exact: true },
+  { path: '/student/competitions/leaderboard', name: 'Leaderboard', exact: true },
+  { path: '/student/notifications', name: 'Notifications', exact: true },
+  { path: '/student/profile', name: 'Profile', exact: true },
+]

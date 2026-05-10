@@ -1,0 +1,14 @@
+{
+  "fullName": "John Doe",
+  "monthlyFeeInr": 0,
+  "dateOfBirth": "2012-09-14",
+  "gender": "M",
+  "group": "Beginner",
+  "batchIds": [
+    "batch_1"
+  ],
+  "emergencyContactName": "Jane Doe",
+  "emergencyContactPhone": "+91-9000000000",
+  "medicalNotes": "",
+  "notes": ""
+}

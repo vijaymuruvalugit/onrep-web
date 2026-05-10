@@ -1,0 +1,77 @@
+// OnRep polish: variable-driven accents on top of CoreUI (no layout rewrites)
+@use "sass:color";
+@use "onrep-variables" as onrep;
+
+// Brand typography tuning (CoreUI scale retained)
+h1,
+.h1 {
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+h2,
+.h2,
+h3,
+.h3 {
+  font-weight: 600;
+}
+
+// Light sidebar (default shell): charcoal text + strong coral “spine” on active
+.sidebar.sidebar-light.onrep-sidebar-light .sidebar-nav,
+.sidebar.sidebar-light .sidebar-nav {
+  --cui-sidebar-nav-link-color: #{onrep.$onrep-charcoal};
+  --cui-sidebar-nav-link-hover-color: #{onrep.$onrep-charcoal};
+  --cui-sidebar-nav-link-hover-bg: rgba(255, 107, 91, 0.1);
+  --cui-sidebar-nav-link-hover-icon-color: #{onrep.$onrep-coral};
+
+  --cui-sidebar-nav-link-active-color: #{onrep.$onrep-charcoal};
+  --cui-sidebar-nav-link-active-bg: rgba(255, 107, 91, 0.2);
+  --cui-sidebar-nav-link-active-icon-color: #{color.scale(onrep.$onrep-coral, $lightness: -12%)};
+
+  --cui-sidebar-nav-link-icon-color: rgba(34, 34, 34, 0.55);
+}
+
+.sidebar.sidebar-light .sidebar-nav .nav-link.active {
+  font-weight: 700;
+  box-shadow: inset 4px 0 0 0 #{onrep.$onrep-coral};
+}
+
+.sidebar.sidebar-light.onrep-sidebar-light .sidebar-brand {
+  color: #{onrep.$onrep-charcoal};
+}
+
+// Same wordmark as login (`AuthShell` primary-logo.png); CoreUI toggles full vs narrow
+.onrep-sidebar-brand-primary {
+  height: 32px;
+  width: auto;
+  max-width: min(200px, 100%);
+  display: block;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.onrep-sidebar-brand-primary--narrow {
+  max-width: 44px;
+}
+
+// Charcoal sidebar (optional / legacy): coral interactive accents
+.sidebar.sidebar-dark .sidebar-nav {
+  --cui-sidebar-nav-link-hover-color: #{onrep.$onrep-white};
+  --cui-sidebar-nav-link-hover-bg: rgba(255, 107, 91, 0.14);
+  --cui-sidebar-nav-link-hover-icon-color: #{onrep.$onrep-coral};
+
+  --cui-sidebar-nav-link-active-color: #{onrep.$onrep-white};
+  --cui-sidebar-nav-link-active-bg: rgba(255, 107, 91, 0.22);
+  --cui-sidebar-nav-link-active-icon-color: #{onrep.$onrep-coral};
+
+  --cui-sidebar-nav-link-icon-color: rgba(255, 255, 255, 0.55);
+}
+
+.sidebar.sidebar-dark .sidebar-brand {
+  color: var(--cui-body-color);
+}
+
+// Primary outline buttons: slightly richer hover without new components
+.btn-outline-primary:hover {
+  border-color: color.scale(onrep.$onrep-coral, $lightness: -8%);
+}

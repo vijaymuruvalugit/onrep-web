@@ -1,0 +1,134 @@
+/* Batch Operations — typography-led timeline (no cards/badges) */
+
+.onrep-batch-header {
+  line-height: 1.35;
+}
+
+/* Primary: batch name — Secondary: next when — Tertiary: place + activity (quiet) */
+.onrep-batch-header__primary {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.onrep-batch-header__operational {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin-top: 0.35rem;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  color: var(--cui-body-color);
+}
+
+.onrep-batch-header__operational--empty {
+  font-weight: 400;
+  font-size: 0.9375rem;
+  color: var(--cui-secondary-color);
+}
+
+.onrep-batch-header__tertiary-block {
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--cui-border-color-translucent, rgba(0, 0, 0, 0.08));
+}
+
+.onrep-batch-header__tertiary-line {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--cui-secondary-color);
+}
+
+.onrep-batch-header__tertiary-line--muted {
+  font-style: italic;
+}
+
+.onrep-batch-workspace-hint {
+  border: none;
+  background: var(--cui-light-bg-subtle, rgba(0, 0, 0, 0.04));
+  color: var(--cui-body-color);
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+}
+
+.onrep-batch-focus {
+  max-width: 42rem;
+}
+
+.onrep-batch-cadence {
+  font-size: 0.9375rem;
+}
+
+.onrep-batch-timeline-divider {
+  letter-spacing: 0.02em;
+}
+
+.onrep-batch-timeline-when {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.onrep-batch-timeline-row--later .onrep-batch-timeline-when {
+  font-weight: 500;
+}
+
+.onrep-batch-timeline-row {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--cui-border-color-translucent, rgba(0, 0, 0, 0.08));
+}
+
+.onrep-batch-student-row {
+  min-height: 2.75rem;
+}
+
+.onrep-batch-membership-switch.form-check {
+  min-height: unset;
+  padding-left: 0;
+}
+
+.onrep-batch-membership-switch .form-check-label {
+  font-size: 0.8125rem;
+  color: var(--cui-secondary-color);
+  white-space: nowrap;
+}
+
+.onrep-batch-timeline-row:last-child {
+  border-bottom: none;
+}
+
+.onrep-batch-timeline-row--today {
+  font-weight: 600;
+  padding-top: 0.35rem;
+}
+
+.onrep-batch-timeline-row--later {
+  opacity: 0.88;
+}
+
+.onrep-batch-ops-stack .card {
+  border-radius: 0.5rem;
+}
+
+/* Hero surface background comes from onrep-surface-a--accent on the card */
+
+.onrep-batch-settings-muted {
+  opacity: 0.97;
+}
+
+@media (max-width: 576px) {
+  .onrep-batch-header__primary {
+    font-size: 1.2rem;
+  }
+
+  .onrep-batch-header__operational {
+    font-size: 1rem;
+  }
+
+  .onrep-batch-timeline-row .btn {
+    min-height: 2.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}

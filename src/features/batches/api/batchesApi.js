@@ -1,0 +1,147 @@
+import http from '../../../api/http'
+import { apiDaysToUiLabels, UI_DAY_LABELS_ORDERED } from '../../schedule/utils/daysOfWeek'
+import { formatSessionClock } from '../../classes/utils/sessionDisplay'
+
+function sortDayLabels(labels) {
+  return [...labels].sort(
+    (a, b) => UI_DAY_LABELS_ORDERED.indexOf(a) - UI_DAY_LABELS_ORDERED.indexOf(b),
+  )
+}
+
+/** First weekly row from list API — same shape Operations uses for cadence. */
+function formatListScheduleSnapshot(snap) {
+  if (!snap || typeof snap !== 'object') return null
+  const days = snap.daysOfWeek ?? snap.days_of_week
+  if (!Array.isArray(days) || days.length === 0) return null
+  const labels = sortDayLabels(apiDaysToUiLabels(days))
+  const dayPart = labels.length ? labels.join(' · ') : ''
+  const start = formatSessionClock(snap.startTime ?? snap.start_time)
+  const end = formatSessionClock(snap.endTime ?? snap.end_time)
+  const timePart = start !== '—' && end !== '—' ? `${start} – ${end}` : start !== '—' ? start : ''
+  return [dayPart, timePart].filter(Boolean).join(' · ') || null
+}
+
+function normalizeBatch(batch) {
+  if (!batch) return batch
+  const activeScheduleCount = Number(batch.activeScheduleCount ?? batch.active_schedule_count ?? 0)
+  const upcomingSessionsCount = Number(
+    batch.upcomingSessionsCount ?? batch.upcoming_sessions_count ?? 0,
+  )
+  const snap = batch.listScheduleSnapshot ?? batch.list_schedule_snapshot
+  const fromSnapshot = formatListScheduleSnapshot(snap)
+
+  const weeklySummary = batch.weeklySummary ?? batch.weekly_summary ?? fromSnapshot ?? null
+
+  const hasUpcomingClass =
+    Boolean(batch.hasUpcomingClass ?? batch.has_upcoming_class) || upcomingSessionsCount > 0
+
+  const todaySessionSnapshot =
+    batch.todaySessionSnapshot ?? batch.today_session_snapshot ?? null
+  const nextSessionSnapshot = batch.nextSessionSnapshot ?? batch.next_session_snapshot ?? null
+
+  return {
+    ...batch,
+    activityWorkspaceId: batch.activityWorkspaceId ?? batch.activity_workspace_id ?? null,
+    subActivityName: batch.subActivityName ?? batch.sub_activity_name ?? null,
+    subActivitySlug: batch.subActivitySlug ?? batch.sub_activity_slug ?? null,
+    studentsCount: batch.studentsCount ?? batch.students_count ?? 0,
+    studentIds: batch.studentIds ?? batch.student_ids ?? [],
+    activeStudentsCount: batch.activeStudentsCount ?? batch.active_students_count ?? 0,
+    activeStudentIds: batch.activeStudentIds ?? batch.active_student_ids ?? [],
+    coachName: batch.coachName ?? batch.coach_name ?? null,
+    location: batch.location ?? batch.place_name ?? batch.placeName ?? null,
+    activeScheduleCount,
+    upcomingSessionsCount,
+    listScheduleSnapshot: snap ?? null,
+    weeklySummary,
+    hasUpcomingClass,
+    todaySessionSnapshot,
+    nextSessionSnapshot,
+  }
+}
+
+export const batchesApi = {
+  async listBatches(params = {}) {
+    const { data } = await http.get('/batches', { params })
+    const batches = Array.isArray(data?.batches) ? data.batches.map(normalizeBatch) : []
+    return { ...(data || {}), batches }
+  },
+
+  async getBatch(batchId) {
+    // Backend currently exposes list + patch, but no dedicated GET /batches/:id route.
+    // Resolve detail from list to keep contract-safe behavior without backend changes.
+    const { data } = await http.get('/batches')
+    const batches = data?.batches || []
+    const batch = batches.find((item) => String(item.id) === String(batchId))
+    return { batch: normalizeBatch(batch) || null }
+  },
+
+  async createBatch(payload) {
+    const { name, feeInr, subActivityId } = payload || {}
+    const body = {
+      name: String(name || '').trim(),
+      subActivityId: String(subActivityId || '').trim(),
+    }
+    if (feeInr !== undefined && feeInr !== null && feeInr !== '') {
+      const n = Number(feeInr)
+      if (Number.isFinite(n) && n >= 0) body.feeInr = Math.round(n)
+    }
+    const { data } = await http.post('/batches', body)
+    const raw = data?.batch
+    return { batch: raw ? normalizeBatch(raw) : null }
+  },
+
+  async updateBatch(batchId, payload) {
+    const { data } = await http.patch(`/batches/${encodeURIComponent(batchId)}`, payload)
+    return data || {}
+  },
+
+  async replaceBatchStudents(batchId, studentIds) {
+    const { data } = await http.put(`/batches/${encodeURIComponent(batchId)}/students`, {
+      studentIds,
+    })
+    return data || {}
+  },
+
+  async listBatchSchedules(batchId) {
+    const { data } = await http.get(`/batch-schedules/${encodeURIComponent(batchId)}`)
+    return data || {}
+  },
+
+  async createBatchSchedule(payload) {
+    const { data } = await http.post('/batch-schedules', payload)
+    return data || {}
+  },
+
+  async updateBatchSchedule(scheduleId, payload) {
+    const { data } = await http.patch(`/batch-schedules/${encodeURIComponent(scheduleId)}`, payload)
+    return data || {}
+  },
+
+  async generateClasses(payload) {
+    const { data } = await http.post('/batch-schedules/generate', payload)
+    return data || {}
+  },
+
+  async listClasses(params = {}) {
+    const { data } = await http.get('/sessions', { params })
+    return data || {}
+  },
+
+  async createSession(payload) {
+    const { data } = await http.post('/sessions', payload)
+    return data || {}
+  },
+
+  async patchSession(sessionId, payload) {
+    const { data } = await http.patch(`/sessions/${encodeURIComponent(sessionId)}`, payload)
+    return data || {}
+  },
+
+  async cancelSession(sessionId, body = {}) {
+    const { data } = await http.patch(`/sessions/${encodeURIComponent(sessionId)}/cancel`, body)
+    return data || {}
+  },
+}
+
+export default batchesApi

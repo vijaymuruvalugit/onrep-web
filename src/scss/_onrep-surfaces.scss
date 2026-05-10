@@ -1,0 +1,104 @@
+// Operational layout: density, elevation, content width — complements CoreUI cards
+@use "onrep-variables" as onrep;
+
+:root {
+  --onrep-canvas: color-mix(in srgb, #{onrep.$onrep-light-gray} 78%, #dfe6ee 100%);
+  --onrep-surface-a: #ffffff;
+  --onrep-surface-a-muted: color-mix(in srgb, #{onrep.$onrep-white} 92%, #{onrep.$onrep-coral} 8%);
+  --onrep-surface-b: color-mix(in srgb, #{onrep.$onrep-white} 97%, #94a3b8 100%);
+  --onrep-surface-c: color-mix(in srgb, #{onrep.$onrep-light-gray} 55%, #cbd5e1 100%);
+  --onrep-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --onrep-shadow-md: 0 4px 14px rgba(15, 23, 42, 0.07), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --onrep-shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.09), 0 4px 12px rgba(15, 23, 42, 0.05);
+  --onrep-radius-lg: 14px;
+  --onrep-radius-md: 12px;
+  --onrep-content-max: 1240px;
+  --onrep-hero-accent: #{onrep.$onrep-coral};
+}
+
+/* Centered operational column — reduces eye travel on wide monitors */
+.onrep-content-column {
+  width: 100%;
+  max-width: var(--onrep-content-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.onrep-page-backdrop {
+  min-height: calc(100vh - 8rem);
+  padding-bottom: 2rem;
+}
+
+/* Three visual density levels (A = hero / today / upcoming, B = supporting, C = config) */
+.onrep-surface-a {
+  background: var(--onrep-surface-a);
+  border: none;
+  border-radius: var(--onrep-radius-lg);
+  box-shadow: var(--onrep-shadow-md);
+}
+
+.onrep-surface-a--accent {
+  border-left: 4px solid var(--onrep-hero-accent);
+  background: linear-gradient(
+    135deg,
+    var(--onrep-surface-a-muted) 0%,
+    var(--onrep-surface-a) 48%
+  );
+  box-shadow: var(--onrep-shadow-lg);
+}
+
+.onrep-surface-b {
+  background: var(--onrep-surface-b);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: var(--onrep-radius-md);
+  box-shadow: var(--onrep-shadow-sm);
+}
+
+.onrep-surface-c {
+  background: var(--onrep-surface-c);
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  border-radius: var(--onrep-radius-md);
+  box-shadow: none;
+}
+
+.onrep-type-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--cui-secondary-color);
+}
+
+.onrep-type-hero {
+  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--cui-body-color);
+}
+
+.onrep-type-meta {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--cui-secondary-color);
+}
+
+.onrep-type-muted {
+  font-size: 0.8125rem;
+  color: var(--cui-secondary-color);
+}
+
+/* Batches grid: lift cards off canvas without harsh borders */
+.onrep-batch-grid .card {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: var(--onrep-radius-md);
+  box-shadow: var(--onrep-shadow-sm);
+  transition:
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.onrep-batch-grid .card:hover {
+  box-shadow: var(--onrep-shadow-md);
+  transform: translateY(-1px);
+}

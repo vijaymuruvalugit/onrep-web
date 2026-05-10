@@ -1,0 +1,96 @@
+@use "onrep-variables" as onrep;
+@use "@coreui/coreui/scss/coreui" as * with (
+  $enable-deprecation-messages: false,
+  $primary: onrep.$onrep-primary,
+  $secondary: onrep.$onrep-secondary,
+  $primary-text-emphasis: onrep.$onrep-primary-text-emphasis,
+  $secondary-text-emphasis: onrep.$onrep-secondary-text-emphasis,
+  $primary-bg-subtle: onrep.$onrep-primary-bg-subtle,
+  $secondary-bg-subtle: onrep.$onrep-secondary-bg-subtle,
+  $primary-border-subtle: onrep.$onrep-primary-border-subtle,
+  $secondary-border-subtle: onrep.$onrep-secondary-border-subtle,
+  $gray-100: onrep.$onrep-light-gray,
+  $gray-200: #e8ecf1,
+  $gray-300: onrep.$onrep-border-subtle,
+  $gray-600: onrep.$onrep-slate,
+  $gray-900: onrep.$onrep-charcoal,
+  $body-color: onrep.$onrep-charcoal,
+  $body-secondary-color: onrep.$onrep-body-secondary,
+  $body-tertiary-bg: onrep.$onrep-light-gray,
+  $font-family-sans-serif: onrep.$onrep-font-sans,
+  $h1-font-size: 2rem,
+  $h2-font-size: 1.5rem,
+  $h3-font-size: 1.25rem,
+  $headings-font-weight: 600,
+  $headings-line-height: 1.25,
+  $body-bg-dark: onrep.$onrep-dark-surface,
+  $sidebar-brand-bg: rgba(255, 255, 255, 0.06)
+);
+@use "@coreui/chartjs/scss/coreui-chartjs";
+@use "vendors/simplebar";
+@use "onrep-theme";
+@use "onrep-surfaces";
+@use "onrep-activity-themes";
+@use "auth";
+
+body {
+  background-color: var(--onrep-canvas, var(--cui-tertiary-bg));
+}
+
+.wrapper {
+  width: 100%;
+  padding-inline: var(--cui-sidebar-occupy-start, 0) var(--cui-sidebar-occupy-end, 0);
+  will-change: auto;
+  @include transition(padding .15s);
+}
+
+.header > .container-fluid,
+.sidebar-header {
+  min-height: calc(4rem + 1px); // stylelint-disable-line function-disallowed-list
+}
+
+.sidebar-brand-full {
+  margin-left: 3px;
+}
+
+.sidebar-header {
+  .nav-underline-border {
+    --cui-nav-underline-border-link-padding-x: 1rem;
+    --cui-nav-underline-border-gap: 0;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    min-height: calc(4rem + 1px); // stylelint-disable-line function-disallowed-list
+  }
+}
+
+.sidebar-toggler {
+  margin-inline-start: auto;
+}
+
+.sidebar-narrow,
+.sidebar-narrow-unfoldable:not(:hover) {
+  .sidebar-toggler {
+    margin-inline-end: auto;
+  }
+}
+
+.header > .container-fluid + .container-fluid {
+  min-height: 3rem;
+}
+
+.footer {
+  min-height: calc(3rem + 1px); // stylelint-disable-line function-disallowed-list
+}
+
+@include color-mode(dark) {
+  body {
+    background-color: var(--cui-dark-bg-subtle);
+  }
+
+  .footer {
+    --cui-footer-bg: var(--cui-body-bg);
+  }
+}

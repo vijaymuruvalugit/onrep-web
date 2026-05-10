@@ -1,0 +1,29 @@
+/**
+ * Coach sidebar metadata — icons resolved in coachNav.jsx (avoids duplicating CNavItem boilerplate per row).
+ */
+import {
+  cilCalendar,
+  cilCheckCircle,
+  cilDollar,
+  cilLayers,
+  cilLocationPin,
+  cilMediaPlay,
+  cilPeople,
+  cilPuzzle,
+  cilSpeedometer,
+  cilUser,
+} from '@coreui/icons'
+
+/** @type {ReadonlyArray<{ name: string, to: string, icon: string[] | Record<string, unknown> }>} */
+export const COACH_NAV_REGISTRATION = Object.freeze([
+  { name: 'Dashboard', to: '/coach/dashboard', icon: cilSpeedometer },
+  { name: 'Skating ops', to: '/coach/skating', icon: cilMediaPlay },
+  { name: 'Batches', to: '/coach/batches', icon: cilLayers },
+  { name: 'Schedule', to: '/coach/schedule', icon: cilCalendar },
+  { name: 'Attendance', to: '/coach/attendance', icon: cilCheckCircle },
+  { name: 'Students', to: '/coach/students', icon: cilPeople },
+  { name: 'Parents', to: '/coach/parents', icon: cilUser },
+  { name: 'Places', to: '/coach/places', icon: cilLocationPin },
+  { name: 'Academy activities', to: '/coach/activities', icon: cilPuzzle },
+  { name: 'Payments', to: '/coach/payments', icon: cilDollar },
+])

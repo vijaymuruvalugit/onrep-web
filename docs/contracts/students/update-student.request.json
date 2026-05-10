@@ -1,0 +1,14 @@
+{
+  "fullName": "John Doe",
+  "monthlyFeeInr": 1500,
+  "dateOfBirth": "2012-09-14",
+  "gender": "M",
+  "group": "Intermediate",
+  "batchIds": [
+    "batch_2"
+  ],
+  "emergencyContactName": "Jane Doe",
+  "emergencyContactPhone": "+91-9000000000",
+  "medicalNotes": "Mild asthma",
+  "notes": "Updated by coach"
+}

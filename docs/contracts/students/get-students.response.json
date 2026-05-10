@@ -1,0 +1,35 @@
+{
+  "students": [
+    {
+      "id": "stu_123",
+      "full_name": "John Doe",
+      "monthly_fee_inr": 0,
+      "status": "active",
+      "date_of_birth": "2012-09-14",
+      "gender": "M",
+      "group_name": "Beginner",
+      "batch_ids": [
+        "batch_1"
+      ],
+      "parent_guardian_name": "Jane Doe",
+      "parent_guardian_phone": "+91-9000000000",
+      "parent_guardian_email": "jane@example.com",
+      "emergency_contact_name": "Jane Doe",
+      "emergency_contact_phone": "+91-9000000000",
+      "medical_notes": "",
+      "notes": "",
+      "coach_monthly_fee_status": "Unpaid",
+      "coach_last_payment_month": null,
+      "created_at": "2026-03-01T10:20:30.000Z"
+    }
+  ],
+  "pagination": null,
+  "_paginationShapeIfPresent": {
+    "page": 1,
+    "pageSize": 25,
+    "total": 250,
+    "totalPages": 10,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  }
+}

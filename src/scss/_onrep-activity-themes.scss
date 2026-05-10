@@ -1,0 +1,23 @@
+// Per–activity-workspace accent (subtle; driven by `data-onrep-activity` on <html>)
+@use "onrep-variables" as onrep;
+
+:root[data-onrep-activity="default"] {
+  --onrep-hero-accent: #{onrep.$onrep-coral};
+}
+
+:root[data-onrep-activity="skating"] {
+  --onrep-hero-accent: #0ea5e9;
+}
+
+:root[data-onrep-activity="music"] {
+  --onrep-hero-accent: #7c3aed;
+}
+
+:root[data-onrep-activity="yoga"] {
+  --onrep-hero-accent: #059669;
+}
+
+/* Coach dashboard KPI strip — first tile echoes operational accent */
+.onrep-dash-stat--sessions {
+  border-left: 4px solid var(--onrep-hero-accent, #{onrep.$onrep-coral}) !important;
+}

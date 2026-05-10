@@ -1,0 +1,38 @@
+@use "../../../scss/onrep-variables" as onrep;
+
+.onrep-attendance-today-panel {
+  border-radius: 0.85rem;
+  border: 2px solid color-mix(in srgb, var(--onrep-hero-accent, #{onrep.$onrep-coral}) 58%, transparent);
+  background: color-mix(in srgb, var(--onrep-hero-accent, #{onrep.$onrep-coral}) 11%, transparent);
+  padding: 1rem 1.15rem;
+}
+
+.onrep-attendance-today-heading {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--cui-body-color);
+  margin-bottom: 0.15rem;
+}
+
+.onrep-attendance-today-sub {
+  font-size: 0.875rem;
+  color: var(--cui-secondary-color);
+}
+
+.onrep-attendance-row {
+  transition: background-color 0.15s ease;
+}
+
+.onrep-attendance-row--next {
+  box-shadow: inset 4px 0 0 var(--onrep-hero-accent, #{onrep.$onrep-coral});
+  background: color-mix(in srgb, var(--onrep-hero-accent, #{onrep.$onrep-coral}) 13%, transparent);
+}
+
+.onrep-attendance-row-meta {
+  font-size: 0.8125rem;
+  color: var(--cui-secondary-color);
+}
+
+.onrep-attendance-past-toggle {
+  font-weight: 600;
+}

@@ -1,0 +1,32 @@
+// OnRep design tokens (see BrandGuide/OnRepBrandGuide.png)
+@use "sass:color";
+
+$onrep-coral: #ff6b5b;
+$onrep-charcoal: #222222;
+$onrep-slate: #6b7280;
+$onrep-light-gray: #f2f4f7;
+$onrep-white: #ffffff;
+
+// Shorthand used when wiring CoreUI
+$onrep-primary: $onrep-coral;
+$onrep-secondary: $onrep-slate;
+
+// Emphasis & subtle tints (aligned to CoreUI theme token roles)
+$onrep-primary-text-emphasis: color.scale($onrep-coral, $lightness: -24%);
+$onrep-primary-bg-subtle: color.mix($onrep-coral, $onrep-white, 12%);
+$onrep-primary-border-subtle: color.mix($onrep-coral, $onrep-white, 35%);
+
+$onrep-secondary-text-emphasis: #374151;
+$onrep-secondary-bg-subtle: #e5e7eb;
+$onrep-secondary-border-subtle: #d1d5db;
+
+// Surfaces
+$onrep-border-subtle: #e5e7eb;
+$onrep-body-secondary: $onrep-slate;
+
+// Typography (Poppins from brand guide; stack matches CoreUI fallbacks)
+$onrep-font-sans:
+  "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", sans-serif;
+
+// Sidebar (charcoal + coral accent via onrep-theme.scss)
+$onrep-dark-surface: $onrep-charcoal;

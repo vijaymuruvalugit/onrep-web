@@ -1,0 +1,55 @@
+/* Batch list cards — one-glance continuity, quiet actions */
+
+.onrep-batch-list-card__title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.onrep-batch-list-card__meta,
+.onrep-batch-list-card__schedule,
+.onrep-batch-list-card__coach {
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+.onrep-batch-list-card__stream {
+  font-weight: 500;
+}
+
+.onrep-batch-list-card__next {
+  font-size: 0.8125rem;
+  line-height: 1.25;
+}
+
+.onrep-batch-list-card__next-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+}
+
+.onrep-batch-list-card__next-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cui-secondary-color);
+}
+
+.onrep-batch-list-card__next-when {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.onrep-batch-list-card__next-place {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  margin-top: 0.1rem;
+}
+
+.onrep-batch-list-card__actions {
+  opacity: 0.92;
+}
