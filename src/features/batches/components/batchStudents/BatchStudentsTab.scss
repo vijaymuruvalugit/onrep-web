@@ -1,0 +1,117 @@
+/* Batch Students tab — operational roster (not a membership matrix) */
+
+.onrep-batch-students-tab {
+  padding-bottom: 2rem;
+}
+
+.onrep-batch-students-header {
+  max-width: 100%;
+}
+
+/* Empty state */
+.onrep-batch-roster-empty {
+  border-radius: 0.75rem;
+  background: var(--cui-body-bg, #fff);
+  border: 1px solid var(--cui-border-color-translucent, rgba(0, 0, 0, 0.08));
+  max-width: 32rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.onrep-batch-roster-empty__copy {
+  max-width: 22rem;
+}
+
+/* Roster list */
+.onrep-batch-roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.onrep-batch-roster-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 0.65rem;
+  background: var(--cui-body-bg, #fff);
+  border: 1px solid var(--cui-border-color-translucent, rgba(0, 0, 0, 0.07));
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.onrep-batch-roster-card:hover {
+  border-color: var(--cui-border-color, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.onrep-batch-roster-card__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.onrep-batch-roster-card__name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--cui-body-color);
+  display: inline-block;
+}
+
+.onrep-batch-roster-card__name:hover {
+  color: var(--cui-primary, #321fdb);
+}
+
+.onrep-batch-roster-card__meta {
+  font-size: 0.8125rem;
+  color: var(--cui-secondary-color);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+/* Reserved for badges / stats — keeps vertical rhythm without showing chrome */
+.onrep-batch-roster-card__future-slot {
+  min-height: 0;
+  margin-top: 0.25rem;
+}
+
+.onrep-batch-roster-card__actions {
+  flex-shrink: 0;
+  padding-top: 0.125rem;
+}
+
+.onrep-batch-roster-card__remove {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none !important;
+}
+
+.onrep-batch-roster-card__remove:hover {
+  color: var(--cui-danger, #e55353) !important;
+}
+
+/* Add modal — multi-select list */
+.onrep-batch-add-modal-list {
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.onrep-batch-add-modal-row {
+  padding: 0.65rem 0.5rem;
+  border-radius: 0.375rem;
+}
+
+.onrep-batch-add-modal-row:hover {
+  background: var(--cui-light-bg-subtle, rgba(0, 0, 0, 0.03));
+}
+
+.onrep-batch-add-modal-row .form-check {
+  margin-bottom: 0;
+}
+
+.onrep-batch-add-modal-row .form-check-label {
+  cursor: pointer;
+  width: 100%;
+}

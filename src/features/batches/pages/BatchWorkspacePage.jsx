@@ -14,16 +14,13 @@ import {
   CNav,
   CNavItem,
   CNavLink,
-  CFormCheck,
   CRow,
   CSpinner,
   CTabContent,
   CTabPane,
 } from '@coreui/react'
 import { useBatches } from '../hooks/useBatches'
-import { useStudents } from '../../students/hooks/useStudents'
 import useClasses from '../../classes/hooks/useClasses'
-import { getStudentParent } from '../../students/utils/studentMappers'
 import CompactSessionRow from '../../schedule/components/CompactSessionRow'
 import { useIsScheduleWide } from '../../../hooks/useMediaQuery'
 import { stripDemoSuffix } from '../utils/batchDisplayUtils'
@@ -38,6 +35,7 @@ import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
 import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
 import { getCoachUiConfig } from '../../academy/api/academyUiApi'
+import BatchStudentsTab from '../components/batchStudents/BatchStudentsTab'
 import './BatchWorkspacePage.scss'
 
 const VALID_TABS = new Set(['schedule', 'students', 'settings'])
@@ -77,10 +75,8 @@ const BatchWorkspacePage = () => {
     fetchBatchSchedules,
     fetchBatchUpcomingClasses,
     saveBatchSettings,
-    assignBatchStudents,
   } = useBatches()
 
-  const { items: students, fetchStudents } = useStudents()
   const { today, fetchTodayClasses } = useClasses()
 
   /** Infer x-activity-id from batch → sub_activity → activity (API: activity_workspace_id). Scoped routes need it; GET /batches is exempt. */
@@ -100,7 +96,6 @@ const BatchWorkspacePage = () => {
     fetchBatchSchedules(batchId)
     fetchBatchUpcomingClasses({ batchId })
     fetchTodayClasses()
-    fetchStudents({ page: 1, pageSize: 200 })
   }, [
     batchId,
     activeActivityId,
@@ -108,7 +103,6 @@ const BatchWorkspacePage = () => {
     fetchBatchSchedules,
     fetchBatchUpcomingClasses,
     fetchTodayClasses,
-    fetchStudents,
   ])
 
   useEffect(() => {
@@ -188,21 +182,6 @@ const BatchWorkspacePage = () => {
 
   const todayIso = todayIsoLocal()
 
-  const selectedStudentIds = useMemo(() => {
-    const directIds = selectedBatch?.studentIds || []
-    if (directIds.length > 0) return new Set(directIds.map((id) => String(id)))
-
-    const derivedIds = students
-      .filter((student) =>
-        Array.isArray(student?.batchIds)
-          ? student.batchIds.some((id) => String(id) === String(batchId))
-          : false,
-      )
-      .map((student) => student.id || student._id)
-      .filter(Boolean)
-    return new Set(derivedIds.map((id) => String(id)))
-  }, [selectedBatch, students, batchId])
-
   const todayBatchClasses = useMemo(() => {
     return today.filter((item) => String(item.batchId || item.batch?.id || '') === String(batchId))
   }, [today, batchId])
@@ -267,13 +246,6 @@ const BatchWorkspacePage = () => {
     }
     return null
   }, [operationalFocus])
-
-  const handleStudentToggle = (studentId, checked) => {
-    const current = new Set(selectedStudentIds)
-    if (checked) current.add(studentId)
-    else current.delete(studentId)
-    assignBatchStudents(batchId, [...current])
-  }
 
   const handleSettingsSave = () => {
     if (!settingsFormRef.current) return
@@ -437,53 +409,13 @@ const BatchWorkspacePage = () => {
         </CTabPane>
 
         <CTabPane visible={activeTab === 'students'}>
-          <CCard>
-            <CCardHeader>
-              <strong>Group members</strong>
-            </CCardHeader>
-            <CCardBody className="onrep-batch-students-body p-0">
-              {!students.length ? (
-                <CAlert color="info" className="m-3">
-                  No students available to assign.
-                </CAlert>
-              ) : null}
-              {students.slice(0, 200).map((student) => {
-                const studentId = student.id || student._id
-                const parent = getStudentParent(student)
-                const showParent = parent && parent !== '—'
-                const title =
-                  showParent && (student.full_name || student.name)
-                    ? `${student.full_name || student.name} — ${parent}`
-                    : undefined
-                return (
-                  <div
-                    key={studentId}
-                    className="onrep-batch-student-row d-flex justify-content-between align-items-center gap-3 border-bottom px-3"
-                  >
-                    <div className="min-w-0 py-2 flex-grow-1">
-                      <Link
-                        to={`/coach/students/${encodeURIComponent(studentId)}`}
-                        className="d-block text-body text-decoration-none fw-semibold text-break"
-                        title={title}
-                      >
-                        {student.full_name || student.name}
-                      </Link>
-                    </div>
-                    <CFormCheck
-                      switch
-                      reverse
-                      className="onrep-batch-membership-switch flex-shrink-0 mb-0"
-                      id={`in-batch-${studentId}`}
-                      label="In batch"
-                      checked={selectedStudentIds.has(studentId)}
-                      onChange={(event) => handleStudentToggle(studentId, event.target.checked)}
-                      aria-label={`${selectedStudentIds.has(studentId) ? 'Remove' : 'Add'} ${student.full_name || student.name || 'student'} ${selectedStudentIds.has(studentId) ? 'from' : 'to'} this batch`}
-                    />
-                  </div>
-                )
-              })}
-            </CCardBody>
-          </CCard>
+          <BatchStudentsTab
+            batchId={batchId}
+            batchTitle={batchTitle}
+            selectedBatch={selectedBatch}
+            tabActive={activeTab === 'students'}
+            detailLoading={detailLoading}
+          />
         </CTabPane>
 
         <CTabPane visible={activeTab === 'settings'}>
