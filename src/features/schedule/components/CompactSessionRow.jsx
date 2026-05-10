@@ -1,5 +1,4 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
 import { CBadge, CButton } from '@coreui/react'
 import {
   formatOperationalSessionRange,
@@ -22,10 +21,10 @@ export default function CompactSessionRow({
   row,
   todayIso,
   placeFallback = '',
-  attendancePath,
   onViewSession,
-  /** When true, show a prominent Start link for attendance */
+  /** When true, show Start — calls onStartSession(row) after confirm (parent handles navigation + API). */
   canStartToday = false,
+  onStartSession,
 }) {
   const ymd = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
   const isToday = Boolean(todayIso && ymd === todayIso)
@@ -43,12 +42,17 @@ export default function CompactSessionRow({
   const typeLabel = sessionTypeLabel(row.sessionType ?? row.session_type)
   const hasActual = Boolean(row.actualStartTime || row.actualEndTime)
   const attendanceBlocked = row.attendanceEnabled === false || row.attendance_enabled === false
+  const showOneOffStyle = Boolean(row.isOneTime) && !row.isCancelled
+  const showRecurringStyle = !row.isCancelled && !row.isOneTime
+
   return (
     <div
       className={[
         'onrep-session-row',
         isToday ? 'onrep-session-row--today' : '',
         row.isCancelled ? 'onrep-session-row--cancelled' : '',
+        showOneOffStyle ? 'onrep-session-row--one-off' : '',
+        showRecurringStyle ? 'onrep-session-row--recurring' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -70,7 +74,7 @@ export default function CompactSessionRow({
           <div className="onrep-session-row__chips d-flex flex-wrap gap-1 align-items-center">
             {row.isOneTime ? (
               <CBadge color="primary" className="rounded-pill fw-normal px-2 py-0 opacity-75">
-                One-time
+                One-off
               </CBadge>
             ) : null}
             {typeLabel ? (
@@ -91,13 +95,13 @@ export default function CompactSessionRow({
           </div>
         </div>
         <div className="onrep-session-row__actions">
-          {canStartToday && attendancePath && !attendanceBlocked ? (
+          {canStartToday && !attendanceBlocked && typeof onStartSession === 'function' ? (
             <CButton
-              as={Link}
-              to={attendancePath}
+              type="button"
               size="sm"
               color="primary"
-              className="text-decoration-none px-3"
+              className="px-3"
+              onClick={() => onStartSession(row)}
             >
               Start
             </CButton>

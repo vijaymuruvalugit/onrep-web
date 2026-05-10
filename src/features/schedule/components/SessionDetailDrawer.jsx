@@ -52,6 +52,8 @@ function formatCancelledAt(iso) {
 
 function statusChip(row, todayIso) {
   if (row.isCancelled) return { label: 'Cancelled', color: 'secondary' }
+  const actualStart = row.actualStartTime ?? row.actual_start_time
+  if (actualStart && !row.attendanceMarked) return { label: 'In progress', color: 'warning' }
   if (row.attendanceMarked) return { label: 'Completed', color: 'success' }
   const ymd = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
   if (ymd && todayIso && ymd === todayIso) return { label: 'Today', color: 'info' }
@@ -246,10 +248,13 @@ export default function SessionDetailDrawer({
 
   const attendancePath = sessionId && `/coach/attendance/class/${encodeURIComponent(sessionId)}`
 
+  const sessionStarted = Boolean(row?.actualStartTime ?? row?.actual_start_time)
+
+  /** Backend enforces cutoff, present marks, and started session. */
   const canCancel =
     row &&
     !row.isCancelled &&
-    !row.attendanceMarked &&
+    !sessionStarted &&
     String(row.status || '').toUpperCase() !== 'CANCELLED'
 
   return (
@@ -313,6 +318,18 @@ export default function SessionDetailDrawer({
 
             <section>
               <div className="onrep-type-label mb-2">Session status</div>
+              {sessionStarted && !row.isCancelled ? (
+                <p className="small text-body-secondary mb-2">
+                  This session has started (actual start time recorded). It cannot be cancelled from
+                  here.
+                </p>
+              ) : null}
+              {!sessionStarted && row.attendanceMarked && !row.isCancelled ? (
+                <p className="small text-body-secondary mb-2">
+                  Cancel may still be allowed before the scheduled end time if no student was marked
+                  present. Otherwise you&apos;ll see an error from the server.
+                </p>
+              ) : null}
               {row.isCancelled ? (
                 <div className="rounded-3 px-3 py-3 bg-body-secondary bg-opacity-10">
                   <div className="fw-semibold text-body-secondary">Cancelled</div>
@@ -344,6 +361,7 @@ export default function SessionDetailDrawer({
                       variant="outline"
                       size="sm"
                       disabled={busy || !canCancel}
+                      className={busy || !canCancel ? 'opacity-50' : ''}
                       onClick={() => setShowCancelConfirm(true)}
                     >
                       Cancel session

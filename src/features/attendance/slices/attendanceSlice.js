@@ -67,9 +67,12 @@ const attendanceSlice = createSlice({
         state.roster = action.payload
         state.draftMarks = action.payload.reduce((acc, student) => {
           const studentId = student.id || student.studentId || student._id
+          const raw = student.attendanceStatus
+          const status =
+            raw === 'present' ? 'present' : raw === 'absent' ? 'absent' : 'absent'
           acc[studentId] = {
             studentId,
-            status: student.attendanceStatus || 'present',
+            status,
             notes: student.attendanceNotes || '',
           }
           return acc

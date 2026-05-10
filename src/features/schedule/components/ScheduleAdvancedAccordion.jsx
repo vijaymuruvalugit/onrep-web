@@ -182,7 +182,7 @@ export default function ScheduleAdvancedAccordion({
 
         <CAccordionItem itemKey={2}>
           <CAccordionHeader className="schedule-adv-accordion__header">
-            Add one-time extra session
+            Add one-off extra session
           </CAccordionHeader>
           <CAccordionBody className="pt-0">
             <p className="small text-body-secondary mb-3">

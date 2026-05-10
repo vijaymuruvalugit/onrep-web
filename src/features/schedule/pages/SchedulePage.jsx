@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   CAlert,
@@ -21,11 +21,7 @@ import ScheduleBatchSwitcher from '../components/ScheduleBatchSwitcher'
 import CreateOneTimeSessionDrawer from '../components/CreateOneTimeSessionDrawer'
 import SessionDetailDrawer from '../components/SessionDetailDrawer'
 import CompactSessionRow from '../components/CompactSessionRow'
-import { formatDaysOfWeekList, formatTimeRange } from '../../places/utils/formatScheduleDays'
-import {
-  formatOperationalSessionRange,
-  normalizeSessionDateYmd,
-} from '../../classes/utils/sessionDisplay'
+import { normalizeSessionDateYmd } from '../../classes/utils/sessionDisplay'
 import { normalizeTrainingSessionRow } from '../../classes/utils/sessionRow'
 import batchesApi from '../../batches/api/batchesApi'
 import useClasses from '../../classes/hooks/useClasses'
@@ -43,6 +39,7 @@ import './SchedulePage.scss'
 
 const SchedulePage = () => {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const activities = useSelector((s) => s.workspace.activities)
   const bootstrapComplete = useSelector((s) => s.workspace.bootstrapComplete)
@@ -67,7 +64,7 @@ const SchedulePage = () => {
   const [drawerSeedRow, setDrawerSeedRow] = useState(null)
   const [createOneTimeOpen, setCreateOneTimeOpen] = useState(false)
   const [sessionKindFilter, setSessionKindFilter] = useState(
-    () => /** @type {'all' | 'regular' | 'one_time' | 'cancelled'} */ ('all'),
+    () => /** @type {'all' | 'regular' | 'one_off' | 'cancelled'} */ ('all'),
   )
 
   const todayIso = todayIsoLocal()
@@ -188,7 +185,7 @@ const SchedulePage = () => {
   const mergedTimeline = useMemo(() => {
     return mergedTimelineRaw.filter((r) => {
       if (sessionKindFilter === 'cancelled') return r.isCancelled
-      if (sessionKindFilter === 'one_time') return r.isOneTime && !r.isCancelled
+      if (sessionKindFilter === 'one_off') return r.isOneTime && !r.isCancelled
       if (sessionKindFilter === 'regular') return !r.isOneTime && !r.isCancelled
       return true
     })
@@ -209,17 +206,6 @@ const SchedulePage = () => {
     const raw = fromSchedule || fromBatch
     return raw ? stripDemoSuffix(raw) : ''
   }, [items, selectedBatch])
-
-  const nextSummaryLine = useMemo(() => {
-    if (!mergedTimelineRaw.length) return 'No upcoming sessions ahead.'
-    const row = firstNonCancelledSession(mergedTimelineRaw) || mergedTimelineRaw[0]
-    return `Next · ${formatOperationalSessionRange(
-      row.sessionDate,
-      row.startTime,
-      row.endTime ?? row.end_time,
-      todayIso,
-    )}`
-  }, [mergedTimelineRaw, todayIso])
 
   const displayedUpcoming = useMemo(() => {
     if (showAllUpcoming || mergedTimeline.length <= upcomingCap) return mergedTimeline
@@ -252,6 +238,31 @@ const SchedulePage = () => {
     fetchTodayClasses()
   }
 
+  const handleStartSession = useCallback(
+    async (row) => {
+      const sid = row.sessionId || row.id
+      if (!sid) return
+      if (
+        !window.confirm(
+          'Start this session now? We will record the start time and open attendance.',
+        )
+      ) {
+        return
+      }
+      try {
+        await batchesApi.patchSession(String(sid), {
+          actualStartTime: new Date().toISOString(),
+        })
+        refreshAll()
+        navigate(`/coach/attendance/class/${encodeURIComponent(sid)}`)
+      } catch (e) {
+        const msg = e?.response?.data?.error || e?.message || 'Could not start session'
+        window.alert(msg)
+      }
+    },
+    [navigate, refreshAll],
+  )
+
   return (
     <div className="schedule-page">
       <CCard className="mb-4 schedule-page__toolbar onrep-surface-b border-0">
@@ -273,124 +284,60 @@ const SchedulePage = () => {
         </CCardHeader>
       </CCard>
 
-      <section className="mb-5 schedule-page__section-upcoming">
-        <div className="d-flex justify-content-between align-items-start gap-3 mb-3 flex-wrap">
-          <h2 className="schedule-page__section-title mb-0 align-self-center">Upcoming sessions</h2>
-          <div className="d-flex flex-wrap gap-2 align-items-center ms-auto">
-            <div className="schedule-page__session-filters btn-group btn-group-sm" role="group">
-              {[
-                { key: 'all', label: 'All' },
-                { key: 'regular', label: 'Regular' },
-                { key: 'one_time', label: 'One-time' },
-                { key: 'cancelled', label: 'Cancelled' },
-              ].map(({ key, label }) => (
-                <CButton
-                  key={key}
-                  color={sessionKindFilter === key ? 'primary' : 'light'}
-                  size="sm"
-                  variant={sessionKindFilter === key ? undefined : 'outline'}
-                  className="px-2"
-                  onClick={() => setSessionKindFilter(key)}
-                >
-                  {label}
-                </CButton>
-              ))}
-            </div>
-            <CButton
-              color="primary"
-              size="sm"
-              disabled={!effectiveBatchId}
-              onClick={() => setCreateOneTimeOpen(true)}
-            >
-              + One-time session
-            </CButton>
-          </div>
-        </div>
-        <CCard className="schedule-page__upcoming-card onrep-surface-a border-0">
-          <CCardBody className="py-3 px-3 px-md-4">
-            {effectiveBatchId ? (
-              <div className="schedule-page__upcoming-summary mb-4 pb-3 border-bottom border-light-subtle">
-                <div className="onrep-type-level2 text-break">
-                  {cadenceSummary || 'No weekly pattern saved'}
-                </div>
-                {summaryPlace ? (
-                  <div className="onrep-type-muted mt-2 small text-break">{summaryPlace}</div>
-                ) : null}
-                <div className="onrep-type-muted mt-2 small">{nextSummaryLine}</div>
-              </div>
-            ) : null}
-            {sessionsError ? <CAlert color="danger">{sessionsError}</CAlert> : null}
-            {sessionsLoading ? (
-              <div className="text-center py-3">
-                <CSpinner size="sm" />
-              </div>
-            ) : null}
-            {!sessionsLoading && !mergedTimeline.length ? (
-              <div className="onrep-type-muted small">
-                {mergedTimelineRaw.length
-                  ? 'No sessions match this filter.'
-                  : 'No upcoming sessions in this window.'}
-              </div>
-            ) : null}
-            {!sessionsLoading &&
-              displayedUpcoming.map((row) => {
-                const sid = row.sessionId || row.id
-                const ymd = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
-                const isTodayRow = Boolean(todayIso && ymd === todayIso)
-                const canStartToday = isTodayRow && !row.attendanceMarked && !row.isCancelled
-                return (
-                  <CompactSessionRow
-                    key={sid}
-                    row={row}
-                    todayIso={todayIso}
-                    placeFallback={primaryPlaceFallback}
-                    canStartToday={canStartToday}
-                    attendancePath={
-                      sid ? `/coach/attendance/class/${encodeURIComponent(sid)}` : undefined
-                    }
-                    onViewSession={(id, r) => {
-                      setDrawerSessionId(id)
-                      setDrawerSeedRow(r)
-                    }}
-                  />
-                )
-              })}
-            {!sessionsLoading && hasMoreUpcoming ? (
-              <div className="mt-3 pt-2 border-top border-light-subtle">
-                <CButton
-                  color="link"
-                  className="px-0 text-decoration-none"
-                  onClick={() => setShowAllUpcoming((v) => !v)}
-                >
-                  {showAllUpcoming ? 'Show fewer sessions' : 'View all upcoming sessions'}
-                </CButton>
-              </div>
-            ) : null}
-          </CCardBody>
-        </CCard>
-      </section>
-
-      <section className="mb-4 schedule-page__section-weekly">
+      <section className="mb-5 schedule-page__section-weekly">
         <CCard className="onrep-surface-b border-0 mb-3">
           <CCardBody className="py-3 px-3 px-md-4 d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
             <div className="min-w-0 flex-grow-1">
-              <div className="onrep-type-label mb-2">Weekly pattern</div>
+              <div className="onrep-type-label mb-2">Weekly schedule</div>
               <div className="onrep-type-level2 text-break">
-                {cadenceSummary || 'No pattern yet'}
+                {cadenceSummary || 'No schedule saved yet'}
               </div>
               {summaryPlace ? (
                 <div className="onrep-type-muted small mt-2 text-break">{summaryPlace}</div>
               ) : null}
+              {effectiveBatchId && error ? (
+                <CAlert color="danger" className="mt-3 mb-0 py-2">
+                  {error.message}
+                </CAlert>
+              ) : null}
+              {effectiveBatchId && loading ? (
+                <div className="d-flex align-items-center gap-2 mt-3 text-body-secondary small">
+                  <CSpinner size="sm" /> Loading schedule…
+                </div>
+              ) : null}
+              {!effectiveBatchId ? (
+                <CAlert color="light" className="mt-3 mb-0 py-2 small">
+                  Select a batch above to view and edit the weekly schedule.
+                </CAlert>
+              ) : null}
+              {!loading && effectiveBatchId && !items.length && !error ? (
+                <CAlert color="info" className="mt-3 mb-0 py-2 small">
+                  No saved pattern yet—use Edit to add your weekly schedule.
+                </CAlert>
+              ) : null}
             </div>
-            <CButton
-              color="primary"
-              size="sm"
-              className="flex-shrink-0"
-              disabled={!effectiveBatchId}
-              onClick={() => setWeeklyPatternOpen((o) => !o)}
-            >
-              {weeklyPatternOpen ? 'Done' : 'Edit'}
-            </CButton>
+            <div className="d-flex flex-wrap gap-2 flex-shrink-0 align-items-center">
+              {effectiveBatchId ? (
+                <CButton
+                  size="sm"
+                  color="secondary"
+                  variant="outline"
+                  className="text-decoration-none"
+                  onClick={() => fetchSchedule(effectiveBatchId)}
+                  disabled={loading}
+                >
+                  Refresh
+                </CButton>
+              ) : null}
+              <CButton
+                color="primary"
+                size="sm"
+                disabled={!effectiveBatchId}
+                onClick={() => setWeeklyPatternOpen((o) => !o)}
+              >
+                {weeklyPatternOpen ? 'Done' : 'Edit'}
+              </CButton>
+            </div>
           </CCardBody>
           <CCollapse visible={weeklyPatternOpen}>
             <div className="border-top border-light-subtle px-3 px-md-4 pb-4 pt-3">
@@ -418,54 +365,92 @@ const SchedulePage = () => {
         </CCard>
       </section>
 
-      <section className="mb-5 schedule-page__section-recurring">
-        <CCard className="onrep-surface-b border-0 mb-3">
-          <CCardBody className="py-3 px-3 px-md-4">
-            <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
-              <div className="onrep-type-label mb-0">Recurring patterns</div>
-              {effectiveBatchId ? (
+      <section className="mb-5 schedule-page__section-upcoming">
+        <div className="d-flex flex-column flex-lg-row justify-content-between align-items-stretch align-items-lg-center gap-3 mb-3">
+          <h2 className="schedule-page__section-title mb-0">Upcoming sessions</h2>
+          <div className="schedule-page__filters-toolbar">
+            <div className="schedule-page__session-filters" role="group" aria-label="Session filters">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'regular', label: 'Regular' },
+                { key: 'one_off', label: 'One-off' },
+                { key: 'cancelled', label: 'Cancelled' },
+              ].map(({ key, label }) => (
                 <CButton
+                  key={key}
+                  color="primary"
                   size="sm"
-                  color="link"
-                  className="text-decoration-none p-0 flex-shrink-0"
-                  onClick={() => fetchSchedule(effectiveBatchId)}
+                  variant={sessionKindFilter === key ? undefined : 'outline'}
+                  active={sessionKindFilter === key}
+                  onClick={() => setSessionKindFilter(key)}
                 >
-                  Refresh
+                  {label}
                 </CButton>
-              ) : null}
+              ))}
             </div>
-            {!effectiveBatchId ? (
-              <CAlert color="light" className="py-2 mb-0">
-                Select a batch first.
-              </CAlert>
-            ) : null}
-            {error ? <CAlert color="danger">{error.message}</CAlert> : null}
-            {loading ? (
+            <CButton
+              color="primary"
+              size="sm"
+              className="schedule-page__add-one-off-btn"
+              disabled={!effectiveBatchId}
+              onClick={() => setCreateOneTimeOpen(true)}
+            >
+              + One-off session
+            </CButton>
+          </div>
+        </div>
+        <CCard className="schedule-page__upcoming-card onrep-surface-a border-0">
+          <CCardBody className="py-3 px-3 px-md-4">
+            {sessionsError ? <CAlert color="danger">{sessionsError}</CAlert> : null}
+            {sessionsLoading ? (
               <div className="text-center py-3">
                 <CSpinner size="sm" />
               </div>
             ) : null}
-            {!loading && effectiveBatchId && !items.length ? (
-              <CAlert color="info" className="py-2 mb-0 small">
-                No saved patterns yet—use the weekly pattern editor above.
-              </CAlert>
+            {!sessionsLoading && !mergedTimeline.length ? (
+              <div className="onrep-type-muted small">
+                {mergedTimelineRaw.length
+                  ? 'No sessions match this filter.'
+                  : 'No upcoming sessions in this window.'}
+              </div>
             ) : null}
-            {!loading &&
-              items.map((schedule) => (
-                <div
-                  key={schedule.id || schedule._id}
-                  className="py-3 border-bottom border-light-subtle small"
+            {!sessionsLoading &&
+              displayedUpcoming.map((row) => {
+                const sid = row.sessionId || row.id
+                const ymd = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
+                const isTodayRow = Boolean(todayIso && ymd === todayIso)
+                const hasActualStart = Boolean(row.actualStartTime ?? row.actual_start_time)
+                const canStartToday =
+                  isTodayRow &&
+                  !row.attendanceMarked &&
+                  !row.isCancelled &&
+                  !hasActualStart
+                return (
+                  <CompactSessionRow
+                    key={sid}
+                    row={row}
+                    todayIso={todayIso}
+                    placeFallback={primaryPlaceFallback}
+                    canStartToday={canStartToday}
+                    onStartSession={handleStartSession}
+                    onViewSession={(id, r) => {
+                      setDrawerSessionId(id)
+                      setDrawerSeedRow(r)
+                    }}
+                  />
+                )
+              })}
+            {!sessionsLoading && hasMoreUpcoming ? (
+              <div className="mt-3 pt-2 border-top border-light-subtle">
+                <CButton
+                  color="link"
+                  className="px-0 text-decoration-none"
+                  onClick={() => setShowAllUpcoming((v) => !v)}
                 >
-                  <div className="fw-semibold">{formatDaysOfWeekList(schedule.daysOfWeek)}</div>
-                  <div className="text-body-secondary">
-                    {formatTimeRange(
-                      schedule.startTime ?? schedule.start_time,
-                      schedule.endTime ?? schedule.end_time,
-                    )}
-                    {schedule.placeName ? ` · ${stripDemoSuffix(schedule.placeName)}` : ''}
-                  </div>
-                </div>
-              ))}
+                  {showAllUpcoming ? 'Show fewer sessions' : 'View all upcoming sessions'}
+                </CButton>
+              </div>
+            ) : null}
           </CCardBody>
         </CCard>
       </section>

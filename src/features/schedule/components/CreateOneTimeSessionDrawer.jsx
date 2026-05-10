@@ -35,7 +35,7 @@ function CoachSelect({ coaches = [], value, onChange, disabled }) {
 }
 
 /**
- * Full operational one-time session creation for a batch.
+ * Full operational one-off session creation for a batch.
  */
 export default function CreateOneTimeSessionDrawer({
   visible,
@@ -229,7 +229,7 @@ export default function CreateOneTimeSessionDrawer({
     <COffcanvas placement="end" visible={visible} onHide={onClose} className="onrep-session-drawer">
       <COffcanvasHeader className="border-bottom border-light-subtle">
         <div>
-          <COffcanvasTitle>Create one-time session</COffcanvasTitle>
+          <COffcanvasTitle>Create one-off session</COffcanvasTitle>
           <div className="small text-body-secondary mt-1">
             Add a standalone training session for this batch.
           </div>
