@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -10,6 +10,7 @@ import {
   CCol,
   CFormInput,
   CFormLabel,
+  CFormSelect,
   CNav,
   CNavItem,
   CNavLink,
@@ -23,18 +24,20 @@ import { useBatches } from '../hooks/useBatches'
 import { useStudents } from '../../students/hooks/useStudents'
 import useClasses from '../../classes/hooks/useClasses'
 import { getStudentParent } from '../../students/utils/studentMappers'
-import { formatOperationalSessionRange } from '../../classes/utils/sessionDisplay'
+import CompactSessionRow from '../../schedule/components/CompactSessionRow'
+import { useIsScheduleWide } from '../../../hooks/useMediaQuery'
 import { stripDemoSuffix } from '../utils/batchDisplayUtils'
 import {
   computeOperationalFocus,
   formatCadenceLine,
   formatHeaderOperationalWhen,
   mergeBatchSessionInstances,
-  showTomorrowDivider,
   todayIsoLocal,
 } from '../utils/batchWorkspaceOperations'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
 import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
+import { listStaffCoaches } from '../../directory/api/directoryApi'
+import { getCoachUiConfig } from '../../academy/api/academyUiApi'
 import './BatchWorkspacePage.scss'
 
 const VALID_TABS = new Set(['schedule', 'students', 'settings'])
@@ -48,8 +51,15 @@ const BatchWorkspacePage = () => {
   const { batchId } = useParams()
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState('schedule')
-  const [timelineExpanded, setTimelineExpanded] = useState(false)
+  const isWide = useIsScheduleWide()
+  const timelineCap = isWide ? 4 : 2
   const settingsFormRef = useRef(null)
+  const didAutoLeadCoachRef = useRef(false)
+
+  const [staffCoaches, setStaffCoaches] = useState([])
+  const [coachUiConfig, setCoachUiConfig] = useState({})
+  const [directoryLoading, setDirectoryLoading] = useState(false)
+  const [leadCoachUserId, setLeadCoachUserId] = useState('')
 
   const {
     selectedBatch,
@@ -72,13 +82,6 @@ const BatchWorkspacePage = () => {
 
   const { items: students, fetchStudents } = useStudents()
   const { today, fetchTodayClasses } = useClasses()
-
-  const refreshSessions = useCallback(() => {
-    if (!batchId) return
-    fetchBatchUpcomingClasses({ batchId })
-    fetchTodayClasses()
-    fetchBatchSchedules(batchId)
-  }, [batchId, fetchBatchUpcomingClasses, fetchTodayClasses, fetchBatchSchedules])
 
   /** Infer x-activity-id from batch → sub_activity → activity (API: activity_workspace_id). Scoped routes need it; GET /batches is exempt. */
   useEffect(() => {
@@ -107,6 +110,71 @@ const BatchWorkspacePage = () => {
     fetchTodayClasses,
     fetchStudents,
   ])
+
+  useEffect(() => {
+    didAutoLeadCoachRef.current = false
+  }, [batchId])
+
+  useEffect(() => {
+    if (!batchId) return
+    let cancelled = false
+    setDirectoryLoading(true)
+    Promise.all([listStaffCoaches(), getCoachUiConfig()])
+      .then(([coaches, cfg]) => {
+        if (!cancelled) {
+          setStaffCoaches(Array.isArray(coaches) ? coaches : [])
+          setCoachUiConfig(cfg && typeof cfg === 'object' ? cfg : {})
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStaffCoaches([])
+          setCoachUiConfig({})
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDirectoryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [batchId])
+
+  useEffect(() => {
+    const id = selectedBatch?.leadCoachUserId ?? selectedBatch?.lead_coach_user_id
+    setLeadCoachUserId(id ? String(id) : '')
+  }, [selectedBatch?.id, selectedBatch?.leadCoachUserId, selectedBatch?.lead_coach_user_id])
+
+  useEffect(() => {
+    if (!batchId || directoryLoading || detailLoading || !selectedBatch) return
+    const existing = selectedBatch.leadCoachUserId ?? selectedBatch.lead_coach_user_id
+    if (existing) return
+    const coachesOnly = staffCoaches.filter((c) => String(c.role).toLowerCase() === 'coach')
+    const defRaw = coachUiConfig?.defaultLeadCoachUserId
+    let pick = null
+    if (defRaw && coachesOnly.some((c) => String(c.id) === String(defRaw))) {
+      pick = String(defRaw)
+    } else if (coachesOnly.length === 1) {
+      pick = String(coachesOnly[0].id)
+    }
+    if (!pick || didAutoLeadCoachRef.current) return
+    didAutoLeadCoachRef.current = true
+    setLeadCoachUserId(pick)
+    saveBatchSettings(batchId, { leadCoachUserId: pick })
+  }, [
+    batchId,
+    coachUiConfig,
+    detailLoading,
+    directoryLoading,
+    saveBatchSettings,
+    selectedBatch,
+    staffCoaches,
+  ])
+
+  const assignableCoaches = useMemo(
+    () => staffCoaches.filter((c) => String(c.role).toLowerCase() === 'coach'),
+    [staffCoaches],
+  )
 
   useEffect(() => {
     const tab = (searchParams.get('tab') || '').toLowerCase()
@@ -159,30 +227,14 @@ const BatchWorkspacePage = () => {
     [batchId, todayBatchClasses, upcomingClasses, todayIso],
   )
 
-  const visibleTimeline = useMemo(() => {
-    const cap = timelineExpanded ? 12 : 6
-    return fullMergedTimeline.slice(0, cap)
-  }, [fullMergedTimeline, timelineExpanded])
+  const compactTimeline = useMemo(
+    () => fullMergedTimeline.slice(0, timelineCap),
+    [fullMergedTimeline, timelineCap],
+  )
 
   const cadenceLine = useMemo(() => formatCadenceLine(schedules), [schedules])
 
-  const sessionsTodayList = useMemo(() => {
-    return fullMergedTimeline.filter((r) => {
-      const d = String(r.sessionDate || '').match(/(\d{4}-\d{2}-\d{2})/)?.[1] || ''
-      return d === todayIso
-    })
-  }, [fullMergedTimeline, todayIso])
-
-  const heroSession = useMemo(() => {
-    if (sessionsTodayList.length) return sessionsTodayList[0]
-    return fullMergedTimeline[0] || null
-  }, [sessionsTodayList, fullMergedTimeline])
-
-  const heroIsToday = useMemo(() => {
-    if (!heroSession) return false
-    const d = String(heroSession.sessionDate || '').match(/(\d{4}-\d{2}-\d{2})/)?.[1] || ''
-    return d === todayIso
-  }, [heroSession, todayIso])
+  const hasMoreTimeline = fullMergedTimeline.length > timelineCap
 
   const headerOperational = useMemo(
     () => formatHeaderOperationalWhen(fullMergedTimeline, todayIso),
@@ -201,17 +253,6 @@ const BatchWorkspacePage = () => {
 
   const primaryAttendanceId =
     operationalFocus.primarySession?.sessionId || operationalFocus.primarySession?.id
-
-  const coachLabelForSession = useCallback(
-    (row) => {
-      const fromRow = row?.coachName ?? row?.coach_name
-      if (fromRow && String(fromRow).trim()) return String(fromRow).trim()
-      const c = selectedBatch?.coachName ?? selectedBatch?.coach_name
-      if (c && String(c).trim()) return String(c).trim()
-      return null
-    },
-    [selectedBatch],
-  )
 
   /** Lightweight same-day status — not a dashboard; bridges the gap after a session ends. */
   const scheduleContinuityLine = useMemo(() => {
@@ -239,8 +280,7 @@ const BatchWorkspacePage = () => {
     const formData = new FormData(settingsFormRef.current)
     saveBatchSettings(batchId, {
       name: String(formData.get('name') || ''),
-      location: String(formData.get('location') || ''),
-      coachName: String(formData.get('coachName') || ''),
+      leadCoachUserId: leadCoachUserId ? leadCoachUserId : null,
     })
   }
 
@@ -268,6 +308,11 @@ const BatchWorkspacePage = () => {
                 {headerOperational.emptyMessage}
               </div>
             )}
+            {scheduleContinuityLine ? (
+              <div className="onrep-batch-header__status onrep-type-muted text-break mt-2">
+                {scheduleContinuityLine}
+              </div>
+            ) : null}
             <div className="onrep-batch-header__tertiary-block">
               {primaryPlaceSingle ? (
                 <div className="onrep-batch-header__tertiary-line text-break">{primaryPlaceSingle}</div>
@@ -329,45 +374,6 @@ const BatchWorkspacePage = () => {
       <CTabContent>
         <CTabPane visible={activeTab === 'schedule'}>
           <div className="onrep-batch-ops-stack">
-            <CCard className="mb-3 border-0 onrep-surface-a onrep-surface-a--accent onrep-batch-ops-hero shadow-none">
-              <CCardBody className="py-4 px-3 px-md-4">
-                {loading ? <CSpinner /> : null}
-                {!loading && scheduleContinuityLine ? (
-                  <div className="onrep-type-muted mb-3">{scheduleContinuityLine}</div>
-                ) : null}
-                {!loading && heroSession ? (
-                  <>
-                    <div className="onrep-type-label mb-2">
-                      {heroIsToday ? 'Session today' : 'Next session'}
-                    </div>
-                    <div className="onrep-type-hero">
-                      {formatOperationalSessionRange(
-                        heroSession.sessionDate,
-                        heroSession.startTime,
-                        heroSession.endTime ?? heroSession.end_time,
-                        todayIso,
-                      )}
-                    </div>
-                    {(heroSession.placeName || heroSession.location || primaryPlaceSingle) && (
-                      <div className="onrep-type-meta mt-2">
-                        {stripDemoSuffix(
-                          heroSession.placeName || heroSession.location || primaryPlaceSingle || '',
-                        )}
-                      </div>
-                    )}
-                    {coachLabelForSession(heroSession) ? (
-                      <div className="onrep-type-muted mt-3">
-                        Coach: <span className="text-body">{coachLabelForSession(heroSession)}</span>
-                      </div>
-                    ) : null}
-                  </>
-                ) : null}
-                {!loading && !heroSession ? (
-                  <div className="text-body-secondary">No upcoming session scheduled.</div>
-                ) : null}
-              </CCardBody>
-            </CCard>
-
             <CCard className="mb-3 border-0 onrep-surface-b shadow-none">
               <CCardBody className="py-3 px-3">
                 <div className="onrep-type-label mb-2">Regular schedule</div>
@@ -384,84 +390,46 @@ const BatchWorkspacePage = () => {
                 <span className="onrep-type-label">Upcoming sessions</span>
               </CCardHeader>
               <CCardBody className="pt-2 px-3">
-                {classesLoading && !visibleTimeline.length ? <CSpinner size="sm" /> : null}
-                {!classesLoading && !visibleTimeline.length ? (
+                {classesLoading && !compactTimeline.length ? <CSpinner size="sm" /> : null}
+                {!classesLoading && !compactTimeline.length ? (
                   <div className="small text-body-secondary py-2">Nothing scheduled in view.</div>
                 ) : null}
-                {visibleTimeline.map((row, idx) => {
-                  const prev = visibleTimeline[idx - 1]
+                {compactTimeline.map((row) => {
                   const sid = row.sessionId || row.id
                   const rowDate =
                     String(row.sessionDate || '').match(/(\d{4}-\d{2}-\d{2})/)?.[1] || ''
                   const isToday = rowDate === todayIso
-                  const divider = showTomorrowDivider(prev, row, todayIso)
                   const canStartToday = isToday && !row.attendanceMarked
-                  const sessionCta = canStartToday ? 'Start session' : 'View session'
-                  const whenLine = formatOperationalSessionRange(
-                    row.sessionDate,
-                    row.startTime,
-                    row.endTime ?? row.end_time,
-                    todayIso,
-                  )
                   return (
-                    <React.Fragment key={sid || idx}>
-                      {divider ? (
-                        <div className="onrep-batch-timeline-divider small text-body-secondary pt-2 pb-1">
-                          Tomorrow
-                        </div>
-                      ) : null}
-                      <div
-                        className={[
-                          'onrep-batch-timeline-row d-flex flex-column flex-sm-row justify-content-between gap-2 gap-sm-3 align-items-start align-items-sm-center',
-                          isToday ? 'onrep-batch-timeline-row--today' : '',
-                          !isToday ? 'onrep-batch-timeline-row--later' : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                      >
-                        <div className="min-w-0">
-                          <div className="onrep-batch-timeline-when">
-                            {whenLine}
-                            {row.isExtraSession ? (
-                              <span className="text-body-secondary fw-normal"> · Extra</span>
-                            ) : null}
-                          </div>
-                          <div className="onrep-type-muted text-truncate">
-                            {stripDemoSuffix(
-                              row.placeName || row.location || primaryPlaceSingle || '',
-                            ) || ''}
-                          </div>
-                        </div>
-                        {sid ? (
-                          <CButton
-                            as={Link}
-                            size="sm"
-                            color="primary"
-                            variant="outline"
-                            className="flex-shrink-0 align-self-stretch align-self-sm-center"
-                            to={`/coach/attendance/class/${encodeURIComponent(sid)}`}
-                          >
-                            {sessionCta}
-                          </CButton>
-                        ) : null}
-                      </div>
-                    </React.Fragment>
+                    <CompactSessionRow
+                      key={sid || row.sessionDate}
+                      row={row}
+                      todayIso={todayIso}
+                      placeFallback={primaryPlaceSingle || ''}
+                      openLabel={canStartToday ? 'Start' : 'Open'}
+                      attendancePath={
+                        sid
+                          ? `/coach/attendance/class/${encodeURIComponent(sid)}`
+                          : undefined
+                      }
+                    />
                   )
                 })}
-                {fullMergedTimeline.length > 6 ? (
-                  <CButton
-                    color="link"
-                    className="px-0 mt-2"
-                    onClick={() => setTimelineExpanded((e) => !e)}
-                  >
-                    {timelineExpanded ? 'Show fewer' : 'Show more'}
-                  </CButton>
+                {hasMoreTimeline ? (
+                  <div className="mt-3 pt-2 border-top border-light-subtle">
+                    <Link
+                      to={schedulePageHref}
+                      className="small text-primary text-decoration-none fw-semibold"
+                    >
+                      View all upcoming sessions
+                    </Link>
+                  </div>
                 ) : null}
               </CCardBody>
             </CCard>
 
             <div className="d-flex justify-content-end mb-4">
-              <CButton color="primary" variant="outline" as={Link} to={schedulePageHref}>
+              <CButton color="link" className="text-decoration-none px-0" as={Link} to={schedulePageHref}>
                 Open full schedule →
               </CButton>
             </div>
@@ -541,8 +509,37 @@ const BatchWorkspacePage = () => {
                     />
                   </CCol>
                   <CCol md={6}>
-                    <CFormLabel>Lead coach / instructor</CFormLabel>
-                    <CFormInput name="coachName" defaultValue={selectedBatch?.coachName || ''} />
+                    <CFormLabel htmlFor="batch-lead-coach">Lead coach / instructor</CFormLabel>
+                    {directoryLoading ? (
+                      <div className="py-2">
+                        <CSpinner size="sm" />
+                      </div>
+                    ) : (
+                      <>
+                        <CFormSelect
+                          id="batch-lead-coach"
+                          aria-label="Lead coach or instructor"
+                          value={leadCoachUserId}
+                          onChange={(e) => setLeadCoachUserId(e.target.value)}
+                        >
+                          <option value="">Not assigned</option>
+                          {assignableCoaches.map((c) => (
+                            <option key={c.id} value={String(c.id)}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </CFormSelect>
+                        {assignableCoaches.length === 0 ? (
+                          <div className="small text-body-secondary mt-1">
+                            No coach accounts yet. Invite coaches under Owner → Coaches.
+                          </div>
+                        ) : (
+                          <div className="small text-body-secondary mt-1">
+                            Set an academy-wide default under Academy activities (owner).
+                          </div>
+                        )}
+                      </>
+                    )}
                   </CCol>
                 </CRow>
               </form>

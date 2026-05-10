@@ -17,6 +17,7 @@ export const API_CLASSIFICATION = Object.freeze({
     '/devices/',
     '/reconciliation/',
     '/academy/',
+    '/coaches',
     '/dashboard/owner-',
     '/dashboard/coach-summary',
     '/dashboard/summary',

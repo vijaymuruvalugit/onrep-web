@@ -7,6 +7,8 @@ import {
   CCardBody,
   CCardHeader,
   CCol,
+  CFormLabel,
+  CFormSelect,
   CRow,
   CSpinner,
 } from '@coreui/react'
@@ -19,6 +21,8 @@ import {
 import { bootstrapWorkspace } from '../../workspace/slices/workspaceSlice'
 import { getWorkspaceDisplay } from '../../../core/activityWorkspace/activityDisplay'
 import { getRemoveActivityConsequenceMessage } from '../../../core/activityWorkspace/activityDisableWarnings'
+import { listStaffCoaches } from '../../directory/api/directoryApi'
+import { getCoachUiConfig, patchCoachUiConfig } from '../../academy/api/academyUiApi'
 
 export default function ManageActivitiesPage() {
   const dispatch = useDispatch()
@@ -31,6 +35,12 @@ export default function ManageActivitiesPage() {
   const [error, setError] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [addingType, setAddingType] = useState(null)
+
+  const [staffCoaches, setStaffCoaches] = useState([])
+  const [coachUiConfig, setCoachUiConfig] = useState({})
+  const [leadStaffLoading, setLeadStaffLoading] = useState(true)
+  const [defaultLeadCoachUserId, setDefaultLeadCoachUserId] = useState('')
+  const [savingLeadDefault, setSavingLeadDefault] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -49,6 +59,55 @@ export default function ManageActivitiesPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!isOwner) return
+    let cancelled = false
+    setLeadStaffLoading(true)
+    Promise.all([listStaffCoaches(), getCoachUiConfig()])
+      .then(([coaches, cfg]) => {
+        if (cancelled) return
+        setStaffCoaches(Array.isArray(coaches) ? coaches : [])
+        const c = cfg && typeof cfg === 'object' ? cfg : {}
+        setCoachUiConfig(c)
+        const d = c.defaultLeadCoachUserId
+        setDefaultLeadCoachUserId(d ? String(d) : '')
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStaffCoaches([])
+          setCoachUiConfig({})
+          setDefaultLeadCoachUserId('')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLeadStaffLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOwner])
+
+  const assignableLeadStaff = useMemo(() => {
+    const roles = new Set(['coach', 'academy_owner', 'admin'])
+    return staffCoaches.filter((c) => roles.has(String(c.role).toLowerCase()))
+  }, [staffCoaches])
+
+  const saveDefaultLeadCoach = async () => {
+    setSavingLeadDefault(true)
+    try {
+      const next = await patchCoachUiConfig({
+        defaultLeadCoachUserId: defaultLeadCoachUserId ? defaultLeadCoachUserId : null,
+      })
+      setCoachUiConfig(next && typeof next === 'object' ? next : {})
+      const d = next?.defaultLeadCoachUserId
+      setDefaultLeadCoachUserId(d ? String(d) : '')
+    } catch (e) {
+      window.alert(e?.message || 'Could not save default coach.')
+    } finally {
+      setSavingLeadDefault(false)
+    }
+  }
 
   const enabledTypes = useMemo(
     () => new Set(items.map((a) => String(a.type || '').toLowerCase())),
@@ -199,6 +258,50 @@ export default function ManageActivitiesPage() {
                 )}
               </>
             ) : null}
+          </CCardBody>
+        </CCard>
+
+        <CCard className="mb-4">
+          <CCardHeader>
+            <strong>Default lead coach</strong>
+            <div className="small text-body-secondary">
+              New batches start with this person as lead when one is set. You can still change each batch under Batches →
+              Settings.
+            </div>
+          </CCardHeader>
+          <CCardBody>
+            {leadStaffLoading ? (
+              <CSpinner />
+            ) : (
+              <>
+                <CFormLabel htmlFor="academy-default-lead-coach">Staff member</CFormLabel>
+                <CFormSelect
+                  id="academy-default-lead-coach"
+                  aria-label="Default lead coach for new batches"
+                  value={defaultLeadCoachUserId}
+                  onChange={(e) => setDefaultLeadCoachUserId(e.target.value)}
+                  className="mb-3"
+                >
+                  <option value="">None</option>
+                  {assignableLeadStaff.map((c) => (
+                    <option key={c.id} value={String(c.id)}>
+                      {c.name}
+                      {String(c.role).toLowerCase() === 'coach'
+                        ? ''
+                        : ` (${String(c.role).replace('academy_owner', 'owner')})`}
+                    </option>
+                  ))}
+                </CFormSelect>
+                <CButton
+                  color="primary"
+                  size="sm"
+                  disabled={savingLeadDefault}
+                  onClick={() => void saveDefaultLeadCoach()}
+                >
+                  {savingLeadDefault ? 'Saving…' : 'Save default'}
+                </CButton>
+              </>
+            )}
           </CCardBody>
         </CCard>
       </CCol>

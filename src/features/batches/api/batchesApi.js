@@ -48,7 +48,14 @@ function normalizeBatch(batch) {
     studentIds: batch.studentIds ?? batch.student_ids ?? [],
     activeStudentsCount: batch.activeStudentsCount ?? batch.active_students_count ?? 0,
     activeStudentIds: batch.activeStudentIds ?? batch.active_student_ids ?? [],
-    coachName: batch.coachName ?? batch.coach_name ?? null,
+    leadCoachUserId: batch.leadCoachUserId ?? batch.lead_coach_user_id ?? null,
+    leadCoachName: batch.leadCoachName ?? batch.lead_coach_name ?? null,
+    coachName:
+      batch.coachName ??
+      batch.coach_name ??
+      batch.leadCoachName ??
+      batch.lead_coach_name ??
+      null,
     location: batch.location ?? batch.place_name ?? batch.placeName ?? null,
     activeScheduleCount,
     upcomingSessionsCount,
