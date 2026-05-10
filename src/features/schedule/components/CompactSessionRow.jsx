@@ -6,6 +6,7 @@ import {
   normalizeSessionDateYmd,
 } from '../../classes/utils/sessionDisplay'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
+import { sessionTypeLabel } from '../constants/sessionTypes'
 
 function shortPlaceLabel(raw, maxLen = 42) {
   const s = stripDemoSuffix(String(raw || '').trim())
@@ -37,8 +38,11 @@ export default function CompactSessionRow({
   const rawPlace = row.placeName || row.location || placeFallback
   const place = shortPlaceLabel(rawPlace)
   const sid = row.sessionId || row.id
-  const title = row.title && String(row.title).trim()
+  const displayTitle =
+    (row.title && String(row.title).trim()) || (row.batchName && String(row.batchName).trim()) || ''
+  const typeLabel = sessionTypeLabel(row.sessionType ?? row.session_type)
   const hasActual = Boolean(row.actualStartTime || row.actualEndTime)
+  const attendanceBlocked = row.attendanceEnabled === false || row.attendance_enabled === false
   return (
     <div
       className={[
@@ -54,14 +58,26 @@ export default function CompactSessionRow({
           <div className="onrep-session-row__date onrep-type-level2">{dateLine}</div>
           <div className="onrep-session-row__meta onrep-type-muted">
             {place ? <span className="onrep-session-row__place">{place}</span> : null}
-            {row.isExtraSession ? (
+            {row.isExtraSession && !row.isOneTime ? (
               <span className="onrep-session-row__extra">{place ? ' · ' : ''}Extra</span>
             ) : null}
           </div>
-          {title ? (
-            <div className="onrep-session-row__title onrep-type-level2 text-truncate">{title}</div>
+          {displayTitle ? (
+            <div className="onrep-session-row__title onrep-type-level2 text-truncate">
+              {displayTitle}
+            </div>
           ) : null}
           <div className="onrep-session-row__chips d-flex flex-wrap gap-1 align-items-center">
+            {row.isOneTime ? (
+              <CBadge color="primary" className="rounded-pill fw-normal px-2 py-0 opacity-75">
+                One-time
+              </CBadge>
+            ) : null}
+            {typeLabel ? (
+              <CBadge color="light" className="text-dark border rounded-pill fw-normal px-2 py-0">
+                {typeLabel}
+              </CBadge>
+            ) : null}
             {row.isCancelled ? (
               <CBadge color="secondary" className="rounded-pill fw-normal px-2 py-0">
                 Cancelled
@@ -75,7 +91,7 @@ export default function CompactSessionRow({
           </div>
         </div>
         <div className="onrep-session-row__actions">
-          {canStartToday && attendancePath ? (
+          {canStartToday && attendancePath && !attendanceBlocked ? (
             <CButton
               as={Link}
               to={attendancePath}

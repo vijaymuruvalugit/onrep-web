@@ -469,10 +469,15 @@ export default function SessionDetailDrawer({
             </section>
 
             <section className="mt-auto pt-2 border-top border-light-subtle">
-              {attendancePath ? (
+              {attendancePath && row.attendanceEnabled !== false ? (
                 <CButton color="primary" className="w-100 mb-2" as={Link} to={attendancePath}>
                   Open attendance
                 </CButton>
+              ) : null}
+              {row.attendanceEnabled === false ? (
+                <div className="small text-body-secondary mb-2">
+                  Attendance tracking is off for this session.
+                </div>
               ) : null}
               <div className="small text-body-secondary">
                 Scheduled window:{' '}

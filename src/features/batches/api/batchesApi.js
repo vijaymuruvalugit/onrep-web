@@ -200,6 +200,11 @@ export const batchesApi = {
     return data || {}
   },
 
+  async createOneTimeSession(payload) {
+    const { data } = await http.post('/sessions/one-time', payload)
+    return data || {}
+  },
+
   async patchSession(sessionId, payload) {
     const { data } = await http.patch(`/sessions/${encodeURIComponent(sessionId)}`, payload)
     return data || {}

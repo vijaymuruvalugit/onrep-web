@@ -44,4 +44,13 @@
     border-radius: var(--onrep-radius-md);
     box-shadow: var(--onrep-shadow-sm);
   }
+
+  .schedule-page__session-filters .btn {
+    border-radius: var(--onrep-radius-md);
+  }
+}
+
+.schedule-batch-switcher__scroll {
+  max-height: 280px;
+  overflow-y: auto;
 }

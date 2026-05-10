@@ -30,6 +30,20 @@ export function normalizeTrainingSessionRow(row) {
     timeOverrideReason: row.timeOverrideReason ?? row.time_override_reason ?? null,
     attendanceMarked: Boolean(row.attendanceMarked ?? row.attendance_marked),
     expectedStudentCount: row.expectedStudentCount ?? row.expected_student_count ?? null,
+    sessionType: row.sessionType ?? row.session_type ?? null,
+    isOneTime: Boolean(row.isOneTime ?? row.is_one_time),
+    visibilityEnabled:
+      row.visibilityEnabled !== undefined
+        ? Boolean(row.visibilityEnabled)
+        : row.visibility_enabled !== undefined
+          ? Boolean(row.visibility_enabled)
+          : true,
+    attendanceEnabled:
+      row.attendanceEnabled !== undefined
+        ? Boolean(row.attendanceEnabled)
+        : row.attendance_enabled !== undefined
+          ? Boolean(row.attendance_enabled)
+          : true,
     /** Heuristic: batch session without a schedule link is usually an extra / manual instance */
     isExtraSession: Boolean(batchId) && !scheduleId,
     updatedAt: row.updatedAt ?? row.updated_at ?? null,

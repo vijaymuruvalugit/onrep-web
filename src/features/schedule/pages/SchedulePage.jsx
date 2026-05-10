@@ -10,7 +10,6 @@ import {
   CCollapse,
   CCol,
   CFormLabel,
-  CFormSelect,
   CSpinner,
 } from '@coreui/react'
 import { useBatches } from '../../batches/hooks/useBatches'
@@ -18,6 +17,8 @@ import usePlaces from '../../places/hooks/usePlaces'
 import { useSchedule } from '../hooks/useSchedule'
 import ScheduleBuilderCard from '../components/ScheduleBuilderCard'
 import ScheduleAdvancedAccordion from '../components/ScheduleAdvancedAccordion'
+import ScheduleBatchSwitcher from '../components/ScheduleBatchSwitcher'
+import CreateOneTimeSessionDrawer from '../components/CreateOneTimeSessionDrawer'
 import SessionDetailDrawer from '../components/SessionDetailDrawer'
 import CompactSessionRow from '../components/CompactSessionRow'
 import { formatDaysOfWeekList, formatTimeRange } from '../../places/utils/formatScheduleDays'
@@ -64,6 +65,10 @@ const SchedulePage = () => {
   const [showAllUpcoming, setShowAllUpcoming] = useState(false)
   const [drawerSessionId, setDrawerSessionId] = useState(null)
   const [drawerSeedRow, setDrawerSeedRow] = useState(null)
+  const [createOneTimeOpen, setCreateOneTimeOpen] = useState(false)
+  const [sessionKindFilter, setSessionKindFilter] = useState(
+    () => /** @type {'all' | 'regular' | 'one_time' | 'cancelled'} */ ('all'),
+  )
 
   const todayIso = todayIsoLocal()
 
@@ -174,16 +179,25 @@ const SchedulePage = () => {
     )
   }, [today, effectiveBatchId])
 
-  const mergedTimeline = useMemo(
+  const mergedTimelineRaw = useMemo(
     () =>
       mergeBatchSessionInstances(effectiveBatchId, todayBatchClasses, sessionRows, todayIso, 80),
     [effectiveBatchId, todayBatchClasses, sessionRows, todayIso],
   )
 
+  const mergedTimeline = useMemo(() => {
+    return mergedTimelineRaw.filter((r) => {
+      if (sessionKindFilter === 'cancelled') return r.isCancelled
+      if (sessionKindFilter === 'one_time') return r.isOneTime && !r.isCancelled
+      if (sessionKindFilter === 'regular') return !r.isOneTime && !r.isCancelled
+      return true
+    })
+  }, [mergedTimelineRaw, sessionKindFilter])
+
   const skippableSessionId = useMemo(() => {
-    const row = firstNonCancelledSession(mergedTimeline)
+    const row = firstNonCancelledSession(mergedTimelineRaw)
     return row?.sessionId || row?.id || ''
-  }, [mergedTimeline])
+  }, [mergedTimelineRaw])
 
   const hasSkippableSession = Boolean(skippableSessionId)
 
@@ -197,15 +211,15 @@ const SchedulePage = () => {
   }, [items, selectedBatch])
 
   const nextSummaryLine = useMemo(() => {
-    if (!mergedTimeline.length) return 'No upcoming sessions ahead.'
-    const row = firstNonCancelledSession(mergedTimeline) || mergedTimeline[0]
+    if (!mergedTimelineRaw.length) return 'No upcoming sessions ahead.'
+    const row = firstNonCancelledSession(mergedTimelineRaw) || mergedTimelineRaw[0]
     return `Next · ${formatOperationalSessionRange(
       row.sessionDate,
       row.startTime,
       row.endTime ?? row.end_time,
       todayIso,
     )}`
-  }, [mergedTimeline, todayIso])
+  }, [mergedTimelineRaw, todayIso])
 
   const displayedUpcoming = useMemo(() => {
     if (showAllUpcoming || mergedTimeline.length <= upcomingCap) return mergedTimeline
@@ -221,11 +235,10 @@ const SchedulePage = () => {
     )
   }, [items, selectedBatch])
 
-  const handleBatchChange = (e) => {
-    const id = e.target.value
+  const handleBatchChange = (batchId) => {
     setSearchParams((prev) => {
       const n = new URLSearchParams(prev)
-      n.set('batchId', id)
+      n.set('batchId', batchId)
       return n
     })
     setShowAllUpcoming(false)
@@ -246,20 +259,14 @@ const SchedulePage = () => {
           <div className="d-flex flex-column gap-2">
             <strong className="schedule-page__toolbar-title d-block">Schedule</strong>
             <div className="row g-2 align-items-end">
-              <CCol xs={12} md={7} lg={6}>
+              <CCol xs={12} md={8} lg={7}>
                 <CFormLabel className="mb-0 small text-body-secondary">Batch</CFormLabel>
-                <CFormSelect
+                <ScheduleBatchSwitcher
+                  batches={batches}
+                  activities={activities}
                   value={effectiveBatchId || ''}
                   onChange={handleBatchChange}
-                  disabled={!batches.length}
-                  aria-label="Select batch"
-                >
-                  {batches.map((b) => (
-                    <option key={b.id || b._id} value={b.id || b._id}>
-                      {stripDemoSuffix(b.name || '') || 'Untitled batch'}
-                    </option>
-                  ))}
-                </CFormSelect>
+                />
               </CCol>
             </div>
           </div>
@@ -267,8 +274,37 @@ const SchedulePage = () => {
       </CCard>
 
       <section className="mb-5 schedule-page__section-upcoming">
-        <div className="d-flex justify-content-between align-items-baseline gap-2 mb-3 flex-wrap">
-          <h2 className="schedule-page__section-title mb-0">Upcoming sessions</h2>
+        <div className="d-flex justify-content-between align-items-start gap-3 mb-3 flex-wrap">
+          <h2 className="schedule-page__section-title mb-0 align-self-center">Upcoming sessions</h2>
+          <div className="d-flex flex-wrap gap-2 align-items-center ms-auto">
+            <div className="schedule-page__session-filters btn-group btn-group-sm" role="group">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'regular', label: 'Regular' },
+                { key: 'one_time', label: 'One-time' },
+                { key: 'cancelled', label: 'Cancelled' },
+              ].map(({ key, label }) => (
+                <CButton
+                  key={key}
+                  color={sessionKindFilter === key ? 'primary' : 'light'}
+                  size="sm"
+                  variant={sessionKindFilter === key ? undefined : 'outline'}
+                  className="px-2"
+                  onClick={() => setSessionKindFilter(key)}
+                >
+                  {label}
+                </CButton>
+              ))}
+            </div>
+            <CButton
+              color="primary"
+              size="sm"
+              disabled={!effectiveBatchId}
+              onClick={() => setCreateOneTimeOpen(true)}
+            >
+              + One-time session
+            </CButton>
+          </div>
         </div>
         <CCard className="schedule-page__upcoming-card onrep-surface-a border-0">
           <CCardBody className="py-3 px-3 px-md-4">
@@ -290,7 +326,11 @@ const SchedulePage = () => {
               </div>
             ) : null}
             {!sessionsLoading && !mergedTimeline.length ? (
-              <div className="onrep-type-muted small">No upcoming sessions in this window.</div>
+              <div className="onrep-type-muted small">
+                {mergedTimelineRaw.length
+                  ? 'No sessions match this filter.'
+                  : 'No upcoming sessions in this window.'}
+              </div>
             ) : null}
             {!sessionsLoading &&
               displayedUpcoming.map((row) => {
@@ -442,6 +482,14 @@ const SchedulePage = () => {
           />
         </div>
       </section>
+
+      <CreateOneTimeSessionDrawer
+        visible={createOneTimeOpen}
+        batch={selectedBatch}
+        places={places}
+        onClose={() => setCreateOneTimeOpen(false)}
+        onCreated={refreshAll}
+      />
 
       <SessionDetailDrawer
         key={drawerSessionId || 'closed'}

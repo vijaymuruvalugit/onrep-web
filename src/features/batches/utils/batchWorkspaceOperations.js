@@ -62,6 +62,9 @@ export function mergeBatchSessionInstances(
     const da = String(a.sessionDate || '').slice(0, 10)
     const db = String(b.sessionDate || '').slice(0, 10)
     if (da !== db) return da.localeCompare(db)
+    const oa = a.isOneTime ? 1 : 0
+    const ob = b.isOneTime ? 1 : 0
+    if (ob !== oa) return ob - oa
     return String(a.startTime || '').localeCompare(String(b.startTime || ''))
   })
 
