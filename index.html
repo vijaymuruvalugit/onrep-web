@@ -21,6 +21,53 @@
       You need to enable JavaScript to run this app
     </noscript>
     <div id="root"></div>
+    <script>
+      // Razorpay payment-return rewriter.
+      //
+      // Razorpay Payment Links append their result params
+      // (razorpay_payment_id, razorpay_payment_link_id, razorpay_signature, ...)
+      // to the callback URL using a standard URL parser. Per RFC, query goes
+      // BEFORE the fragment, and in practice the hash fragment is frequently
+      // dropped on redirect. Because we use HashRouter, that lands the user on
+      // `/?razorpay_*=...` with no hash route — the React app then falls
+      // through to the catch-all and bounces to /auth/login.
+      //
+      // This shim runs BEFORE React mounts. If we detect Razorpay return
+      // params at the root URL with no hash route already present, we restore
+      // the hash route to the subscription payment-processing page (which
+      // polls /auth/me and routes to next after activation).
+      //
+      // Idempotent: only triggers when there's no usable hash route and
+      // Razorpay params are present.
+      (function restoreRazorpayHash() {
+        try {
+          var hash = window.location.hash || '';
+          // Already on a hash route — nothing to do. Covers the well-behaved
+          // case where the hash survived the redirect.
+          if (hash && hash.length > 1 && hash.charAt(1) === '/') return;
+
+          var search = window.location.search || '';
+          if (!search) return;
+
+          // Razorpay always sends at least these two params on success.
+          var isRzpReturn = /[?&]razorpay_payment_(id|link_id)=/.test(search);
+          if (!isRzpReturn) return;
+
+          // Build the hash-routed target. We deliberately do NOT carry the
+          // razorpay_* params onto the React route — webhooks are the
+          // authoritative activation path; the processing page only polls
+          // /auth/me. `next` is recovered by the processing page from its
+          // own search params (we have no way to recover it here since it
+          // got dropped along with the fragment), and falls back to the
+          // role-based dashboard.
+          var origin = window.location.origin;
+          var path = window.location.pathname || '/';
+          window.location.replace(origin + path + '#/subscription/payment-processing');
+        } catch (e) {
+          // Never block app boot — fall through to the normal React route.
+        }
+      })();
+    </script>
     <script type="module" src="/src/index.jsx"></script>
   </body>
 </html>

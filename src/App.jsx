@@ -155,6 +155,29 @@ function SubscriptionEventRefresher() {
 }
 
 /**
+ * Root (`/`) route redirector.
+ *
+ * The exact `/` route is a fallback — most authenticated traffic enters the
+ * app via `/coach/dashboard`, `/owner/...`, `/parent/...` etc. (matched by
+ * the `/*` DefaultLayout route). Anyone hitting `/` exactly is either:
+ *   1. Unauthenticated — send to `/auth/login`.
+ *   2. Authenticated but landed here via an external redirect that lost the
+ *      hash fragment (most commonly the Razorpay payment return — see the
+ *      pre-React shim in `index.html`). Send them to `/coach/dashboard`,
+ *      which is role-aware via DefaultLayout + SubscriptionGuard.
+ *
+ * Never unconditionally bounce to login while authenticated — that strands
+ * paying users on the login screen after returning from Razorpay if the
+ * shim somehow missed the rewrite.
+ */
+function RootRedirect({ isRestored }) {
+  const isAuthenticated = useSelector((s) => s.auth.isAuthenticated)
+  if (!isRestored) return <CSpinner color="primary" />
+  if (isAuthenticated) return <Navigate to="/coach/dashboard" replace />
+  return <Navigate to="/auth/login" replace />
+}
+
+/**
  * Main Application Component
  *
  * Manages application-wide concerns:
@@ -237,12 +260,7 @@ const App = () => {
             </Route>
           </Route>
 
-          <Route
-            path="/"
-            element={
-              isRestored ? <Navigate to="/auth/login" replace /> : <CSpinner color="primary" />
-            }
-          />
+          <Route path="/" element={<RootRedirect isRestored={isRestored} />} />
         </Routes>
       </Suspense>
     </HashRouter>
