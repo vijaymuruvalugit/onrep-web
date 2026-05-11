@@ -31,6 +31,34 @@ const RequireAuth = React.lazy(() => import('./layouts/RequireAuth'))
 
 import { publicRoutes } from './routes/publicRoutes'
 import { restoreSession } from './features/auth/slices/authSlice'
+import { registerSubscriptionRequiredHandler } from './api/http'
+
+/**
+ * Phase 2.2 — global paywall redirector.
+ *
+ * The http response interceptor calls `subscriptionRequiredHandler` whenever
+ * a 403 SUBSCRIPTION_REQUIRED bubbles up. Plain `window.location.hash =` keeps
+ * this decoupled from `react-router` (so the handler can fire from anywhere,
+ * including stores and lazy chunks). We skip the redirect if we're already
+ * on the paywall to avoid loops.
+ */
+function SubscriptionPaywallBinder() {
+  useEffect(() => {
+    registerSubscriptionRequiredHandler(() => {
+      try {
+        const target = '#/coach/billing/paywall'
+        if (typeof window === 'undefined') return
+        if (window.location.hash.startsWith('#/coach/billing/paywall')) return
+        if (window.location.hash.startsWith('#/coach/billing')) return
+        window.location.hash = target
+      } catch (e) {
+        console.warn('[paywall] redirect failed', e?.message)
+      }
+    })
+    return () => registerSubscriptionRequiredHandler(null)
+  }, [])
+  return null
+}
 
 /**
  * Main Application Component
@@ -80,6 +108,7 @@ const App = () => {
 
   return (
     <HashRouter>
+      <SubscriptionPaywallBinder />
       <Suspense
         fallback={
           <div className="pt-3 text-center">

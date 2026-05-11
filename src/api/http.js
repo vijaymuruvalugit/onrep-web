@@ -46,10 +46,22 @@ function debugWorkspaceRequest({ pathForRules, fullUrl, skipHeader, activityId, 
 }
 
 let activityForbiddenHandler = null
+let subscriptionRequiredHandler = null
 
 /** Registered from store setup to avoid http ↔ workspace circular imports. */
 export function registerActivityForbiddenHandler(fn) {
   activityForbiddenHandler = typeof fn === 'function' ? fn : null
+}
+
+/**
+ * Phase 2.2 global paywall trigger. When any API returns
+ * `403 { code: 'SUBSCRIPTION_REQUIRED' }`, the registered handler decides how
+ * to navigate (typically `history.push('/coach/billing/paywall')`).
+ *
+ * Registered from `App.jsx` so that http stays decoupled from react-router.
+ */
+export function registerSubscriptionRequiredHandler(fn) {
+  subscriptionRequiredHandler = typeof fn === 'function' ? fn : null
 }
 
 function maybeDispatchWorkspaceFault(errorBody, status) {
@@ -136,6 +148,16 @@ http.interceptors.response.use(
 
     if (status === 401 && storeRef && forceLogoutAction) {
       storeRef.dispatch(forceLogoutAction('unauthorized'))
+    } else if (
+      status === 403 &&
+      (body?.code === 'SUBSCRIPTION_REQUIRED' || normalized?.code === 'SUBSCRIPTION_REQUIRED') &&
+      subscriptionRequiredHandler
+    ) {
+      try {
+        subscriptionRequiredHandler(body || normalized)
+      } catch (handlerError) {
+        console.error('[http] subscription required handler failed', handlerError)
+      }
     } else {
       maybeDispatchWorkspaceFault(body, status)
     }

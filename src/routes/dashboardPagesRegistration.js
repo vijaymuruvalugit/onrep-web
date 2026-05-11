@@ -16,6 +16,21 @@ const ParentPaymentHistoryPage = React.lazy(
   () => import('../features/payments/pages/ParentPaymentHistoryPage'),
 )
 const CoachPaymentsPage = React.lazy(() => import('../features/payments/pages/CoachPaymentsPage'))
+const BillingPage = React.lazy(() => import('../features/payments/pages/BillingPage'))
+const PaywallPage = React.lazy(() => import('../features/payments/pages/PaywallPage'))
+const PaymentSettingsPage = React.lazy(
+  () => import('../features/payments/pages/PaymentSettingsPage'),
+)
+const PayoutDetailsPage = React.lazy(
+  () => import('../features/payments/pages/PayoutDetailsPage'),
+)
+const OpsWebhooksPage = React.lazy(() => import('../features/payments/pages/OpsWebhooksPage'))
+const OpsCollectionsPage = React.lazy(
+  () => import('../features/payments/pages/OpsCollectionsPage'),
+)
+const OpsSettlementsPage = React.lazy(
+  () => import('../features/payments/pages/OpsSettlementsPage'),
+)
 const ParentNotificationsPage = React.lazy(
   () => import('../features/parent/pages/ParentNotificationsPage'),
 )
@@ -81,6 +96,13 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/coach/parents', component: ParentsOverviewPage },
   { path: '/coach/activities', component: ManageActivitiesPage },
   { path: '/coach/payments', component: CoachPaymentsPage },
+  { path: '/coach/payments/settings', component: PaymentSettingsPage },
+  { path: '/coach/payments/payout-details', component: PayoutDetailsPage },
+  { path: '/coach/billing', component: BillingPage },
+  { path: '/coach/billing/paywall', component: PaywallPage },
+  { path: '/ops/webhooks', component: OpsWebhooksPage },
+  { path: '/ops/collections', component: OpsCollectionsPage },
+  { path: '/ops/settlements', component: OpsSettlementsPage },
   { path: '/coach/onboarding/coaches', component: CoachInvitesPage },
   { path: '/onboarding/setup', component: OnboardingSetupPage },
   { path: '/onboarding/complete', component: OnboardingCompletePage },

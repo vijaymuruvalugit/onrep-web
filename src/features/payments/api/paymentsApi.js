@@ -85,6 +85,12 @@ export const paymentsApi = {
     return data || null
   },
 
+  /** Phase 1.5/3.2 post-redirect polling */
+  async getParentObligationStatus(obligationId) {
+    const { data } = await http.get(`/payments/parent/obligations/${obligationId}/status`)
+    return data || null
+  },
+
   async reportParentPaid({
     obligationId,
     amount,

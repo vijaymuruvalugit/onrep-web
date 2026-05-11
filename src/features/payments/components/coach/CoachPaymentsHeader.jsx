@@ -13,6 +13,7 @@ import {
   CRow,
   CSpinner,
 } from '@coreui/react'
+import { Link } from 'react-router-dom'
 import CIcon from '@coreui/icons-react'
 import { cilWallet } from '@coreui/icons'
 
@@ -64,6 +65,23 @@ const CoachPaymentsHeader = ({
           <p className="text-body-secondary small mb-0">
             Track fees, record payments, and confirm parent-reported payments.
           </p>
+        </CCol>
+        <CCol xs="auto" className="d-flex gap-2">
+          <Link to="/coach/payments/settings">
+            <CButton size="sm" color="secondary" variant="outline">
+              Payment settings
+            </CButton>
+          </Link>
+          <Link to="/coach/payments/payout-details">
+            <CButton size="sm" color="secondary" variant="outline">
+              Payout details
+            </CButton>
+          </Link>
+          <Link to="/coach/billing">
+            <CButton size="sm" color="primary" variant="outline">
+              Billing
+            </CButton>
+          </Link>
         </CCol>
       </CRow>
 
