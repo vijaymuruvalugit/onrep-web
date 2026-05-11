@@ -15,7 +15,7 @@
  */
 
 import React, { Suspense, useEffect } from 'react'
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { CSpinner } from '@coreui/react'
@@ -28,35 +28,129 @@ import './scss/examples.scss'
 // Containers
 const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
 const RequireAuth = React.lazy(() => import('./layouts/RequireAuth'))
+const SubscriptionShell = React.lazy(
+  () => import('./features/subscription/components/SubscriptionShell'),
+)
+const SubscriptionPaywallPage = React.lazy(
+  () => import('./features/subscription/pages/SubscriptionPaywallPage'),
+)
+const SubscriptionPaymentProcessingPage = React.lazy(
+  () => import('./features/subscription/pages/SubscriptionPaymentProcessingPage'),
+)
+const SubscriptionGuard = React.lazy(() => import('./features/auth/guards/SubscriptionGuard'))
 
 import { publicRoutes } from './routes/publicRoutes'
 import { restoreSession } from './features/auth/slices/authSlice'
 import { registerSubscriptionRequiredHandler } from './api/http'
+import { refreshSubscription } from './features/auth/subscriptionRefresh'
+import { sanitizeNext } from './features/auth/sanitizeNext'
 
 /**
- * Phase 2.2 — global paywall redirector.
+ * Global paywall redirector — 403 SUBSCRIPTION_REQUIRED interceptor.
  *
- * The http response interceptor calls `subscriptionRequiredHandler` whenever
- * a 403 SUBSCRIPTION_REQUIRED bubbles up. Plain `window.location.hash =` keeps
- * this decoupled from `react-router` (so the handler can fire from anywhere,
- * including stores and lazy chunks). We skip the redirect if we're already
- * on the paywall to avoid loops.
+ * Doctrine (CONTEXT/05):
+ *   1. Preferred path: `navigate('/subscription/paywall?next=…', { replace: true })`
+ *      so React Router stays in charge, layouts unmount cleanly, Redux state
+ *      remains coherent.
+ *   2. Fallback hard navigation `window.location.replace(...)` is reserved for
+ *      shell corruption (router not yet mounted, handler unregistered). It
+ *      bypasses React state cleanup and can mask future bugs.
+ *   3. Owner-only — coach/parent/student never see `/subscription/*` from a
+ *      403. They still get the standard 403 surface in the dashboard.
+ *   4. Force-refresh `/auth/me` post-redirect so the new `can_access_app`
+ *      shape is reflected (the guard also does this defensively).
+ *   5. Loop guard: if we are already on the paywall, skip the redirect.
  */
 function SubscriptionPaywallBinder() {
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+  const userRole = useSelector((s) => s.auth.user?.role)
+
   useEffect(() => {
     registerSubscriptionRequiredHandler(() => {
       try {
-        const target = '#/coach/billing/paywall'
         if (typeof window === 'undefined') return
-        if (window.location.hash.startsWith('#/coach/billing/paywall')) return
-        if (window.location.hash.startsWith('#/coach/billing')) return
-        window.location.hash = target
+        // Loop guard — already on the paywall / processing page.
+        if (window.location.hash.startsWith('#/subscription/')) return
+        // Owner-only redirect. Non-owners just see the 403 surface from the
+        // calling page; the backend coach gate already 403s appropriately.
+        if (userRole && userRole !== 'academy_owner') return
+
+        const currentHash = window.location.hash || ''
+        const currentPath = currentHash.startsWith('#') ? currentHash.slice(1) : ''
+        const cleanPath = currentPath.split('?')[0]
+        const safeNext = sanitizeNext(currentPath) // includes query
+        const nextQs = safeNext ? `?next=${encodeURIComponent(safeNext)}` : ''
+        const target = `/subscription/paywall${nextQs}`
+
+        // Force /auth/me refresh — the cached subscription is now stale.
+        refreshSubscription(dispatch, { force: true }).catch(() => {})
+
+        // Preferred: in-router navigate. Hard fallback only if the navigate
+        // handler is unavailable (e.g. mid-mount race).
+        try {
+          navigate(target, { replace: true })
+        } catch (navErr) {
+          // Shell-corruption fallback. Documented as last resort.
+          console.warn(
+            '[paywall] navigate replace failed; falling back to hard replace',
+            navErr?.message,
+          )
+          window.location.replace(`#${target}`)
+        }
+        // Avoid the dashboard route remaining the back-button target.
+        // (replace:true handles that for navigate; the hard fallback above
+        // uses location.replace for the same effect.)
+        void cleanPath
       } catch (e) {
         console.warn('[paywall] redirect failed', e?.message)
       }
     })
     return () => registerSubscriptionRequiredHandler(null)
-  }, [])
+  }, [dispatch, navigate, userRole])
+  return null
+}
+
+/**
+ * Centralized event-driven `refreshSubscription` triggers.
+ *
+ * Each event uses the 30s TTL (no force) — multi-tab focus churn / laptop
+ * wakeups must not hammer `/auth/me`. The processing page and 403 interceptor
+ * are the only sites that force-bypass the TTL.
+ */
+function SubscriptionEventRefresher() {
+  const dispatch = useDispatch()
+  const isAuthenticated = useSelector((s) => s.auth.isAuthenticated)
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined
+    function onVisible() {
+      if (typeof document !== 'undefined' && document.hidden) return
+      refreshSubscription(dispatch).catch(() => {})
+    }
+    function onOnline() {
+      refreshSubscription(dispatch).catch(() => {})
+    }
+    function onFocus() {
+      refreshSubscription(dispatch).catch(() => {})
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisible)
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', onOnline)
+      window.addEventListener('focus', onFocus)
+    }
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisible)
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', onOnline)
+        window.removeEventListener('focus', onFocus)
+      }
+    }
+  }, [dispatch, isAuthenticated])
   return null
 }
 
@@ -109,6 +203,7 @@ const App = () => {
   return (
     <HashRouter>
       <SubscriptionPaywallBinder />
+      <SubscriptionEventRefresher />
       <Suspense
         fallback={
           <div className="pt-3 text-center">
@@ -120,9 +215,28 @@ const App = () => {
           {publicRoutes.map((route) => (
             <Route key={route.path} path={route.path} element={<route.element />} />
           ))}
+
+          {/*
+           * Subscription tree — MUST live OUTSIDE the DefaultLayout +
+           * SubscriptionGuard tree. The paywall is a calm conversion screen,
+           * not an admin dashboard. The processing page would self-redirect
+           * if it were inside the guard.
+           */}
           <Route element={<RequireAuth />}>
-            <Route path="/*" element={<DefaultLayout />} />
+            <Route path="/subscription" element={<SubscriptionShell />}>
+              <Route path="paywall" element={<SubscriptionPaywallPage />} />
+              <Route path="payment-processing" element={<SubscriptionPaymentProcessingPage />} />
+              <Route index element={<Navigate to="paywall" replace />} />
+            </Route>
           </Route>
+
+          {/* Dashboard tree — guarded by SubscriptionGuard (can_access_app). */}
+          <Route element={<RequireAuth />}>
+            <Route element={<SubscriptionGuard />}>
+              <Route path="/*" element={<DefaultLayout />} />
+            </Route>
+          </Route>
+
           <Route
             path="/"
             element={

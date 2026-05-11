@@ -69,9 +69,17 @@ const CreateAcademyPage = () => {
       const { data } = await authApi.signup(body)
       const needsVerify =
         data?.needs_email_verification === true || data?.needsEmailVerification === true
+      // NOTE: deliberately NOT capturing `payment_url` here.
+      //
+      // Funnel doctrine (CONTEXT/05): post-signup MUST be
+      //   signup → verify email → login → SubscriptionGuard
+      // The guard sends `billing_choice === 'subscribe'` owners with
+      // `can_access_app === false` straight to `/subscription/paywall`.
+      // A separate "Continue to payment" CTA here would create a parallel
+      // funnel that drifts from the canonical one. If signup still returns
+      // `payment_url` in the API for back-compat, we ignore it.
       setDone({
         needsVerify,
-        paymentUrl: data?.payment_url || data?.paymentUrl || null,
         billingChoice: data?.billing_choice || values.billing_choice,
       })
     } catch (e) {
@@ -86,23 +94,15 @@ const CreateAcademyPage = () => {
         title={done.needsVerify ? 'Check your email' : 'Account created'}
         subtitle={
           done.needsVerify
-            ? 'We sent a verification link. Confirm your email, then sign in to continue setup.'
+            ? 'We sent a verification link. Confirm your email, then sign in to continue.'
             : 'You can sign in to continue.'
         }
       >
         <CAlert color={done.needsVerify ? 'info' : 'success'}>
           {done.needsVerify
-            ? 'Open the email we sent and tap verify. After that, sign in and finish payment setup if needed.'
-            : 'Your academy is ready to configure.'}
+            ? 'Open the email we sent and tap verify. Once verified, sign in — if you chose Subscribe, we’ll take you straight to the payment page.'
+            : 'Your academy is ready. Sign in to continue.'}
         </CAlert>
-        {done.paymentUrl ? (
-          <CAlert color="warning">
-            Complete subscription payment to activate your plan:{' '}
-            <a href={done.paymentUrl} target="_blank" rel="noreferrer">
-              Open payment page
-            </a>
-          </CAlert>
-        ) : null}
         <CButton color="primary" className="w-100 mb-2" as={Link} to="/auth/login">
           Go to login
         </CButton>
@@ -236,7 +236,8 @@ const CreateAcademyPage = () => {
             <div className="small text-danger mt-1">{errors.activities.message}</div>
           ) : (
             <div className="small text-body-secondary mt-1">
-              Platform-defined activities only — pick what you run today (more types ship over time).
+              Platform-defined activities only — pick what you run today (more types ship over
+              time).
             </div>
           )}
         </div>

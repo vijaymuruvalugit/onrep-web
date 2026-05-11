@@ -1,39 +1,21 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { CAlert, CButton, CCard, CCardBody, CCardHeader } from '@coreui/react'
-
 /**
- * Subscription paywall (Phase 2.2). Reached only via the global 403
- * SUBSCRIPTION_REQUIRED interceptor or a deliberate user click. Intentionally
- * minimal — single message, two CTAs, no payment UI inline.
+ * Legacy alias for `/coach/billing/paywall` → `/subscription/paywall`.
+ *
+ * Pre-Phase-X this page rendered its own simple paywall inside the dashboard
+ * layout. The canonical surface is now `/subscription/paywall` mounted under
+ * a minimal full-viewport `SubscriptionShell` (NOT inside DefaultLayout).
+ * Any deep links / bookmarks still hit `/coach/billing/paywall` and Navigate
+ * forwards them with `replace` so the legacy URL never lingers in history.
+ *
+ * Keep this file thin — all subscription UX changes belong in
+ * `SubscriptionPaywallPage.jsx`.
  */
+import React from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
+
 export default function PaywallPage() {
-  const navigate = useNavigate()
-  return (
-    <div className="p-4" style={{ maxWidth: 640 }}>
-      <CCard>
-        <CCardHeader>
-          <strong>Subscription required</strong>
-        </CCardHeader>
-        <CCardBody>
-          <CAlert color="warning">
-            Your subscription has expired. Renew to continue managing your academy.
-          </CAlert>
-          <p className="text-muted">
-            Once you renew, parent payments, schedules, and reporting unlock immediately.
-            You'll be able to come back to this page from any link that requires an active
-            subscription.
-          </p>
-          <div className="d-flex gap-2 mt-3">
-            <CButton color="primary" onClick={() => navigate('/coach/billing')}>
-              Renew now
-            </CButton>
-            <CButton color="secondary" variant="outline" onClick={() => navigate('/coach/billing')}>
-              View plans
-            </CButton>
-          </div>
-        </CCardBody>
-      </CCard>
-    </div>
-  )
+  const location = useLocation()
+  // Forward any existing query string (e.g. `?payment=failed&next=…`).
+  const search = location.search || ''
+  return <Navigate to={`/subscription/paywall${search}`} replace />
 }

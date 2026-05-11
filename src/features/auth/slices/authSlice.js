@@ -3,6 +3,16 @@ import normalizeApiError from '../../../api/normalizeApiError'
 import { authStorage } from '../../../api/authStorage'
 import { authApi } from '../api/authApi'
 import { normalizeOnboardingDtoFromApi } from '../../onboarding/utils/onboardingSteps'
+import { persistLastKnownSubscription, clearLastKnownSubscription } from '../lastKnownSubscription'
+
+function syncLastKnownSubscription(user) {
+  if (!user) {
+    clearLastKnownSubscription()
+    return
+  }
+  const academyName = user.academy?.name || user.academy_name || user.academyName || null
+  persistLastKnownSubscription({ subscription: user.subscription || null, academyName })
+}
 
 /**
  * Merge `/login` and `/me` extras into the persisted user object (single storage shape).
@@ -157,6 +167,7 @@ const authSlice = createSlice({
         state.isRestored = true
         authStorage.setToken(token)
         authStorage.setUser(user)
+        syncLastKnownSubscription(user)
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false
@@ -171,6 +182,7 @@ const authSlice = createSlice({
         if (action.payload?.user) {
           state.user = action.payload.user
           authStorage.setUser(state.user)
+          syncLastKnownSubscription(state.user)
         }
       })
       .addCase(refreshSession.rejected, () => {
@@ -181,6 +193,7 @@ const authSlice = createSlice({
       })
       .addCase(logout.fulfilled, (state) => {
         authStorage.clear()
+        clearLastKnownSubscription()
         state.user = null
         state.token = null
         state.loading = false
@@ -192,6 +205,7 @@ const authSlice = createSlice({
       })
       .addCase(logout.rejected, (state) => {
         authStorage.clear()
+        clearLastKnownSubscription()
         state.user = null
         state.token = null
         state.loading = false

@@ -11,7 +11,11 @@ export const ROUTE_CLASSIFICATION = Object.freeze({
   ]),
   scoped: Object.freeze(['/coach/']),
   bootstrap: Object.freeze(['/login', '/register']),
-  exempt: Object.freeze(['/onboarding/']),
+  // `/subscription/*` lives outside the dashboard tree entirely; it must
+  // never engage workspace or activity gates. Listing it here is defensive
+  // (in case any helper accidentally inspects the path before the routes
+  // tree decides where to mount).
+  exempt: Object.freeze(['/onboarding/', '/subscription/']),
 })
 
 export function coachPathRequiresWorkspace(pathname) {
@@ -23,4 +27,10 @@ export function coachPathRequiresWorkspace(pathname) {
 export function onboardingPathExemptFromWorkspace(pathname) {
   if (!pathname) return false
   return ROUTE_CLASSIFICATION.exempt.some((prefix) => pathname.startsWith(prefix))
+}
+
+/** Returns true when the path is inside the subscription paywall surface. */
+export function isSubscriptionRoute(pathname) {
+  if (!pathname) return false
+  return pathname === '/subscription' || pathname.startsWith('/subscription/')
 }
