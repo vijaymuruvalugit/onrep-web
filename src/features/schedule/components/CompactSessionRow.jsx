@@ -6,6 +6,7 @@ import {
 } from '../../classes/utils/sessionDisplay'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { sessionTypeLabel } from '../constants/sessionTypes'
+import { isOperationalOneOff, isOperationalRecurring } from '../../classes/utils/sessionRow'
 
 function shortPlaceLabel(raw, maxLen = 42) {
   const s = stripDemoSuffix(String(raw || '').trim())
@@ -42,8 +43,8 @@ export default function CompactSessionRow({
   const typeLabel = sessionTypeLabel(row.sessionType ?? row.session_type)
   const hasActual = Boolean(row.actualStartTime || row.actualEndTime)
   const attendanceBlocked = row.attendanceEnabled === false || row.attendance_enabled === false
-  const showOneOffStyle = Boolean(row.isOneTime) && !row.isCancelled
-  const showRecurringStyle = !row.isCancelled && !row.isOneTime
+  const oneOffRow = isOperationalOneOff(row)
+  const recurringRow = isOperationalRecurring(row)
 
   return (
     <div
@@ -51,8 +52,8 @@ export default function CompactSessionRow({
         'onrep-session-row',
         isToday ? 'onrep-session-row--today' : '',
         row.isCancelled ? 'onrep-session-row--cancelled' : '',
-        showOneOffStyle ? 'onrep-session-row--one-off' : '',
-        showRecurringStyle ? 'onrep-session-row--recurring' : '',
+        oneOffRow ? 'onrep-session-row--one-off' : '',
+        recurringRow ? 'onrep-session-row--recurring' : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -72,7 +73,7 @@ export default function CompactSessionRow({
             </div>
           ) : null}
           <div className="onrep-session-row__chips d-flex flex-wrap gap-1 align-items-center">
-            {row.isOneTime ? (
+            {oneOffRow ? (
               <CBadge color="primary" className="rounded-pill fw-normal px-2 py-0 opacity-75">
                 One-off
               </CBadge>

@@ -49,3 +49,17 @@ export function normalizeTrainingSessionRow(row) {
     updatedAt: row.updatedAt ?? row.updated_at ?? null,
   }
 }
+
+/** True for API one-offs and template-less instances (no batch_schedule link). */
+export function isOperationalOneOff(row) {
+  if (!row || row.isCancelled) return false
+  if (Boolean(row.isOneTime ?? row.is_one_time)) return true
+  return !Boolean(row.scheduleId ?? row.schedule_id)
+}
+
+/** Materialized row tied to a weekly pattern (has schedule_id), not flagged one-off. */
+export function isOperationalRecurring(row) {
+  if (!row || row.isCancelled) return false
+  if (Boolean(row.isOneTime ?? row.is_one_time)) return false
+  return Boolean(row.scheduleId ?? row.schedule_id)
+}

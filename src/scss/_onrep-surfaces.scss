@@ -106,7 +106,8 @@
   }
 }
 
-.onrep-session-row--today {
+/* Default “today” highlight only when not typed as recurring vs one-off (those use distinct fills below). */
+.onrep-session-row--today:not(.onrep-session-row--recurring):not(.onrep-session-row--one-off) {
   margin-inline: -0.35rem;
   padding-inline: 0.55rem;
   border-radius: var(--onrep-radius-md);
@@ -114,6 +115,14 @@
   margin-bottom: 0.15rem;
   background: color-mix(in srgb, var(--onrep-surface-a-muted) 65%, transparent);
   border-left: 3px solid var(--onrep-hero-accent);
+}
+
+.onrep-session-row--today {
+  margin-inline: -0.35rem;
+  padding-inline: 0.55rem;
+  border-radius: var(--onrep-radius-md);
+  border-bottom-color: transparent;
+  margin-bottom: 0.15rem;
 
   .onrep-session-row__date {
     font-weight: 700;
@@ -122,7 +131,7 @@
   }
 }
 
-/* Recurring vs one-off instances (not cancelled) — distinct tints + accent bars */
+/* Recurring: neutral (white / body surface); one-off: warm tint + accent */
 .onrep-session-row--recurring:not(.onrep-session-row--today) {
   margin-inline: -0.35rem;
   padding-inline: 0.55rem;
@@ -130,8 +139,8 @@
   border-radius: var(--onrep-radius-md);
   border-bottom-color: transparent;
   margin-bottom: 0.15rem;
-  border-left: 3px solid color-mix(in srgb, var(--cui-primary) 72%, var(--cui-body-bg) 28%);
-  background: color-mix(in srgb, var(--cui-primary) 12%, var(--cui-body-bg) 88%);
+  border-left: none;
+  background: var(--cui-body-bg);
 }
 
 .onrep-session-row--one-off:not(.onrep-session-row--today) {
@@ -146,21 +155,13 @@
 }
 
 .onrep-session-row--today.onrep-session-row--one-off {
-  border-left: 3px solid color-mix(in srgb, var(--cui-warning) 75%, transparent);
-  background: color-mix(
-    in srgb,
-    var(--cui-warning) 16%,
-    color-mix(in srgb, var(--onrep-surface-a-muted) 65%, transparent)
-  );
+  border-left: 3px solid color-mix(in srgb, var(--cui-warning) 88%, var(--cui-body-bg) 12%);
+  background: color-mix(in srgb, var(--cui-warning) 22%, var(--cui-body-bg) 78%);
 }
 
 .onrep-session-row--today.onrep-session-row--recurring {
-  border-left: 3px solid color-mix(in srgb, var(--cui-primary) 70%, transparent);
-  background: color-mix(
-    in srgb,
-    var(--cui-primary) 14%,
-    color-mix(in srgb, var(--onrep-surface-a-muted) 65%, transparent)
-  );
+  border-left: none;
+  background: var(--cui-body-bg);
 }
 
 .onrep-session-row--cancelled {

@@ -22,7 +22,11 @@ import CreateOneTimeSessionDrawer from '../components/CreateOneTimeSessionDrawer
 import SessionDetailDrawer from '../components/SessionDetailDrawer'
 import CompactSessionRow from '../components/CompactSessionRow'
 import { normalizeSessionDateYmd } from '../../classes/utils/sessionDisplay'
-import { normalizeTrainingSessionRow } from '../../classes/utils/sessionRow'
+import {
+  isOperationalOneOff,
+  isOperationalRecurring,
+  normalizeTrainingSessionRow,
+} from '../../classes/utils/sessionRow'
 import batchesApi from '../../batches/api/batchesApi'
 import useClasses from '../../classes/hooks/useClasses'
 import {
@@ -185,8 +189,8 @@ const SchedulePage = () => {
   const mergedTimeline = useMemo(() => {
     return mergedTimelineRaw.filter((r) => {
       if (sessionKindFilter === 'cancelled') return r.isCancelled
-      if (sessionKindFilter === 'one_off') return r.isOneTime && !r.isCancelled
-      if (sessionKindFilter === 'regular') return !r.isOneTime && !r.isCancelled
+      if (sessionKindFilter === 'one_off') return isOperationalOneOff(r)
+      if (sessionKindFilter === 'regular') return isOperationalRecurring(r)
       return true
     })
   }, [mergedTimelineRaw, sessionKindFilter])
