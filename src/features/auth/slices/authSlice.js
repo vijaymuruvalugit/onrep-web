@@ -4,14 +4,31 @@ import { authStorage } from '../../../api/authStorage'
 import { authApi } from '../api/authApi'
 import { normalizeOnboardingDtoFromApi } from '../../onboarding/utils/onboardingSteps'
 import { persistLastKnownSubscription, clearLastKnownSubscription } from '../lastKnownSubscription'
+import { clearAwaitingPaymentConfirmation } from '../../subscription/awaitingPaymentStorage'
 
+/**
+ * Replace (never merge) the UI subscription cache for the just-authenticated
+ * user. If the new user has no subscription payload, the cache is wiped so
+ * the previous user's `academy_name` / price never leaks into the paywall
+ * identity strip.
+ */
 function syncLastKnownSubscription(user) {
-  if (!user) {
-    clearLastKnownSubscription()
-    return
-  }
+  clearLastKnownSubscription()
+  if (!user) return
+  const subscription = user.subscription || null
+  if (!subscription) return
   const academyName = user.academy?.name || user.academy_name || user.academyName || null
-  persistLastKnownSubscription({ subscription: user.subscription || null, academyName })
+  persistLastKnownSubscription({ subscription, academyName })
+}
+
+/**
+ * Wipe ALL session-scoped subscription UI state. Called on every auth
+ * transition (login success, logout, forced 401 logout) so paywall state
+ * cannot leak across accounts in the same browser tab.
+ */
+function resetSubscriptionSessionState() {
+  clearAwaitingPaymentConfirmation()
+  clearLastKnownSubscription()
 }
 
 /**
@@ -128,6 +145,7 @@ const authSlice = createSlice({
     },
     forceLogout(state, action) {
       authStorage.clear()
+      resetSubscriptionSessionState()
       state.user = null
       state.token = null
       state.status = 'unauthenticated'
@@ -167,6 +185,10 @@ const authSlice = createSlice({
         state.isRestored = true
         authStorage.setToken(token)
         authStorage.setUser(user)
+        // Wipe any awaiting-payment flag from the previous account in this tab
+        // BEFORE persisting the new cache, so a freshly-logged-in academy
+        // never inherits the prior user's "Waiting for confirmation..." UI.
+        clearAwaitingPaymentConfirmation()
         syncLastKnownSubscription(user)
       })
       .addCase(login.rejected, (state, action) => {
@@ -193,7 +215,7 @@ const authSlice = createSlice({
       })
       .addCase(logout.fulfilled, (state) => {
         authStorage.clear()
-        clearLastKnownSubscription()
+        resetSubscriptionSessionState()
         state.user = null
         state.token = null
         state.loading = false
@@ -205,7 +227,7 @@ const authSlice = createSlice({
       })
       .addCase(logout.rejected, (state) => {
         authStorage.clear()
-        clearLastKnownSubscription()
+        resetSubscriptionSessionState()
         state.user = null
         state.token = null
         state.loading = false

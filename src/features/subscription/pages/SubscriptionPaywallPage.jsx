@@ -27,8 +27,10 @@ import { logout } from '../../auth/slices/authSlice'
 import { refreshSubscription } from '../../auth/subscriptionRefresh'
 import { sanitizeNext, safeNextOrDefault } from '../../auth/sanitizeNext'
 import { readLastKnownSubscription } from '../../auth/lastKnownSubscription'
-
-const AWAITING_KEY = 'onrep_subscription_awaiting_confirmation'
+import {
+  readAwaitingPaymentConfirmation,
+  setAwaitingPaymentConfirmation,
+} from '../awaitingPaymentStorage'
 
 function copyForState({ state, billing_context, payment }) {
   if (payment === 'failed') {
@@ -102,22 +104,8 @@ function formatAmount(rupees) {
   }
 }
 
-function setAwaiting(value) {
-  try {
-    if (value) sessionStorage.setItem(AWAITING_KEY, '1')
-    else sessionStorage.removeItem(AWAITING_KEY)
-  } catch {
-    /* no storage */
-  }
-}
-
-function readAwaiting() {
-  try {
-    return sessionStorage.getItem(AWAITING_KEY) === '1'
-  } catch {
-    return false
-  }
-}
+const setAwaiting = setAwaitingPaymentConfirmation
+const readAwaiting = readAwaitingPaymentConfirmation
 
 export default function SubscriptionPaywallPage() {
   const dispatch = useDispatch()
