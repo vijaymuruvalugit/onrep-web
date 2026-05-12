@@ -31,6 +31,9 @@ import { formatLocalYmd } from '../../dashboard/utils/calendarDate'
 import { skatingOpsApi } from '../api/skatingOpsApi'
 import { skatingChecklistApi } from '../api/skatingChecklistApi'
 import { DEFAULT_RAPID_KPIS } from '../constants/rapidObservationKpis'
+import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
+import SessionAthleteGrid from '../components/SessionAthleteGrid'
+import AthleteCaptureDrawer from '../components/AthleteCaptureDrawer'
 import '../skating-ops.css'
 
 const SK_LAST_PLACE = 'onrep.skating.lastPlaceId'
@@ -269,6 +272,11 @@ const SkatingOpsPage = () => {
   const [advanceTick, setAdvanceTick] = useState(0)
   const [reEntryWarmth, setReEntryWarmth] = useState(null)
 
+  const [captureDrawerStudentId, setCaptureDrawerStudentId] = useState(null)
+  const [athleteFocusDraft, setAthleteFocusDraft] = useState('')
+  const [athleteFocusSaving, setAthleteFocusSaving] = useState(false)
+  const [athleteFocusSaveMsg, setAthleteFocusSaveMsg] = useState('')
+
   const lapSecondsRef = useRef(null)
   const forceDuplicateRef = useRef(false)
   const restoredRef = useRef(false)
@@ -292,6 +300,15 @@ const SkatingOpsPage = () => {
   })
 
   const selectedSessionId = sessionParam || ''
+
+  useEffect(() => {
+    if (!captureDrawerStudentId || !bundle?.session) return
+    const map = bundle.session.sessionAthleteFocusJson || {}
+    const cell = map[captureDrawerStudentId]
+    const t = cell && typeof cell === 'object' && cell.text != null ? String(cell.text) : ''
+    setAthleteFocusDraft(t)
+    setAthleteFocusSaveMsg('')
+  }, [captureDrawerStudentId, bundle?.session, selectedSessionId])
 
   const clearPendingObsAdvance = useCallback(() => {
     if (advanceTimerRef.current != null) {
@@ -610,16 +627,39 @@ const SkatingOpsPage = () => {
   }
 
   const rosterForSession = useMemo(() => {
+    const resolved = bundle?.resolvedAthletes
+    if (Array.isArray(resolved) && resolved.length > 0) {
+      const order = resolved.map((r) => String(r.student_id))
+      const byId = new Map(skaters.map((s) => [String(s.id), s]))
+      return order.map((id) => byId.get(id)).filter(Boolean)
+    }
     const ids = bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []
     const set = new Set(ids.map(String))
     return skaters.filter((s) => set.has(String(s.id)))
   }, [bundle, skaters])
 
+  const rosterWithSource = useMemo(() => {
+    const src = new Map((bundle?.resolvedAthletes || []).map((r) => [String(r.student_id), r.source]))
+    return rosterForSession.map((r) => ({
+      ...r,
+      rosterSource: src.get(String(r.id)) || null,
+    }))
+  }, [rosterForSession, bundle?.resolvedAthletes])
+
   const rosterFiltered = useMemo(() => {
     const q = rosterFilter.trim().toLowerCase()
-    if (!q) return rosterForSession
-    return rosterForSession.filter((r) => (r.full_name || '').toLowerCase().includes(q))
-  }, [rosterForSession, rosterFilter])
+    if (!q) return rosterWithSource
+    return rosterWithSource.filter((r) => (r.full_name || '').toLowerCase().includes(q))
+  }, [rosterWithSource, rosterFilter])
+
+  const inlineAthleteFocus = useMemo(() => {
+    if (!lapStudentId || !bundle?.session) return null
+    const map = bundle.session.sessionAthleteFocusJson
+    const cell = map && typeof map === 'object' ? map[lapStudentId] : null
+    const txt =
+      cell && typeof cell === 'object' && cell.text != null ? String(cell.text).trim() : ''
+    return { text: txt }
+  }, [lapStudentId, bundle?.session])
 
   const bundleFreshnessLabel = useMemo(() => {
     if (!bundleFetchedAt) return null
@@ -641,9 +681,58 @@ const SkatingOpsPage = () => {
     })
   }, [])
 
+  const captureStudentName = useMemo(() => {
+    if (!captureDrawerStudentId) return ''
+    return skaters.find((s) => String(s.id) === String(captureDrawerStudentId))?.full_name || ''
+  }, [captureDrawerStudentId, skaters])
+
+  const openCaptureDrawer = useCallback(
+    (studentId) => {
+      setCaptureDrawerStudentId(studentId)
+      setAthleteFocusSaveMsg('')
+      clearPendingObsAdvance()
+      setLapStudentId(studentId)
+      focusLapInput()
+    },
+    [clearPendingObsAdvance, focusLapInput]
+  )
+
+  const closeCaptureDrawer = useCallback(() => {
+    setCaptureDrawerStudentId(null)
+    setAthleteFocusSaveMsg('')
+  }, [])
+
+  const saveAthleteFocus = useCallback(async () => {
+    if (!selectedSessionId || !captureDrawerStudentId) return
+    setAthleteFocusSaving(true)
+    setAthleteFocusSaveMsg('')
+    try {
+      await skatingOpsApi.patchSession(selectedSessionId, {
+        sessionAthleteFocusJson: {
+          [captureDrawerStudentId]: {
+            text: athleteFocusDraft.trim(),
+            updated_at: new Date().toISOString(),
+          },
+        },
+      })
+      await loadBundle(selectedSessionId)
+      setAthleteFocusSaveMsg(SESSION_OPS_COPY.focusSaved)
+    } catch (e) {
+      setAthleteFocusSaveMsg(e?.message || 'Save failed')
+    } finally {
+      setAthleteFocusSaving(false)
+    }
+  }, [selectedSessionId, captureDrawerStudentId, athleteFocusDraft, loadBundle])
+
   const ensureDefaultRace = async () => {
     if (!selectedSessionId || !bundle) return
-    const ids = bundle.session?.sessionSkaterIds || bundle.session?.session_skater_ids || []
+    const resolvedIds = Array.isArray(bundle.resolvedAthletes)
+      ? bundle.resolvedAthletes.map((r) => r.student_id)
+      : []
+    const ids =
+      resolvedIds.length > 0
+        ? resolvedIds
+        : bundle.session?.sessionSkaterIds || bundle.session?.session_skater_ids || []
     await skatingOpsApi.mergeGroup(selectedSessionId, 'main', {
       name: 'Main',
       skaterIds: ids,
@@ -1224,6 +1313,26 @@ const SkatingOpsPage = () => {
                       Close match between efforts — confirm the tag below.
                     </div>
                   ) : null}
+                  {bundle.session?.sessionFocus ||
+                  (Array.isArray(bundle.session?.objectivesJson) && bundle.session.objectivesJson.length) ? (
+                    <div className="small mb-3 px-2 py-2 border rounded bg-body-tertiary">
+                      {bundle.session?.sessionFocus ? (
+                        <div className="mb-1">
+                          <span className="text-body-secondary">Session focus · </span>
+                          <span>{bundle.session.sessionFocus}</span>
+                        </div>
+                      ) : null}
+                      {Array.isArray(bundle.session?.objectivesJson) && bundle.session.objectivesJson.length ? (
+                        <ul className="mb-0 mt-1 ps-3">
+                          {bundle.session.objectivesJson.slice(0, 8).map((o, i) => (
+                            <li key={i} className="small">
+                              {typeof o === 'string' ? o : o?.text || JSON.stringify(o)}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </CCol>
                 <CCol lg={5}>
                   <div
@@ -1240,26 +1349,39 @@ const SkatingOpsPage = () => {
                     value={rosterFilter}
                     onChange={(e) => setRosterFilter(e.target.value)}
                   />
-                  <div className="table-responsive border rounded" style={{ maxHeight: 280 }}>
-                    <CTable bordered small responsive className="mb-0">
-                      <CTableBody>
-                        {rosterFiltered.map((r) => (
-                          <CTableRow
-                            key={r.id}
-                            className={`${String(lapStudentId) === String(r.id) ? 'table-active skating-active-skater-row' : ''}`}
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              clearPendingObsAdvance()
-                              setLapStudentId(String(r.id))
-                              focusLapInput()
-                            }}
-                          >
-                            <CTableDataCell className="py-1">{r.full_name}</CTableDataCell>
-                          </CTableRow>
-                        ))}
-                      </CTableBody>
-                    </CTable>
-                  </div>
+                  <SessionAthleteGrid
+                    rows={rosterFiltered}
+                    lapStudentId={lapStudentId}
+                    onPickSkater={(id) => {
+                      clearPendingObsAdvance()
+                      setLapStudentId(id)
+                      focusLapInput()
+                    }}
+                    showRosterSource={Boolean(import.meta.env?.DEV)}
+                    onOpenSideCapture={openCaptureDrawer}
+                  />
+                  {inlineAthleteFocus ? (
+                    <div className="small mt-2 px-1 py-2 border rounded bg-body-tertiary d-flex flex-wrap align-items-center justify-content-between gap-2">
+                      <span className="text-body-secondary" style={{ minWidth: 0 }}>
+                        <span className="text-uppercase text-muted" style={{ fontSize: '0.65rem' }}>
+                          {SESSION_OPS_COPY.todayFocusInline}
+                        </span>
+                        <br />
+                        <span className="text-body">
+                          {inlineAthleteFocus.text || '— Not set — tap side panel to add.'}
+                        </span>
+                      </span>
+                      <CButton
+                        type="button"
+                        size="sm"
+                        color="secondary"
+                        variant="outline"
+                        onClick={() => openCaptureDrawer(lapStudentId)}
+                      >
+                        {SESSION_OPS_COPY.editFocusInPanel}
+                      </CButton>
+                    </div>
+                  ) : null}
                   {bundle.races?.length === 0 ? (
                     <div className="mt-2">
                       <CButton size="sm" color="secondary" onClick={ensureDefaultRace}>
@@ -1732,6 +1854,17 @@ const SkatingOpsPage = () => {
           Select a training session above or create one.
         </CAlert>
       )}
+
+      <AthleteCaptureDrawer
+        visible={Boolean(captureDrawerStudentId)}
+        studentName={captureStudentName}
+        focusText={athleteFocusDraft}
+        onChangeFocus={setAthleteFocusDraft}
+        onSaveFocus={() => void saveAthleteFocus()}
+        saving={athleteFocusSaving}
+        saveMessage={athleteFocusSaveMsg}
+        onClose={closeCaptureDrawer}
+      />
 
       <CModal visible={showCreate} onClose={() => setShowCreate(false)}>
         <CModalHeader>New training session</CModalHeader>
