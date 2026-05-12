@@ -68,7 +68,7 @@ const StudentsTable = ({ students, loading, onRetry, error, canRetry = false }) 
     <CCard>
       <CCardHeader className="d-flex justify-content-between align-items-center">
         <strong>Students</strong>
-        <CButton component={Link} color="primary" size="sm" to="/coach/students/new">
+        <CButton as={Link} color="primary" size="sm" to="/coach/students/new">
           <CIcon icon={cilPlus} className="me-1" />
           Add Student
         </CButton>
@@ -111,7 +111,7 @@ const StudentsTable = ({ students, loading, onRetry, error, canRetry = false }) 
                       <div className="text-body-secondary small mb-3">
                         Start by creating the first student profile.
                       </div>
-                      <CButton component={Link} color="primary" to="/coach/students/new">
+                      <CButton as={Link} color="primary" to="/coach/students/new">
                         Add Student
                       </CButton>
                     </div>
