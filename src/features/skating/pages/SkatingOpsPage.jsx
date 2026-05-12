@@ -288,6 +288,10 @@ const SkatingOpsPage = () => {
   const [obsReturnSkater, setObsReturnSkater] = useState(null)
   const [advanceTick, setAdvanceTick] = useState(0)
   const [reEntryWarmth, setReEntryWarmth] = useState(null)
+  /** Client-only count for this browser session (bundle has no observation aggregate). */
+  const [sessionObservationCount, setSessionObservationCount] = useState(0)
+  const [observedStudentIds, setObservedStudentIds] = useState(() => new Set())
+  const [timingPanelOpen, setTimingPanelOpen] = useState(true)
 
   const [captureDrawerStudentId, setCaptureDrawerStudentId] = useState(null)
   const [athleteFocusDraft, setAthleteFocusDraft] = useState('')
@@ -967,11 +971,14 @@ const SkatingOpsPage = () => {
   const todaySummaryParts = useMemo(() => {
     const parts = []
     if (todaySummary.athleteCount) parts.push(`${todaySummary.athleteCount} athletes`)
-    if (todaySummary.lapCount != null) parts.push(`${todaySummary.lapCount} laps recorded`)
-    if (todaySummary.focus) parts.push(`Focus: ${todaySummary.focus}`)
-    if (todaySummary.mostActive?.name) parts.push(`Most active: ${todaySummary.mostActive.name}`)
+    if (sessionObservationCount > 0)
+      parts.push(
+        `${sessionObservationCount} observation${sessionObservationCount === 1 ? '' : 's'}`,
+      )
+    if (todaySummary.lapCount != null && todaySummary.lapCount > 0)
+      parts.push(`${todaySummary.lapCount} lap${todaySummary.lapCount === 1 ? '' : 's'}`)
     return parts
-  }, [todaySummary])
+  }, [todaySummary, sessionObservationCount])
 
   const elapsedLabel = useMemo(() => {
     if (!selectedSessionId || !bundle) return null
@@ -1017,6 +1024,16 @@ const SkatingOpsPage = () => {
     else setSessionsPanelOpen(true)
   }, [coachLive, selectedSessionId])
 
+  useEffect(() => {
+    if (coachLive) setTimingPanelOpen(false)
+    else setTimingPanelOpen(true)
+  }, [coachLive, selectedSessionId])
+
+  useEffect(() => {
+    setSessionObservationCount(0)
+    setObservedStudentIds(new Set())
+  }, [selectedSessionId])
+
   /** Pre-fill “same glance” scores when athlete or session changes; suppress auto-save until coach taps. */
   useEffect(() => {
     if (!selectedSessionId) {
@@ -1056,9 +1073,9 @@ const SkatingOpsPage = () => {
         until: Date.now() + OBS_RETURN_WINDOW_MS,
       })
       setLapStudentId(String(toSid))
-      focusLapInput()
+      if (!coachLive) focusLapInput()
     },
-    [focusLapInput],
+    [focusLapInput, coachLive],
   )
 
   const submitObservation = useCallback(
@@ -1085,6 +1102,8 @@ const SkatingOpsPage = () => {
         obsLastSentByStudentRef.current[sidKey] = dedupeSig
         writeObsTemplate(selectedSessionId, scores)
         setObsSyncedAt(Date.now())
+        setSessionObservationCount((c) => c + 1)
+        setObservedStudentIds((prev) => new Set(prev).add(sidKey))
         setLastObsLabel(`${sk?.full_name || 'Skater'} · ${formatClockShort(new Date())}`)
         setObsPulse(true)
         window.setTimeout(() => setObsPulse(false), 700)
@@ -1117,7 +1136,7 @@ const SkatingOpsPage = () => {
             executeObsAdvance(sidKey, fromName, targetId)
           }, pauseMs)
         } else {
-          focusLapInput()
+          if (!coachLive) focusLapInput()
         }
       } catch (e) {
         setObsError(
@@ -1144,6 +1163,7 @@ const SkatingOpsPage = () => {
       focusLapInput,
       clearPendingObsAdvance,
       executeObsAdvance,
+      coachLive,
     ],
   )
 
@@ -1500,15 +1520,16 @@ const SkatingOpsPage = () => {
                     </div>
                   ) : null}
                 </CCol>
-                <CCol lg={5}>
+                <CCol lg={4}>
                   <AthletesInSessionPanel
                     coachLive={coachLive}
                     rosterFiltered={rosterFiltered}
                     lapStudentId={lapStudentId}
+                    observedStudentIds={observedStudentIds}
                     onPickSkater={(id) => {
                       clearPendingObsAdvance()
                       setLapStudentId(id)
-                      focusLapInput()
+                      if (!coachLive) focusLapInput()
                     }}
                     onOpenSideCapture={openCaptureDrawer}
                     rosterFilter={rosterFilter}
@@ -1541,251 +1562,45 @@ const SkatingOpsPage = () => {
                       </CButton>
                     </div>
                   ) : null}
-                  {(bundle.races || []).length > 1 ? (
-                    coachLive ? (
-                      <details className="mt-2 coach-recede coach-recede-latent">
-                        <summary
-                          className="small text-body-secondary user-select-none"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {SESSION_OPS_COPY.timingLaneColumn}{' '}
-                          <span className="opacity-50">(multiple lanes)</span>
-                        </summary>
-                        <CButtonGroup vertical role="group" className="w-100 mt-1">
-                          {(bundle.races || []).map((rc) => (
-                            <CButton
-                              key={rc.id}
-                              color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
-                              size="sm"
-                              className="text-start"
-                              disabled={lapSubmitting}
-                              onClick={() => {
-                                setLapRaceId(rc.id)
-                                focusLapInput()
-                              }}
-                            >
-                              {(rc.label || rc.groupName || 'Lane').slice(0, 48)}
-                            </CButton>
-                          ))}
-                        </CButtonGroup>
-                      </details>
-                    ) : (
-                      <div className="mt-2">
-                        <div className="small text-body-secondary mb-1">
-                          {SESSION_OPS_COPY.timingLaneColumn}
-                        </div>
-                        <CButtonGroup vertical role="group" className="w-100">
-                          {(bundle.races || []).map((rc) => (
-                            <CButton
-                              key={rc.id}
-                              color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
-                              size="sm"
-                              className="text-start"
-                              disabled={lapSubmitting}
-                              onClick={() => {
-                                setLapRaceId(rc.id)
-                                focusLapInput()
-                              }}
-                            >
-                              {(rc.label || rc.groupName || 'Lane').slice(0, 48)}
-                            </CButton>
-                          ))}
-                        </CButtonGroup>
-                      </div>
-                    )
-                  ) : (bundle.races || []).length === 1 && coachLive ? (
-                    <div className="mt-2">
-                      <CButton
-                        size="sm"
-                        color="light"
-                        variant="outline"
-                        type="button"
-                        onClick={() => void addTimingLane()}
-                      >
-                        {SESSION_OPS_COPY.addTimingLane}
-                      </CButton>
-                    </div>
-                  ) : null}
                 </CCol>
-                <CCol lg={7} className={coachLive ? 'operational-sticky-stack' : undefined}>
-                  <form
-                    aria-busy={lapSubmitting ? 'true' : 'false'}
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      submitLap(e)
-                    }}
-                    onKeyDown={onFormKeyDown}
+                <CCol lg={8} className={coachLive ? 'operational-sticky-stack' : undefined}>
+                  <section
+                    className={`skating-obs-primary-panel border rounded p-3 mb-3 bg-body-tertiary${obsPulse ? ' skating-obs-block--pulse' : ''}`}
                   >
-                    <div className="fw-semibold mb-2">{SESSION_OPS_COPY.lapEntryTitle}</div>
-                    {lapSubmitting ? (
-                      <div className="small text-warning mb-1 d-flex align-items-center gap-2">
-                        <CSpinner size="sm" />
-                        Saving lap…
-                      </div>
-                    ) : null}
-                    {!coachLive ? (
-                      <div className="small text-body-secondary mb-1">
-                        Pick an athlete on the left → seconds → Enter. ⌘/Ctrl+Enter saves. Alt+↑↓
-                        switches timing lane when multiple exist.
-                      </div>
-                    ) : null}
-                    <div className="mb-2 p-2 border rounded bg-body-tertiary">
-                      {lapStudentId ? (
-                        <div>
-                          <div className="small text-body-secondary">
-                            {SESSION_OPS_COPY.recordingFor}
-                          </div>
-                          <div className="fw-semibold">
-                            {rosterForSession.find((r) => String(r.id) === String(lapStudentId))
-                              ?.full_name || 'Athlete'}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="small text-body-secondary mb-0">
-                          {SESSION_OPS_COPY.selectAthletePrompt}
-                        </div>
-                      )}
-                    </div>
-                    {(bundle.races || []).length > 1 ? (
-                      <CFormSelect
-                        className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
-                        aria-label="Timing lane for this lap"
-                        value={lapRaceId}
-                        disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                        onChange={(e) => {
-                          setLapRaceId(e.target.value)
-                          focusLapInput()
-                        }}
-                      >
-                        <option value="">Lane (optional)</option>
-                        {(bundle.races || []).map((rc) => (
-                          <option key={rc.id} value={rc.id}>
-                            {(rc.label || rc.groupName || 'Lane').slice(0, 40)} ·{' '}
-                            {rc.startedAtMs ? new Date(rc.startedAtMs).toLocaleTimeString() : ''}
-                          </option>
-                        ))}
-                      </CFormSelect>
-                    ) : null}
-                    <CFormSelect
-                      className="mb-2"
-                      aria-label="Effort tag for this lap"
-                      title="Benchmark / effort — same control every session"
-                      value={activeEffortSkillId}
-                      disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                      onChange={(e) => {
-                        manualEffortOverrideRef.current = true
-                        const id = e.target.value
-                        const sk = id
-                          ? skillsCatalog.find((r) => String(r.id) === String(id))
-                          : null
-                        setActiveEffortSkillId(id)
-                        setActiveEffortName(sk?.name || '')
-                        writeActiveEffort(selectedSessionId, lapStudentId, id, sk?.name || '')
-                        focusLapInput()
-                      }}
-                    >
-                      <option value="">Effort tag (optional)</option>
-                      {skillsCatalog.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {(s.name || 'Effort').slice(0, 56)}
-                        </option>
-                      ))}
-                    </CFormSelect>
-                    <CFormInput
-                      ref={lapSecondsRef}
-                      name="lapSeconds"
-                      className="mb-2"
-                      type="number"
-                      inputMode="decimal"
-                      step="0.01"
-                      min="0"
-                      placeholder="Seconds"
-                      value={lapSeconds}
-                      disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                      onChange={(e) => setLapSeconds(e.target.value)}
-                      autoComplete="off"
-                    />
-                    {duplicateWarn ? (
-                      <CAlert color="warning" className="py-2">
-                        {duplicateWarn}{' '}
-                        <CButton
-                          type="button"
-                          size="sm"
-                          color="warning"
-                          onClick={submitDuplicateAnyway}
-                        >
-                          Submit anyway
-                        </CButton>
-                      </CAlert>
-                    ) : null}
-                    {lapError ? (
-                      <CAlert
-                        color="danger"
-                        className="py-2 d-flex flex-wrap align-items-center gap-2 justify-content-between"
-                      >
-                        <span>{lapError}</span>
-                        <CButton
-                          type="button"
-                          size="sm"
-                          color="danger"
-                          variant="outline"
-                          onClick={retryAfterLapFailure}
-                        >
-                          Retry
-                        </CButton>
-                      </CAlert>
-                    ) : null}
-                    <div className="d-flex gap-2 flex-wrap align-items-center">
-                      <CButton
-                        type="submit"
-                        color="primary"
-                        disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                      >
-                        {lapSubmitting ? <CSpinner size="sm" /> : SESSION_OPS_COPY.recordLapCta}
-                      </CButton>
-                      {!coachLive ? (
-                        <CButton
-                          type="button"
-                          color="light"
-                          disabled={lapSubmitting}
-                          onClick={() => {
-                            setLapSeconds('')
-                            setDuplicateWarn('')
-                            setLapError('')
-                          }}
-                        >
-                          {SESSION_OPS_COPY.clearDraft}
-                        </CButton>
-                      ) : null}
-                    </div>
-                    {undoOffer && undoSecondsLeft > 0 ? (
-                      <div className="mt-2 d-flex align-items-center gap-2 flex-wrap">
-                        <CButton
-                          type="button"
-                          size="sm"
-                          color="warning"
-                          variant="outline"
-                          disabled={undoBusy || lapSubmitting}
-                          onClick={undoLastLap}
-                        >
-                          {undoBusy ? (
-                            <CSpinner size="sm" />
-                          ) : (
-                            `Undo last lap (${undoSecondsLeft}s)`
-                          )}
-                        </CButton>
-                        <span className="small text-body-secondary">{undoOffer.label}</span>
-                      </div>
-                    ) : null}
-                    {lastEffortPhrase ? (
-                      <p className="small text-body-secondary mt-2 mb-0" aria-live="polite">
-                        {lastEffortPhrase}
+                    <div className="mb-3">
+                      <h2 className="h5 fw-semibold mb-1 text-body">
+                        {SESSION_OPS_COPY.quickObservationsTitle}
+                      </h2>
+                      <p className="small text-body-secondary mb-0">
+                        {SESSION_OPS_COPY.quickObservationsSubtitle}
                       </p>
-                    ) : null}
-                  </form>
-                  <div
-                    className={`mt-4 pt-3 border-top skating-obs-block${obsPulse ? ' skating-obs-block--pulse' : ''}`}
-                  >
+                    </div>
+                    {!lapStudentId ? (
+                      coachLive ? (
+                        <CAlert color="light" className="py-3 small mb-3">
+                          {SESSION_OPS_COPY.selectAthletePrompt}
+                        </CAlert>
+                      ) : (
+                        <p className="small text-body-secondary mb-3">
+                          {SESSION_OPS_COPY.selectAthletePrompt}
+                        </p>
+                      )
+                    ) : (
+                      <div className="small text-body-secondary mb-3 pb-2 border-bottom border-secondary-subtle">
+                        <span className="text-uppercase text-muted" style={{ fontSize: '0.65rem' }}>
+                          {SESSION_OPS_COPY.recordingFor}
+                        </span>
+                        <div className="fw-semibold fs-6 text-body">
+                          {rosterForSession.find((r) => String(r.id) === String(lapStudentId))
+                            ?.full_name || 'Athlete'}
+                        </div>
+                        {observedStudentIds.has(String(lapStudentId)) ? (
+                          <span className="text-success small mt-1 d-inline-block">
+                            {SESSION_OPS_COPY.observationSavedThisSession}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                     <div className="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-2">
                       <span className="small fw-medium text-body-secondary">
                         {SESSION_OPS_COPY.quickNoticeTitle}
@@ -1895,6 +1710,7 @@ const SkatingOpsPage = () => {
                       obsFlashKeys={obsFlashKeys}
                       disabled={obsSaving || uiPaused || opsState === 'ended' || !lapStudentId}
                       onTap={applyObsTap}
+                      comfortable={coachLive}
                     />
                     <details
                       className="small mt-2"
@@ -1935,7 +1751,238 @@ const SkatingOpsPage = () => {
                         </CButton>
                       </div>
                     ) : null}
-                  </div>
+                  </section>
+
+                  <details
+                    className={`skating-timing-advanced border rounded mb-3${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
+                    open={timingPanelOpen}
+                    onToggle={(e) => setTimingPanelOpen(e.target.open)}
+                  >
+                    <summary className="px-3 py-3 skating-timing-summary user-select-none">
+                      <span className="fw-semibold text-body d-block">
+                        {SESSION_OPS_COPY.timingSectionTitle}
+                      </span>
+                      <span className="small text-body-secondary d-block mt-1">
+                        {SESSION_OPS_COPY.timingSectionHint}
+                      </span>
+                    </summary>
+                    <div className="px-3 pb-3 pt-2 border-top">
+                      {(bundle.races || []).length > 1 ? (
+                        <div className={`mb-3${coachLive ? ' coach-recede coach-recede-latent' : ''}`}>
+                          <div className="small text-body-secondary mb-1">
+                            {SESSION_OPS_COPY.timingLaneColumn}
+                            {coachLive ? (
+                              <span className="opacity-50"> (multiple lanes)</span>
+                            ) : null}
+                          </div>
+                          <CButtonGroup vertical role="group" className="w-100">
+                            {(bundle.races || []).map((rc) => (
+                              <CButton
+                                key={rc.id}
+                                color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
+                                size="sm"
+                                className="text-start"
+                                disabled={lapSubmitting}
+                                onClick={() => {
+                                  setLapRaceId(rc.id)
+                                  focusLapInput()
+                                }}
+                              >
+                                {(rc.label || rc.groupName || 'Lane').slice(0, 48)}
+                              </CButton>
+                            ))}
+                          </CButtonGroup>
+                        </div>
+                      ) : (bundle.races || []).length === 1 && coachLive ? (
+                        <div className="mb-3">
+                          <CButton
+                            size="sm"
+                            color="light"
+                            variant="outline"
+                            type="button"
+                            onClick={() => void addTimingLane()}
+                          >
+                            {SESSION_OPS_COPY.addTimingLane}
+                          </CButton>
+                        </div>
+                      ) : null}
+                      <form
+                        aria-busy={lapSubmitting ? 'true' : 'false'}
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          submitLap(e)
+                        }}
+                        onKeyDown={onFormKeyDown}
+                      >
+                        <div className="fw-semibold small text-body-secondary mb-2">
+                          {SESSION_OPS_COPY.lapEntryTitle}
+                        </div>
+                        {lapSubmitting ? (
+                          <div className="small text-warning mb-1 d-flex align-items-center gap-2">
+                            <CSpinner size="sm" />
+                            Saving lap…
+                          </div>
+                        ) : null}
+                        {!coachLive ? (
+                          <div className="small text-body-secondary mb-2">
+                            Pick an athlete on the left → seconds → Enter. ⌘/Ctrl+Enter saves. Alt+↑↓
+                            switches timing lane when multiple exist.
+                          </div>
+                        ) : null}
+                        <div className="small text-body-secondary mb-3">
+                          {lapStudentId ? (
+                            <>
+                              <span className="text-uppercase text-muted" style={{ fontSize: '0.65rem' }}>
+                                {SESSION_OPS_COPY.recordingFor}
+                              </span>{' '}
+                              <strong>
+                                {rosterForSession.find((r) => String(r.id) === String(lapStudentId))
+                                  ?.full_name || 'Athlete'}
+                              </strong>
+                            </>
+                          ) : (
+                            SESSION_OPS_COPY.selectAthletePrompt
+                          )}
+                        </div>
+                        {(bundle.races || []).length > 1 ? (
+                          <CFormSelect
+                            className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
+                            aria-label="Timing lane for this lap"
+                            value={lapRaceId}
+                            disabled={lapSubmitting || uiPaused || opsState === 'ended'}
+                            onChange={(e) => {
+                              setLapRaceId(e.target.value)
+                              focusLapInput()
+                            }}
+                          >
+                            <option value="">Lane (optional)</option>
+                            {(bundle.races || []).map((rc) => (
+                              <option key={rc.id} value={rc.id}>
+                                {(rc.label || rc.groupName || 'Lane').slice(0, 40)} ·{' '}
+                                {rc.startedAtMs ? new Date(rc.startedAtMs).toLocaleTimeString() : ''}
+                              </option>
+                            ))}
+                          </CFormSelect>
+                        ) : null}
+                        <CFormSelect
+                          className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
+                          aria-label="Effort tag for this lap"
+                          title="Benchmark / effort — same control every session"
+                          value={activeEffortSkillId}
+                          disabled={lapSubmitting || uiPaused || opsState === 'ended'}
+                          onChange={(e) => {
+                            manualEffortOverrideRef.current = true
+                            const id = e.target.value
+                            const sk = id
+                              ? skillsCatalog.find((r) => String(r.id) === String(id))
+                              : null
+                            setActiveEffortSkillId(id)
+                            setActiveEffortName(sk?.name || '')
+                            writeActiveEffort(selectedSessionId, lapStudentId, id, sk?.name || '')
+                            focusLapInput()
+                          }}
+                        >
+                          <option value="">Effort tag (optional)</option>
+                          {skillsCatalog.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {(s.name || 'Effort').slice(0, 56)}
+                            </option>
+                          ))}
+                        </CFormSelect>
+                        <CFormInput
+                          ref={lapSecondsRef}
+                          name="lapSeconds"
+                          className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min="0"
+                          placeholder="Seconds"
+                          value={lapSeconds}
+                          disabled={lapSubmitting || uiPaused || opsState === 'ended'}
+                          onChange={(e) => setLapSeconds(e.target.value)}
+                          autoComplete="off"
+                        />
+                        {duplicateWarn ? (
+                          <CAlert color="warning" className="py-2">
+                            {duplicateWarn}{' '}
+                            <CButton
+                              type="button"
+                              size="sm"
+                              color="warning"
+                              onClick={submitDuplicateAnyway}
+                            >
+                              Submit anyway
+                            </CButton>
+                          </CAlert>
+                        ) : null}
+                        {lapError ? (
+                          <CAlert
+                            color="danger"
+                            className="py-2 d-flex flex-wrap align-items-center gap-2 justify-content-between"
+                          >
+                            <span>{lapError}</span>
+                            <CButton
+                              type="button"
+                              size="sm"
+                              color="danger"
+                              variant="outline"
+                              onClick={retryAfterLapFailure}
+                            >
+                              Retry
+                            </CButton>
+                          </CAlert>
+                        ) : null}
+                        <div className="d-flex gap-2 flex-wrap align-items-center">
+                          <CButton
+                            type="submit"
+                            color="primary"
+                            disabled={lapSubmitting || uiPaused || opsState === 'ended'}
+                          >
+                            {lapSubmitting ? <CSpinner size="sm" /> : SESSION_OPS_COPY.recordLapCta}
+                          </CButton>
+                          {!coachLive ? (
+                            <CButton
+                              type="button"
+                              color="light"
+                              disabled={lapSubmitting}
+                              onClick={() => {
+                                setLapSeconds('')
+                                setDuplicateWarn('')
+                                setLapError('')
+                              }}
+                            >
+                              {SESSION_OPS_COPY.clearDraft}
+                            </CButton>
+                          ) : null}
+                        </div>
+                        {undoOffer && undoSecondsLeft > 0 ? (
+                          <div className="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                            <CButton
+                              type="button"
+                              size="sm"
+                              color="warning"
+                              variant="outline"
+                              disabled={undoBusy || lapSubmitting}
+                              onClick={undoLastLap}
+                            >
+                              {undoBusy ? (
+                                <CSpinner size="sm" />
+                              ) : (
+                                `Undo last lap (${undoSecondsLeft}s)`
+                              )}
+                            </CButton>
+                            <span className="small text-body-secondary">{undoOffer.label}</span>
+                          </div>
+                        ) : null}
+                        {lastEffortPhrase ? (
+                          <p className="small text-body-secondary mt-2 mb-0" aria-live="polite">
+                            {lastEffortPhrase}
+                          </p>
+                        ) : null}
+                      </form>
+                    </div>
+                  </details>
                   {lastProgression ? (
                     <CAlert
                       color="info"

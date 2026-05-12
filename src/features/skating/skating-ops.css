@@ -154,6 +154,55 @@
   font-size: 0.78rem;
 }
 
-.skating-ops-page .skating-advance-pause__actions .btn {
-  font-size: 0.78rem;
+.skating-ops-page .skating-obs-primary-panel {
+  box-shadow: 0 1px 0 rgba(var(--cui-body-color-rgb, 33, 37, 41), 0.06);
 }
+
+.skating-ops-page .skating-timing-advanced > summary {
+  list-style: none;
+}
+
+.skating-ops-page .skating-timing-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.skating-ops-page .skating-timing-summary {
+  cursor: pointer;
+}
+
+.skating-ops-page .skating-timing-summary:hover {
+  background: rgba(var(--cui-secondary-rgb, 73, 80, 87), 0.06);
+}
+
+.skating-ops-page .skating-signal-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(var(--cui-success-rgb, 25, 135, 84), 0.65);
+  box-shadow: 0 0 0 2px rgba(var(--cui-success-rgb, 25, 135, 84), 0.12);
+}
+
+.skating-ops-page .skating-athlete-has-signal td:first-child {
+  background: linear-gradient(
+    90deg,
+    rgba(var(--cui-success-rgb, 25, 135, 84), 0.06) 0%,
+    transparent 12px
+  );
+}
+
+.skating-ops-page .rapid-kpi-strip--comfortable .rapid-kpi-row .small {
+  min-width: 100px;
+  font-size: 0.95rem;
+}
+
+.skating-ops-page .rapid-kpi-strip--comfortable .rapid-kpi-row .btn-group .btn {
+  min-width: 2.6rem;
+  min-height: 2.6rem;
+}
+
+.skating-ops-page .coach-session-live .rapid-kpi-strip--comfortable .rapid-kpi-row .btn-group .btn {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+

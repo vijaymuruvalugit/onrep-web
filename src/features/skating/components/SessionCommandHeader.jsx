@@ -20,10 +20,15 @@ export default function SessionCommandHeader({
   return (
     <div className="session-command-header border-bottom pb-3 mb-3">
       <div className="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-        <div>
-          <strong className="me-2">{SESSION_OPS_COPY.liveSessionTitle}</strong>
+        <div className="d-flex flex-wrap align-items-center gap-2">
+          <strong>{SESSION_OPS_COPY.liveSessionTitle}</strong>
           <CBadge color={lifecycle.badgeColor}>{lifecycle.label}</CBadge>
-          {placeName ? <span className="small text-body-secondary ms-2">{placeName}</span> : null}
+          {elapsedLabel ? (
+            <span className="small fw-medium text-body" aria-live="polite">
+              {elapsedLabel}
+            </span>
+          ) : null}
+          {placeName ? <span className="small text-body-secondary">{placeName}</span> : null}
         </div>
         <div className="d-flex flex-wrap gap-2">
           {canStart ? (
@@ -53,11 +58,6 @@ export default function SessionCommandHeader({
           ) : null}
         </div>
       </div>
-      {elapsedLabel ? (
-        <div className="small fw-medium text-body mb-1" aria-live="polite">
-          {elapsedLabel}
-        </div>
-      ) : null}
       {todaySummaryParts?.length ? (
         <div className="small text-body-secondary skating-today-summary mb-2" aria-live="polite">
           {todaySummaryParts.join(' · ')}

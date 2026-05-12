@@ -8,6 +8,7 @@ export default function AthletesInSessionPanel({
   coachLive,
   rosterFiltered,
   lapStudentId,
+  observedStudentIds,
   onPickSkater,
   onOpenSideCapture,
   rosterFilter,
@@ -47,6 +48,8 @@ export default function AthletesInSessionPanel({
         <SessionAthleteGrid
           rows={rosterFiltered}
           lapStudentId={lapStudentId}
+          observedStudentIds={observedStudentIds}
+          coachLive={coachLive}
           onPickSkater={onPickSkater}
           showRosterSource={Boolean(import.meta.env?.DEV)}
           onOpenSideCapture={onOpenSideCapture}

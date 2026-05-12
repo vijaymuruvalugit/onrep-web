@@ -3,9 +3,15 @@ import { CButton, CButtonGroup } from '@coreui/react'
 import { DEFAULT_RAPID_KPIS } from '../constants/rapidObservationKpis'
 
 /** Numeric 1–5 chips per KPI — maps to postRapidObservation payload in parent. */
-export default function QualitativeObservationStrip({ obsScores, obsFlashKeys, disabled, onTap }) {
+export default function QualitativeObservationStrip({
+  obsScores,
+  obsFlashKeys,
+  disabled,
+  onTap,
+  comfortable = false,
+}) {
   return (
-    <>
+    <div className={comfortable ? 'rapid-kpi-strip--comfortable' : undefined}>
       {DEFAULT_RAPID_KPIS.map(({ key, label }) => (
         <div
           key={key}
@@ -33,6 +39,6 @@ export default function QualitativeObservationStrip({ obsScores, obsFlashKeys, d
           </CButtonGroup>
         </div>
       ))}
-    </>
+    </div>
   )
 }

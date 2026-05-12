@@ -8,6 +8,8 @@ import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
 export default function SessionAthleteGrid({
   rows,
   lapStudentId,
+  observedStudentIds,
+  coachLive,
   onPickSkater,
   showRosterSource,
   onOpenSideCapture,
@@ -26,43 +28,62 @@ export default function SessionAthleteGrid({
   }
 
   return (
-    <div className="table-responsive border rounded" style={{ maxHeight: 280 }}>
+    <div
+      className="table-responsive border rounded"
+      style={{ maxHeight: coachLive ? 'min(52vh, 440px)' : 280 }}
+    >
       <CTable bordered small responsive className="mb-0">
         <CTableBody>
-          {rows.map((r) => (
-            <CTableRow
-              key={r.id}
-              className={`${String(lapStudentId) === String(r.id) ? 'table-active skating-active-skater-row' : ''}`}
-              data-athlete-row={String(r.id)}
-            >
-              <CTableDataCell
-                className="py-1"
-                style={{ cursor: 'pointer' }}
-                onClick={() => onPickSkater(String(r.id))}
+          {rows.map((r) => {
+            const sid = String(r.id)
+            const hasSignal = observedStudentIds?.has?.(sid)
+            return (
+              <CTableRow
+                key={r.id}
+                className={`${String(lapStudentId) === sid ? 'table-active skating-active-skater-row' : ''}${
+                  hasSignal ? ' skating-athlete-has-signal' : ''
+                }`}
+                data-athlete-row={sid}
               >
-                <span>{r.full_name}</span>
-                {showRosterSource && r.rosterSource ? (
-                  <CBadge color="secondary" className="ms-2 text-uppercase">
-                    {r.rosterSource}
-                  </CBadge>
-                ) : null}
-              </CTableDataCell>
-              <CTableDataCell className="py-1 text-end" style={{ width: 1 }}>
-                <CButton
-                  type="button"
-                  size="sm"
-                  color="light"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onOpenSideCapture(String(r.id))
-                  }}
+                <CTableDataCell
+                  className={coachLive ? 'py-3' : 'py-1'}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => onPickSkater(sid)}
                 >
-                  {sidePanelLabel}
-                </CButton>
-              </CTableDataCell>
-            </CTableRow>
-          ))}
+                  <span className={coachLive ? 'fs-6' : undefined}>{r.full_name}</span>
+                  {hasSignal ? (
+                    <span
+                      className="skating-signal-dot ms-2 align-middle"
+                      title={SESSION_OPS_COPY.observationSavedThisSession}
+                      aria-label={SESSION_OPS_COPY.observationSavedThisSession}
+                    />
+                  ) : null}
+                  {showRosterSource && r.rosterSource ? (
+                    <CBadge color="secondary" className="ms-2 text-uppercase">
+                      {r.rosterSource}
+                    </CBadge>
+                  ) : null}
+                </CTableDataCell>
+                <CTableDataCell
+                  className={`${coachLive ? 'py-3' : 'py-1'} text-end`}
+                  style={{ width: 1 }}
+                >
+                  <CButton
+                    type="button"
+                    size="sm"
+                    color="light"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenSideCapture(sid)
+                    }}
+                  >
+                    {sidePanelLabel}
+                  </CButton>
+                </CTableDataCell>
+              </CTableRow>
+            )
+          })}
         </CTableBody>
       </CTable>
     </div>
