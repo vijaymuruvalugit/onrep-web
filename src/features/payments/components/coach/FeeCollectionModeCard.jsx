@@ -64,7 +64,7 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
         setError({
           ...e,
           message:
-            'Online checkout needs Razorpay configured on the server. Stay on manual tracking or ask your host to add keys.',
+            'Online checkout is currently unavailable. Stay on manual tracking, or contact OnRep support.',
         })
       } else {
         setError(e)
@@ -128,16 +128,16 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
               >
                 <div className="fw-semibold">Online checkout</div>
                 <div className="small opacity-75">
-                  Parents use Pay now with hosted checkout (Payment Links). Needs Razorpay on the
-                  server.
+                  Parents pay through OnRep&apos;s hosted checkout (UPI / cards / netbanking). We
+                  settle collected fees to your bank or UPI.
                 </div>
               </CButton>
             </div>
 
             {!automatedAvailable ? (
               <CAlert color="light" className="mb-0 py-2 text-body border">
-                Online checkout is unavailable until Razorpay keys are configured on the backend (or
-                dev stub flags). Manual tracking always works.
+                Online checkout is currently unavailable. Manual tracking always works — contact
+                OnRep support if you&apos;d like to enable online checkout for your academy.
               </CAlert>
             ) : (
               <p className="text-body-secondary small mb-0">

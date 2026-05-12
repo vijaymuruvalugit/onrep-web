@@ -31,8 +31,8 @@ const COPY = {
     detail: 'Our team will verify your payout details soon. You will be notified once verified.',
   },
   [CHECKOUT_READINESS_REASONS.NO_LIVE_KEYS]: {
-    title: 'Payment gateway not in live mode',
-    detail: 'Live Razorpay keys are required to accept real payments. Contact support.',
+    title: 'Online checkout temporarily unavailable',
+    detail: 'OnRep is finishing the setup on our side. Contact OnRep support if this persists.',
   },
   [CHECKOUT_READINESS_REASONS.SUBSCRIPTION_INACTIVE]: {
     title: 'Subscription not active',

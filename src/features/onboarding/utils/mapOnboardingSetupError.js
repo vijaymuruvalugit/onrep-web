@@ -7,9 +7,9 @@ export function friendlyOnboardingSetupError(code, fallbackMessage = 'Something 
   const c = String(code || '').toUpperCase()
   switch (c) {
     case 'AUTOMATED_NOT_AVAILABLE':
-      return 'Online payments are not available right now. Choose manual fee tracking or ask your host to configure Razorpay.'
+      return 'Online checkout is currently unavailable. Use manual fee tracking, or contact OnRep support to enable online checkout.'
     case 'AUTOMATED_RAZORPAY_NOT_CONFIGURED':
-      return 'Online checkout is not configured on the server yet. Use manual payments or contact support.'
+      return 'Online checkout is currently unavailable. Use manual fee tracking, or contact OnRep support.'
     case 'INVALID_UPI_VPA':
       return 'Enter a valid UPI ID (for example name@paytm).'
     case 'PAYMENT_MODULE_LOCKED':

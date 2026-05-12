@@ -167,6 +167,24 @@ function OnboardingSetupContent() {
                 You can invite coaches and start adding batches and students. Change fee settings
                 later from Payments when needed.
               </p>
+              {paymentModule === 'AUTOMATED' ? (
+                <CAlert color="info" className="py-2 mb-3">
+                  <div className="fw-semibold mb-1">Next: add your payout details</div>
+                  <div className="small mb-2">
+                    OnRep collects fees from parents on your behalf. Add your bank account or UPI
+                    ID so we can settle collected fees to your academy.
+                  </div>
+                  <CButton
+                    color="primary"
+                    variant="outline"
+                    size="sm"
+                    as={Link}
+                    to="/coach/payments/payout-details"
+                  >
+                    Add bank / UPI details
+                  </CButton>
+                </CAlert>
+              ) : null}
               <CButton color="primary" as={Link} to="/onboarding/complete">
                 Continue
               </CButton>
@@ -198,8 +216,8 @@ function OnboardingSetupContent() {
                 Automated payments
                 <div className="small fw-normal text-body-secondary">
                   {automatedAvailable
-                    ? 'Razorpay checkout for parents'
-                    : 'Not available until Razorpay is configured on the server'}
+                    ? 'Hosted online checkout for parents — handled by OnRep'
+                    : 'Online checkout is currently unavailable. Contact OnRep support.'}
                 </div>
               </CButton>
               {busy ? (
@@ -237,13 +255,17 @@ function OnboardingSetupContent() {
                 </CForm>
               ) : (
                 <>
-                  <p className="small text-body-secondary">
-                    Fee collection uses Razorpay payment links for parents. Your server must have
-                    valid Razorpay keys.
+                  <p className="small text-body-secondary mb-2">
+                    Online checkout is powered by OnRep — parents pay through a hosted page using
+                    UPI, cards, or netbanking. You don&apos;t need a payment gateway account.
+                  </p>
+                  <p className="small text-body-secondary mb-3">
+                    After enabling, add your <strong>bank account or UPI ID</strong> so we can
+                    transfer collected fees to your academy.
                   </p>
                   <CButton color="primary" onClick={() => void onAutomatedSetup()} disabled={busy}>
                     {busy ? <CSpinner size="sm" /> : null}
-                    Continue
+                    Enable online checkout
                   </CButton>
                 </>
               )}
