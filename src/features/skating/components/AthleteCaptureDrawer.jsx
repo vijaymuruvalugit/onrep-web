@@ -38,20 +38,31 @@ export default function AthleteCaptureDrawer({
           {SESSION_OPS_COPY.markPresentSoon}
         </CAlert>
         <div>
-          <label className="form-label small text-body-secondary">{SESSION_OPS_COPY.focusPlaceholder}</label>
+          <label className="form-label small text-body-secondary">
+            {SESSION_OPS_COPY.focusPlaceholder}
+          </label>
           <CFormInput
             value={focusText}
             onChange={(e) => onChangeFocus(e.target.value)}
             placeholder="e.g. Quicker crossovers on corners"
           />
           <div className="d-flex gap-2 mt-2 align-items-center flex-wrap">
-            <CButton type="button" color="primary" size="sm" disabled={saving} onClick={onSaveFocus}>
+            <CButton
+              type="button"
+              color="primary"
+              size="sm"
+              disabled={saving}
+              onClick={onSaveFocus}
+            >
               {saving ? 'Saving…' : SESSION_OPS_COPY.focusSave}
             </CButton>
             {saveMessage ? <span className="small text-success">{saveMessage}</span> : null}
           </div>
         </div>
-        <p className="small text-body-secondary mb-0">{SESSION_OPS_COPY.openInlineCapture}</p>
+        <p className="small text-body-secondary mb-0">
+          {SESSION_OPS_COPY.openInlineCapture} Use the main panel for laps and quick notices for
+          this athlete.
+        </p>
       </COffcanvasBody>
     </COffcanvas>
   )

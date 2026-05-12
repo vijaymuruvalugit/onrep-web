@@ -11,11 +11,14 @@ export default function SessionAthleteGrid({
   onPickSkater,
   showRosterSource,
   onOpenSideCapture,
+  sidePanelLabel = 'Side panel',
 }) {
   if (!rows?.length) {
     return (
       <div className="border rounded p-3 bg-body-tertiary">
-        <div className="fw-semibold text-body-secondary mb-1">{SESSION_OPS_COPY.emptyRosterTitle}</div>
+        <div className="fw-semibold text-body-secondary mb-1">
+          {SESSION_OPS_COPY.emptyRosterTitle}
+        </div>
         <p className="small text-body-secondary mb-2 mb-0">{SESSION_OPS_COPY.emptyRosterBody}</p>
         <p className="small text-muted mt-2 mb-0">{SESSION_OPS_COPY.emptyRosterCta}</p>
       </div>
@@ -30,6 +33,7 @@ export default function SessionAthleteGrid({
             <CTableRow
               key={r.id}
               className={`${String(lapStudentId) === String(r.id) ? 'table-active skating-active-skater-row' : ''}`}
+              data-athlete-row={String(r.id)}
             >
               <CTableDataCell
                 className="py-1"
@@ -54,7 +58,7 @@ export default function SessionAthleteGrid({
                     onOpenSideCapture(String(r.id))
                   }}
                 >
-                  Side panel
+                  {sidePanelLabel}
                 </CButton>
               </CTableDataCell>
             </CTableRow>

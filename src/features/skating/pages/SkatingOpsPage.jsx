@@ -27,13 +27,19 @@ import {
   CTableRow,
 } from '@coreui/react'
 import placesApi from '../../places/api/placesApi'
+import { useAuth } from '../../auth/hooks/useAuth'
 import { formatLocalYmd } from '../../dashboard/utils/calendarDate'
 import { skatingOpsApi } from '../api/skatingOpsApi'
 import { skatingChecklistApi } from '../api/skatingChecklistApi'
 import { DEFAULT_RAPID_KPIS } from '../constants/rapidObservationKpis'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
-import SessionAthleteGrid from '../components/SessionAthleteGrid'
 import AthleteCaptureDrawer from '../components/AthleteCaptureDrawer'
+import AthletesInSessionPanel from '../components/AthletesInSessionPanel'
+import QualitativeObservationStrip from '../components/QualitativeObservationStrip'
+import SessionCommandHeader from '../components/SessionCommandHeader'
+import StartSessionModal from '../components/StartSessionModal'
+import { deriveSessionLifecycle, formatElapsedLiveLabel } from '../utils/sessionLifecycle'
+import { computeSessionSummary } from '../utils/sessionTodaySummary'
 import '../skating-ops.css'
 
 const SK_LAST_PLACE = 'onrep.skating.lastPlaceId'
@@ -78,7 +84,11 @@ function formatTime(isoOrDate) {
   try {
     const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate)
     if (Number.isNaN(d.getTime())) return '—'
-    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    return d.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
   } catch {
     return '—'
   }
@@ -93,13 +103,13 @@ function lapSecondsFromRow(row) {
 function raceLabelForLap(row, races) {
   if (!row?.raceId) return '—'
   const rc = (races || []).find((r) => String(r.id) === String(row.raceId))
-  return rc?.label || rc?.groupName || 'Race'
+  return rc?.label || rc?.groupName || 'Lane'
 }
 
 function raceLabelForId(raceId, races) {
   if (!raceId) return '—'
   const rc = (races || []).find((r) => String(r.id) === String(raceId))
-  return rc?.label || rc?.groupName || 'Race'
+  return rc?.label || rc?.groupName || 'Lane'
 }
 
 function formatBundleFreshness(msAgo) {
@@ -150,8 +160,12 @@ function readActiveEffort(sessionId, studentId) {
     if (!raw) return { skillId: '', skillName: '' }
     const o = JSON.parse(raw)
     if (o?.sessionId !== sessionId) return { skillId: '', skillName: '' }
-    if (o.studentId && String(o.studentId) !== String(studentId)) return { skillId: '', skillName: '' }
-    return { skillId: o.skillId ? String(o.skillId) : '', skillName: o.skillName ? String(o.skillName) : '' }
+    if (o.studentId && String(o.studentId) !== String(studentId))
+      return { skillId: '', skillName: '' }
+    return {
+      skillId: o.skillId ? String(o.skillId) : '',
+      skillName: o.skillName ? String(o.skillName) : '',
+    }
   } catch {
     return { skillId: '', skillName: '' }
   }
@@ -210,6 +224,8 @@ function isFullObservationSet(obsScores) {
  * Single-route skating operational surface — lap-first UX, session continuity, stable bundle fields.
  */
 const SkatingOpsPage = () => {
+  const auth = useAuth()
+  const currentUserId = auth?.user?.id || auth?.user?.sub || ''
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionParam = searchParams.get('session') || ''
   const focusFromUrl = searchParams.get('focus') === '1'
@@ -229,11 +245,12 @@ const SkatingOpsPage = () => {
   const [focusMode, setFocusMode] = useState(focusFromUrl)
   const [uiPaused, setUiPaused] = useState(false)
 
-  const [showCreate, setShowCreate] = useState(false)
-  const [createPlaceId, setCreatePlaceId] = useState('')
-  const [createRink, setCreateRink] = useState('Rink')
-  const [createNotes, setCreateNotes] = useState('')
-  const [createSkaterIds, setCreateSkaterIds] = useState(() => new Set())
+  const [showStartLiveModal, setShowStartLiveModal] = useState(false)
+  const [defaultPlaceForModal, setDefaultPlaceForModal] = useState('')
+  const [defaultRinkForModal, setDefaultRinkForModal] = useState('Rink')
+  const [showAddAthletesModal, setShowAddAthletesModal] = useState(false)
+  const [addAthletesPick, setAddAthletesPick] = useState(() => new Set())
+  const [addAthletesSaving, setAddAthletesSaving] = useState(false)
 
   const [lapStudentId, setLapStudentId] = useState('')
   const [lapSeconds, setLapSeconds] = useState('')
@@ -276,6 +293,9 @@ const SkatingOpsPage = () => {
   const [athleteFocusDraft, setAthleteFocusDraft] = useState('')
   const [athleteFocusSaving, setAthleteFocusSaving] = useState(false)
   const [athleteFocusSaveMsg, setAthleteFocusSaveMsg] = useState('')
+
+  const athletePanelRef = useRef(null)
+  const defaultRaceEnsureAttemptedRef = useRef(new Set())
 
   const lapSecondsRef = useRef(null)
   const forceDuplicateRef = useRef(false)
@@ -552,9 +572,9 @@ const SkatingOpsPage = () => {
   useEffect(() => {
     try {
       const lp = sessionStorage.getItem(SK_LAST_PLACE)
-      if (lp) setCreatePlaceId(lp)
+      if (lp) setDefaultPlaceForModal(lp)
       const lr = sessionStorage.getItem(SK_LAST_RINK)
-      if (lr) setCreateRink(lr)
+      if (lr) setDefaultRinkForModal(lr)
     } catch {
       /* ignore */
     }
@@ -642,7 +662,8 @@ const SkatingOpsPage = () => {
     if (Array.isArray(resolved)) {
       for (const r of resolved) pushId(r.student_id)
     }
-    const sessionIds = bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []
+    const sessionIds =
+      bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []
     for (const id of sessionIds) pushId(id)
     for (const g of bundle?.groups || []) {
       const gk = g.skaterIds || g.skater_ids || []
@@ -653,9 +674,11 @@ const SkatingOpsPage = () => {
   }, [bundle, skaters])
 
   const rosterWithSource = useMemo(() => {
-    const src = new Map((bundle?.resolvedAthletes || []).map((r) => [String(r.student_id), r.source]))
+    const src = new Map(
+      (bundle?.resolvedAthletes || []).map((r) => [String(r.student_id), r.source]),
+    )
     const sessionSet = new Set(
-      (bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []).map(String)
+      (bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []).map(String),
     )
     return rosterForSession.map((r) => {
       const id = String(r.id)
@@ -713,7 +736,7 @@ const SkatingOpsPage = () => {
       setLapStudentId(studentId)
       focusLapInput()
     },
-    [clearPendingObsAdvance, focusLapInput]
+    [clearPendingObsAdvance, focusLapInput],
   )
 
   const closeCaptureDrawer = useCallback(() => {
@@ -761,6 +784,38 @@ const SkatingOpsPage = () => {
     await loadSnapshot()
   }
 
+  const addTimingLane = async () => {
+    if (!selectedSessionId) return
+    setLapError('')
+    try {
+      await skatingOpsApi.addRace(selectedSessionId, 'main', {})
+      await loadBundle(selectedSessionId)
+      await loadSnapshot()
+    } catch (err) {
+      setLapError(err?.message || 'Could not add timing lane.')
+    }
+  }
+
+  useEffect(() => {
+    const races = bundle?.races
+    if (!Array.isArray(races) || races.length !== 1) return
+    setLapRaceId(String(races[0].id))
+  }, [bundle?.races])
+
+  useEffect(() => {
+    if (!selectedSessionId || !bundle) return
+    if (Array.isArray(bundle.races) && bundle.races.length > 0) return
+    if (defaultRaceEnsureAttemptedRef.current.has(selectedSessionId)) return
+    void (async () => {
+      defaultRaceEnsureAttemptedRef.current.add(selectedSessionId)
+      try {
+        await ensureDefaultRace()
+      } catch {
+        defaultRaceEnsureAttemptedRef.current.delete(selectedSessionId)
+      }
+    })()
+  }, [selectedSessionId, bundle])
+
   const submitLap = async (e) => {
     e?.preventDefault?.()
     if (!selectedSessionId || uiPaused || lapSubmitting) return
@@ -776,7 +831,9 @@ const SkatingOpsPage = () => {
       Math.abs(Number(last.lapMs ?? last.lap_ms) / 1000 - sec) < 0.05
 
     if (similar && !forceDuplicateRef.current) {
-      setDuplicateWarn('Very similar to the last lap for this skater — submit again to confirm, or adjust time.')
+      setDuplicateWarn(
+        'Very similar to the last lap for this skater — submit again to confirm, or adjust time.',
+      )
       setLapError('')
       return
     }
@@ -824,9 +881,18 @@ const SkatingOpsPage = () => {
       await loadBundle(selectedSessionId)
       await loadSnapshot()
       setLapSeconds('')
-      focusLapInput()
+      const onFloor = Boolean(selectedSessionId && bundle?.session?.opsState === 'active')
+      if (onFloor) {
+        requestAnimationFrame(() => {
+          athletePanelRef.current?.focus?.()
+        })
+      } else {
+        focusLapInput()
+      }
     } catch (err) {
-      setLapError(err?.message || 'That lap didn’t stick — your time is still here. Try again in a moment.')
+      setLapError(
+        err?.message || 'That lap didn’t stick — your time is still here. Try again in a moment.',
+      )
     } finally {
       setLapSubmitting(false)
       setPendingLapPreview(null)
@@ -860,30 +926,6 @@ const SkatingOpsPage = () => {
     await submitLap()
   }
 
-  const onCreateSession = async () => {
-    const place = places.find((p) => String(p.id) === String(createPlaceId))
-    const body = {
-      date: dateYmd,
-      placeId: createPlaceId || undefined,
-      placeName: place?.name || undefined,
-      rinkOrRoad: createRink,
-      notes: createNotes || undefined,
-      sessionSkaterIds: Array.from(createSkaterIds),
-    }
-    const row = await skatingOpsApi.createSession(body)
-    try {
-      if (createPlaceId) sessionStorage.setItem(SK_LAST_PLACE, createPlaceId)
-      sessionStorage.setItem(SK_LAST_RINK, createRink)
-    } catch {
-      /* ignore */
-    }
-    setShowCreate(false)
-    setCreateSkaterIds(new Set())
-    setCreateNotes('')
-    await loadSnapshot()
-    if (row?.id) selectSession(row.id)
-  }
-
   const endSession = async () => {
     if (!selectedSessionId) return
     clearPendingObsAdvance()
@@ -905,6 +947,65 @@ const SkatingOpsPage = () => {
   const selSession = sessions.find((s) => String(s.id) === String(selectedSessionId))
   const opsState = selSession?.opsState || bundle?.session?.opsState
   const coachLive = opsState === 'active' && Boolean(selectedSessionId)
+
+  const lifecycle = useMemo(
+    () => deriveSessionLifecycle({ opsState, uiPaused }),
+    [opsState, uiPaused],
+  )
+
+  const nameByStudentId = useMemo(() => {
+    const m = new Map()
+    for (const s of skaters) m.set(String(s.id), s.full_name || String(s.id))
+    return m
+  }, [skaters])
+
+  const todaySummary = useMemo(
+    () => computeSessionSummary(bundle, rosterForSession.length, nameByStudentId),
+    [bundle, rosterForSession.length, nameByStudentId],
+  )
+
+  const todaySummaryParts = useMemo(() => {
+    const parts = []
+    if (todaySummary.athleteCount) parts.push(`${todaySummary.athleteCount} athletes`)
+    if (todaySummary.lapCount != null) parts.push(`${todaySummary.lapCount} laps recorded`)
+    if (todaySummary.focus) parts.push(`Focus: ${todaySummary.focus}`)
+    if (todaySummary.mostActive?.name) parts.push(`Most active: ${todaySummary.mostActive.name}`)
+    return parts
+  }, [todaySummary])
+
+  const elapsedLabel = useMemo(() => {
+    if (!selectedSessionId || !bundle) return null
+    if (lifecycle.key !== 'active' && lifecycle.key !== 'paused') return null
+    const started =
+      selSession?.startedAt ??
+      selSession?.started_at ??
+      bundle.session?.startedAt ??
+      bundle.session?.started_at
+    const ended =
+      selSession?.endedAt ??
+      selSession?.ended_at ??
+      bundle.session?.endedAt ??
+      bundle.session?.ended_at
+    if (!started) return null
+    return formatElapsedLiveLabel(started, { endedAtIso: ended })
+  }, [selectedSessionId, bundle, selSession, lifecycle.key, bundleAgeTick])
+
+  const guidanceLine = useMemo(() => {
+    if (!selectedSessionId || !bundle) return ''
+    if (rosterForSession.length === 0) return SESSION_OPS_COPY.addAthletesToRecord
+    if (!lapStudentId && coachLive) return SESSION_OPS_COPY.guidancePickAthlete
+    if (coachLive && lapStudentId && !hasObsScores && !obsSyncedAt)
+      return SESSION_OPS_COPY.guidanceNoObsYet
+    return ''
+  }, [
+    selectedSessionId,
+    bundle,
+    rosterForSession.length,
+    lapStudentId,
+    coachLive,
+    hasObsScores,
+    obsSyncedAt,
+  ])
 
   const bundlePeripheralFresh = useMemo(() => {
     if (!coachLive || bundleFetchedAt == null || bundleLoading) return false
@@ -945,17 +1046,20 @@ const SkatingOpsPage = () => {
     setObsScores((prev) => ({ ...prev, [key]: n }))
   }, [])
 
-  const executeObsAdvance = useCallback((fromSid, fromName, toSid) => {
-    setObsAdvancePending(null)
-    obsChainAdvanceRef.current = true
-    setObsReturnSkater({
-      id: String(fromSid),
-      name: fromName || 'Skater',
-      until: Date.now() + OBS_RETURN_WINDOW_MS,
-    })
-    setLapStudentId(String(toSid))
-    focusLapInput()
-  }, [focusLapInput])
+  const executeObsAdvance = useCallback(
+    (fromSid, fromName, toSid) => {
+      setObsAdvancePending(null)
+      obsChainAdvanceRef.current = true
+      setObsReturnSkater({
+        id: String(fromSid),
+        name: fromName || 'Skater',
+        until: Date.now() + OBS_RETURN_WINDOW_MS,
+      })
+      setLapStudentId(String(toSid))
+      focusLapInput()
+    },
+    [focusLapInput],
+  )
 
   const submitObservation = useCallback(
     async ({ manual = false } = {}) => {
@@ -1122,12 +1226,52 @@ const SkatingOpsPage = () => {
     void submitObservation({ manual: true })
   }
 
+  const openStartLiveModal = () => {
+    try {
+      const lp = sessionStorage.getItem(SK_LAST_PLACE) || ''
+      setDefaultPlaceForModal(lp)
+      const lr = sessionStorage.getItem(SK_LAST_RINK) || 'Rink'
+      setDefaultRinkForModal(lr)
+    } catch {
+      /* ignore */
+    }
+    setShowStartLiveModal(true)
+  }
+
+  const onSessionStartedFromModal = (sid) => {
+    void loadSnapshot()
+    if (sid) selectSession(sid)
+  }
+
+  const saveAddAthletes = async () => {
+    if (!selectedSessionId || !bundle?.session) return
+    setAddAthletesSaving(true)
+    try {
+      const cur = new Set(
+        (bundle.session.sessionSkaterIds || bundle.session.session_skater_ids || []).map(String),
+      )
+      for (const id of addAthletesPick) cur.add(String(id))
+      await skatingOpsApi.patchSession(selectedSessionId, { sessionSkaterIds: Array.from(cur) })
+      setShowAddAthletesModal(false)
+      setAddAthletesPick(new Set())
+      await loadBundle(selectedSessionId)
+      await loadSnapshot()
+    } catch (e) {
+      setLapError(e?.message || 'Could not update athletes.')
+    } finally {
+      setAddAthletesSaving(false)
+    }
+  }
+
   const inner = (
     <>
       <CCard className="mb-3">
         {slimSessionBar ? (
           <CCardBody className="py-2 px-3 d-flex flex-wrap align-items-center gap-2 border-bottom-0">
-            <span className="small text-body-secondary text-truncate flex-grow-1" style={{ maxWidth: '85%' }}>
+            <span
+              className="small text-body-secondary text-truncate flex-grow-1"
+              style={{ maxWidth: '85%' }}
+            >
               {selSession?.placeName || bundle?.session?.placeName || 'This session'} ·{' '}
               {formatTime(selSession?.startedAt ?? selSession?.started_at)}
             </span>
@@ -1137,7 +1281,7 @@ const SkatingOpsPage = () => {
               className="p-0 text-decoration-none"
               onClick={() => setSessionsPanelOpen(true)}
             >
-              Switch session
+              {SESSION_OPS_COPY.switchSession}
             </CButton>
           </CCardBody>
         ) : null}
@@ -1145,27 +1289,32 @@ const SkatingOpsPage = () => {
           <>
             <CCardHeader className="d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div>
-                <strong>Skating ops</strong>
+                <strong>{SESSION_OPS_COPY.pageTitle}</strong>
                 <span className="text-body-secondary small ms-2">
-                  Training sessions (runtime) — not scheduled classes.
+                  {SESSION_OPS_COPY.pageSubtitle}
                 </span>
               </div>
               <div className="d-flex flex-wrap gap-2 align-items-center">
-                <CFormLabel className="mb-0 small">Day</CFormLabel>
+                <CFormLabel className="mb-0 small">{SESSION_OPS_COPY.dayLabel}</CFormLabel>
                 <CFormInput
                   type="date"
                   value={dateYmd}
                   onChange={(e) => setDateYmd(e.target.value)}
                   className="w-auto"
                 />
-                <CButton color="secondary" size="sm" variant="outline" onClick={() => loadSnapshot()}>
-                  Refresh
+                <CButton
+                  color="secondary"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => loadSnapshot()}
+                >
+                  {SESSION_OPS_COPY.refresh}
                 </CButton>
-                <CButton color="primary" size="sm" onClick={() => setShowCreate(true)}>
-                  New training session
+                <CButton color="primary" size="sm" onClick={openStartLiveModal}>
+                  {SESSION_OPS_COPY.newSessionCta}
                 </CButton>
                 <CButton as={Link} size="sm" color="light" variant="outline" to="/coach/attendance">
-                  Attendance
+                  {SESSION_OPS_COPY.attendanceLink}
                 </CButton>
                 {coachLive && selectedSessionId ? (
                   <CButton
@@ -1174,7 +1323,7 @@ const SkatingOpsPage = () => {
                     variant="ghost"
                     onClick={() => setSessionsPanelOpen(false)}
                   >
-                    Minimize list
+                    {SESSION_OPS_COPY.minimizeList}
                   </CButton>
                 ) : null}
               </div>
@@ -1185,55 +1334,60 @@ const SkatingOpsPage = () => {
                 <CSpinner />
               ) : (
                 <CTable hover responsive small>
-              <CTableHead>
-                <CTableRow>
-                  <CTableHeaderCell>When</CTableHeaderCell>
-                  <CTableHeaderCell>Place</CTableHeaderCell>
-                  <CTableHeaderCell>State</CTableHeaderCell>
-                  <CTableHeaderCell />
-                </CTableRow>
-              </CTableHead>
-              <CTableBody>
-                {sessions.length === 0 ? (
-                  <CTableRow>
-                    <CTableDataCell colSpan={4} className="text-body-secondary">
-                      No training sessions on this day.
-                    </CTableDataCell>
-                  </CTableRow>
-                ) : (
-                  sessions.map((s) => (
-                    <CTableRow
-                      key={s.id}
-                      className={String(s.id) === String(selectedSessionId) ? 'table-active' : ''}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => selectSession(s.id)}
-                    >
-                      <CTableDataCell>
-                        {s.sessionDate ?? s.session_date} · {formatTime(s.startedAt ?? s.started_at)}{' '}
-                        {(s.endedAt ?? s.ended_at) ? `→ ${formatTime(s.endedAt ?? s.ended_at)}` : ''}
-                      </CTableDataCell>
-                      <CTableDataCell>{(s.placeName ?? s.place_name) || '—'}</CTableDataCell>
-                      <CTableDataCell>
-                        <CBadge color={opsBadgeColor(s.opsState)}>{s.opsState}</CBadge>
-                      </CTableDataCell>
-                      <CTableDataCell className="text-end">
-                        <CButton
-                          size="sm"
-                          color="primary"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            selectSession(s.id)
-                          }}
-                        >
-                          Open
-                        </CButton>
-                      </CTableDataCell>
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell>When</CTableHeaderCell>
+                      <CTableHeaderCell>Place</CTableHeaderCell>
+                      <CTableHeaderCell>State</CTableHeaderCell>
+                      <CTableHeaderCell />
                     </CTableRow>
-                  ))
-                )}
-              </CTableBody>
-            </CTable>
+                  </CTableHead>
+                  <CTableBody>
+                    {sessions.length === 0 ? (
+                      <CTableRow>
+                        <CTableDataCell colSpan={4} className="text-body-secondary">
+                          No training sessions on this day.
+                        </CTableDataCell>
+                      </CTableRow>
+                    ) : (
+                      sessions.map((s) => (
+                        <CTableRow
+                          key={s.id}
+                          className={
+                            String(s.id) === String(selectedSessionId) ? 'table-active' : ''
+                          }
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => selectSession(s.id)}
+                        >
+                          <CTableDataCell>
+                            {s.sessionDate ?? s.session_date} ·{' '}
+                            {formatTime(s.startedAt ?? s.started_at)}{' '}
+                            {(s.endedAt ?? s.ended_at)
+                              ? `→ ${formatTime(s.endedAt ?? s.ended_at)}`
+                              : ''}
+                          </CTableDataCell>
+                          <CTableDataCell>{(s.placeName ?? s.place_name) || '—'}</CTableDataCell>
+                          <CTableDataCell>
+                            <CBadge color={opsBadgeColor(s.opsState)}>{s.opsState}</CBadge>
+                          </CTableDataCell>
+                          <CTableDataCell className="text-end">
+                            <CButton
+                              size="sm"
+                              color="primary"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                selectSession(s.id)
+                              }}
+                            >
+                              Open
+                            </CButton>
+                          </CTableDataCell>
+                        </CTableRow>
+                      ))
+                    )}
+                  </CTableBody>
+                </CTable>
               )}
             </CCardBody>
           </>
@@ -1242,44 +1396,35 @@ const SkatingOpsPage = () => {
 
       {selectedSessionId ? (
         <CCard className={`mb-3${opsState === 'active' ? ' coach-session-live' : ''}`}>
-          <CCardHeader className="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-              <strong>Live session</strong>{' '}
-              <CBadge color={opsBadgeColor(opsState)}>{opsState || '—'}</CBadge>
-              {uiPaused ? (
-                <CBadge color="warning" className="ms-1">
-                  {coachLive ? 'Paused' : 'Paused (UI)'}
-                </CBadge>
-              ) : null}
-              {!coachLive && bundle && bundleFreshnessLabel && !bundleLoading ? (
-                <span className="small text-body-secondary ms-2">Bundle updated {bundleFreshnessLabel}</span>
-              ) : null}
-            </div>
-            <div className={`d-flex flex-wrap gap-2${coachLive ? ' coach-live-actions' : ''}`}>
-              {opsState === 'upcoming' ? (
-                <CButton size="sm" color="success" onClick={startSession}>
-                  Start
-                </CButton>
-              ) : null}
-              {opsState === 'active' ? (
-                <CButton size="sm" color="warning" variant="outline" onClick={() => setUiPaused((p) => !p)}>
-                  {uiPaused ? 'Resume' : 'Pause'}
-                </CButton>
-              ) : null}
-              {opsState === 'active' || opsState === 'upcoming' ? (
-                <CButton size="sm" color="dark" variant="outline" onClick={endSession}>
-                  End
-                </CButton>
-              ) : null}
-              {!coachLive ? (
-                <CButton size="sm" color={focusMode ? 'danger' : 'secondary'} onClick={toggleFocus}>
-                  {focusMode ? 'Exit focus' : 'Focus mode'}
-                </CButton>
-              ) : null}
-            </div>
+          <CCardHeader className="d-flex flex-wrap justify-content-end align-items-center gap-2">
+            {!coachLive ? (
+              <CButton size="sm" color={focusMode ? 'danger' : 'secondary'} onClick={toggleFocus}>
+                {focusMode ? 'Exit focus' : 'Focus mode'}
+              </CButton>
+            ) : null}
           </CCardHeader>
           <CCardBody>
             {bundleError ? <CAlert color="danger">{bundleError}</CAlert> : null}
+            <SessionCommandHeader
+              placeName={bundle?.session?.placeName || selSession?.placeName || ''}
+              lifecycle={{ badgeColor: lifecycle.badgeColor, label: lifecycle.label }}
+              elapsedLabel={elapsedLabel || undefined}
+              todaySummaryParts={todaySummaryParts}
+              guidanceLine={guidanceLine}
+              onPauseToggle={() => setUiPaused((p) => !p)}
+              pauseLabel={uiPaused ? 'Resume' : 'Pause'}
+              onEnd={() => void endSession()}
+              onStart={() => void startSession()}
+              onSwitchSession={coachLive ? () => setSessionsPanelOpen(true) : undefined}
+              canStart={opsState === 'upcoming'}
+              canPause={opsState === 'active'}
+              canEnd={opsState === 'active' || opsState === 'upcoming'}
+            />
+            {!coachLive && bundle && bundleFreshnessLabel && !bundleLoading ? (
+              <div className="small text-body-secondary mb-2">
+                Bundle updated {bundleFreshnessLabel}
+              </div>
+            ) : null}
             {reEntryWarmth ? (
               <div className="small text-body-secondary skating-reentry-hint mb-2 px-1 py-1 rounded">
                 {reEntryWarmth}
@@ -1333,7 +1478,8 @@ const SkatingOpsPage = () => {
                     </div>
                   ) : null}
                   {bundle.session?.sessionFocus ||
-                  (Array.isArray(bundle.session?.objectivesJson) && bundle.session.objectivesJson.length) ? (
+                  (Array.isArray(bundle.session?.objectivesJson) &&
+                    bundle.session.objectivesJson.length) ? (
                     <div className="small mb-3 px-2 py-2 border rounded bg-body-tertiary">
                       {bundle.session?.sessionFocus ? (
                         <div className="mb-1">
@@ -1341,7 +1487,8 @@ const SkatingOpsPage = () => {
                           <span>{bundle.session.sessionFocus}</span>
                         </div>
                       ) : null}
-                      {Array.isArray(bundle.session?.objectivesJson) && bundle.session.objectivesJson.length ? (
+                      {Array.isArray(bundle.session?.objectivesJson) &&
+                      bundle.session.objectivesJson.length ? (
                         <ul className="mb-0 mt-1 ps-3">
                           {bundle.session.objectivesJson.slice(0, 8).map((o, i) => (
                             <li key={i} className="small">
@@ -1354,30 +1501,23 @@ const SkatingOpsPage = () => {
                   ) : null}
                 </CCol>
                 <CCol lg={5}>
-                  <div
-                    className={`small text-body-secondary mb-1${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
-                    title={coachLive ? 'Headcount context — tap a name to steer focus' : undefined}
-                  >
-                    Roster ({rosterForSession.length}) · Total laps {bundle.totalLapCount ?? 0}
-                  </div>
-                  <CFormInput
-                    size="sm"
-                    className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
-                    placeholder="Filter roster…"
-                    title="Optional — roster filter stays available"
-                    value={rosterFilter}
-                    onChange={(e) => setRosterFilter(e.target.value)}
-                  />
-                  <SessionAthleteGrid
-                    rows={rosterFiltered}
+                  <AthletesInSessionPanel
+                    coachLive={coachLive}
+                    rosterFiltered={rosterFiltered}
                     lapStudentId={lapStudentId}
                     onPickSkater={(id) => {
                       clearPendingObsAdvance()
                       setLapStudentId(id)
                       focusLapInput()
                     }}
-                    showRosterSource={Boolean(import.meta.env?.DEV)}
                     onOpenSideCapture={openCaptureDrawer}
+                    rosterFilter={rosterFilter}
+                    onRosterFilterChange={setRosterFilter}
+                    onAddAthletesRequest={() => {
+                      setAddAthletesPick(new Set())
+                      setShowAddAthletesModal(true)
+                    }}
+                    listRef={athletePanelRef}
                   />
                   {inlineAthleteFocus ? (
                     <div className="small mt-2 px-1 py-2 border rounded bg-body-tertiary d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -1401,57 +1541,71 @@ const SkatingOpsPage = () => {
                       </CButton>
                     </div>
                   ) : null}
-                  {bundle.races?.length === 0 ? (
+                  {(bundle.races || []).length > 1 ? (
+                    coachLive ? (
+                      <details className="mt-2 coach-recede coach-recede-latent">
+                        <summary
+                          className="small text-body-secondary user-select-none"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {SESSION_OPS_COPY.timingLaneColumn}{' '}
+                          <span className="opacity-50">(multiple lanes)</span>
+                        </summary>
+                        <CButtonGroup vertical role="group" className="w-100 mt-1">
+                          {(bundle.races || []).map((rc) => (
+                            <CButton
+                              key={rc.id}
+                              color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
+                              size="sm"
+                              className="text-start"
+                              disabled={lapSubmitting}
+                              onClick={() => {
+                                setLapRaceId(rc.id)
+                                focusLapInput()
+                              }}
+                            >
+                              {(rc.label || rc.groupName || 'Lane').slice(0, 48)}
+                            </CButton>
+                          ))}
+                        </CButtonGroup>
+                      </details>
+                    ) : (
+                      <div className="mt-2">
+                        <div className="small text-body-secondary mb-1">
+                          {SESSION_OPS_COPY.timingLaneColumn}
+                        </div>
+                        <CButtonGroup vertical role="group" className="w-100">
+                          {(bundle.races || []).map((rc) => (
+                            <CButton
+                              key={rc.id}
+                              color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
+                              size="sm"
+                              className="text-start"
+                              disabled={lapSubmitting}
+                              onClick={() => {
+                                setLapRaceId(rc.id)
+                                focusLapInput()
+                              }}
+                            >
+                              {(rc.label || rc.groupName || 'Lane').slice(0, 48)}
+                            </CButton>
+                          ))}
+                        </CButtonGroup>
+                      </div>
+                    )
+                  ) : (bundle.races || []).length === 1 && coachLive ? (
                     <div className="mt-2">
-                      <CButton size="sm" color="secondary" onClick={ensureDefaultRace}>
-                        Add default race group
+                      <CButton
+                        size="sm"
+                        color="light"
+                        variant="outline"
+                        type="button"
+                        onClick={() => void addTimingLane()}
+                      >
+                        {SESSION_OPS_COPY.addTimingLane}
                       </CButton>
                     </div>
-                  ) : coachLive ? (
-                    <details className="mt-2 coach-recede coach-recede-latent">
-                      <summary className="small text-body-secondary user-select-none" style={{ cursor: 'pointer' }}>
-                        Race <span className="opacity-50">(here if you need it)</span>
-                      </summary>
-                      <CButtonGroup vertical role="group" className="w-100 mt-1">
-                        {(bundle.races || []).map((rc) => (
-                          <CButton
-                            key={rc.id}
-                            color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
-                            size="sm"
-                            className="text-start"
-                            disabled={lapSubmitting}
-                            onClick={() => {
-                              setLapRaceId(rc.id)
-                              focusLapInput()
-                            }}
-                          >
-                            {(rc.label || rc.groupName || 'Race').slice(0, 48)}
-                          </CButton>
-                        ))}
-                      </CButtonGroup>
-                    </details>
-                  ) : (
-                    <div className="mt-2">
-                      <div className="small text-body-secondary mb-1">Quick race</div>
-                      <CButtonGroup vertical role="group" className="w-100">
-                        {(bundle.races || []).map((rc) => (
-                          <CButton
-                            key={rc.id}
-                            color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
-                            size="sm"
-                            className="text-start"
-                            disabled={lapSubmitting}
-                            onClick={() => {
-                              setLapRaceId(rc.id)
-                              focusLapInput()
-                            }}
-                          >
-                            {(rc.label || rc.groupName || 'Race').slice(0, 48)}
-                          </CButton>
-                        ))}
-                      </CButtonGroup>
-                    </div>
-                  )}
+                  ) : null}
                 </CCol>
                 <CCol lg={7} className={coachLive ? 'operational-sticky-stack' : undefined}>
                   <form
@@ -1462,7 +1616,7 @@ const SkatingOpsPage = () => {
                     }}
                     onKeyDown={onFormKeyDown}
                   >
-                    <div className="fw-semibold mb-2">Lap entry</div>
+                    <div className="fw-semibold mb-2">{SESSION_OPS_COPY.lapEntryTitle}</div>
                     {lapSubmitting ? (
                       <div className="small text-warning mb-1 d-flex align-items-center gap-2">
                         <CSpinner size="sm" />
@@ -1471,47 +1625,47 @@ const SkatingOpsPage = () => {
                     ) : null}
                     {!coachLive ? (
                       <div className="small text-body-secondary mb-1">
-                        Tab skater → seconds → Enter. ⌘/Ctrl+Enter saves. Alt+↑↓ switches race when multiple
-                        exist.
+                        Pick an athlete on the left → seconds → Enter. ⌘/Ctrl+Enter saves. Alt+↑↓
+                        switches timing lane when multiple exist.
                       </div>
                     ) : null}
-                    <CFormSelect
-                      className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
-                      aria-label={coachLive ? 'Active skater (or pick another)' : undefined}
-                      title={coachLive ? 'Change who you’re focused on' : undefined}
-                      value={lapStudentId}
-                      disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                      onChange={(e) => {
-                        clearPendingObsAdvance()
-                        setLapStudentId(e.target.value)
-                        focusLapInput()
-                      }}
-                    >
-                      <option value="">Skater…</option>
-                      {rosterFiltered.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.full_name}
-                        </option>
-                      ))}
-                    </CFormSelect>
-                    <CFormSelect
-                      className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
-                      aria-label={coachLive ? 'Race for this lap' : undefined}
-                      value={lapRaceId}
-                      disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                      onChange={(e) => {
-                        setLapRaceId(e.target.value)
-                        focusLapInput()
-                      }}
-                    >
-                      <option value="">Race (optional)</option>
-                      {(bundle.races || []).map((rc) => (
-                        <option key={rc.id} value={rc.id}>
-                          {(rc.label || rc.groupName || 'Race').slice(0, 40)} ·{' '}
-                          {rc.startedAtMs ? new Date(rc.startedAtMs).toLocaleTimeString() : ''}
-                        </option>
-                      ))}
-                    </CFormSelect>
+                    <div className="mb-2 p-2 border rounded bg-body-tertiary">
+                      {lapStudentId ? (
+                        <div>
+                          <div className="small text-body-secondary">
+                            {SESSION_OPS_COPY.recordingFor}
+                          </div>
+                          <div className="fw-semibold">
+                            {rosterForSession.find((r) => String(r.id) === String(lapStudentId))
+                              ?.full_name || 'Athlete'}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="small text-body-secondary mb-0">
+                          {SESSION_OPS_COPY.selectAthletePrompt}
+                        </div>
+                      )}
+                    </div>
+                    {(bundle.races || []).length > 1 ? (
+                      <CFormSelect
+                        className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
+                        aria-label="Timing lane for this lap"
+                        value={lapRaceId}
+                        disabled={lapSubmitting || uiPaused || opsState === 'ended'}
+                        onChange={(e) => {
+                          setLapRaceId(e.target.value)
+                          focusLapInput()
+                        }}
+                      >
+                        <option value="">Lane (optional)</option>
+                        {(bundle.races || []).map((rc) => (
+                          <option key={rc.id} value={rc.id}>
+                            {(rc.label || rc.groupName || 'Lane').slice(0, 40)} ·{' '}
+                            {rc.startedAtMs ? new Date(rc.startedAtMs).toLocaleTimeString() : ''}
+                          </option>
+                        ))}
+                      </CFormSelect>
+                    ) : null}
                     <CFormSelect
                       className="mb-2"
                       aria-label="Effort tag for this lap"
@@ -1521,7 +1675,9 @@ const SkatingOpsPage = () => {
                       onChange={(e) => {
                         manualEffortOverrideRef.current = true
                         const id = e.target.value
-                        const sk = id ? skillsCatalog.find((r) => String(r.id) === String(id)) : null
+                        const sk = id
+                          ? skillsCatalog.find((r) => String(r.id) === String(id))
+                          : null
                         setActiveEffortSkillId(id)
                         setActiveEffortName(sk?.name || '')
                         writeActiveEffort(selectedSessionId, lapStudentId, id, sk?.name || '')
@@ -1552,7 +1708,12 @@ const SkatingOpsPage = () => {
                     {duplicateWarn ? (
                       <CAlert color="warning" className="py-2">
                         {duplicateWarn}{' '}
-                        <CButton type="button" size="sm" color="warning" onClick={submitDuplicateAnyway}>
+                        <CButton
+                          type="button"
+                          size="sm"
+                          color="warning"
+                          onClick={submitDuplicateAnyway}
+                        >
                           Submit anyway
                         </CButton>
                       </CAlert>
@@ -1580,7 +1741,7 @@ const SkatingOpsPage = () => {
                         color="primary"
                         disabled={lapSubmitting || uiPaused || opsState === 'ended'}
                       >
-                        {lapSubmitting ? <CSpinner size="sm" /> : 'Record lap'}
+                        {lapSubmitting ? <CSpinner size="sm" /> : SESSION_OPS_COPY.recordLapCta}
                       </CButton>
                       {!coachLive ? (
                         <CButton
@@ -1593,7 +1754,7 @@ const SkatingOpsPage = () => {
                             setLapError('')
                           }}
                         >
-                          Clear draft
+                          {SESSION_OPS_COPY.clearDraft}
                         </CButton>
                       ) : null}
                     </div>
@@ -1607,7 +1768,11 @@ const SkatingOpsPage = () => {
                           disabled={undoBusy || lapSubmitting}
                           onClick={undoLastLap}
                         >
-                          {undoBusy ? <CSpinner size="sm" /> : `Undo last lap (${undoSecondsLeft}s)`}
+                          {undoBusy ? (
+                            <CSpinner size="sm" />
+                          ) : (
+                            `Undo last lap (${undoSecondsLeft}s)`
+                          )}
                         </CButton>
                         <span className="small text-body-secondary">{undoOffer.label}</span>
                       </div>
@@ -1622,7 +1787,9 @@ const SkatingOpsPage = () => {
                     className={`mt-4 pt-3 border-top skating-obs-block${obsPulse ? ' skating-obs-block--pulse' : ''}`}
                   >
                     <div className="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-2">
-                      <span className="small fw-medium text-body-secondary">Quick notice</span>
+                      <span className="small fw-medium text-body-secondary">
+                        {SESSION_OPS_COPY.quickNoticeTitle}
+                      </span>
                       <span className="small text-body-secondary opacity-75" aria-live="polite">
                         {obsSaving ? (
                           <span className="skating-sync-pending">Syncing…</span>
@@ -1656,10 +1823,11 @@ const SkatingOpsPage = () => {
                           )
                         })()}
                         <span className="text-body-secondary skating-advance-pause__line">
-                          <span className="d-none">{advanceTick}</span>
-                          → {obsAdvancePending.targetName}
+                          <span className="d-none">{advanceTick}</span>→{' '}
+                          {obsAdvancePending.targetName}
                           <span className="opacity-50 ms-1">
-                            ({Math.max(0, Math.ceil((obsAdvancePending.until - Date.now()) / 1000))}s)
+                            ({Math.max(0, Math.ceil((obsAdvancePending.until - Date.now()) / 1000))}
+                            s)
                           </span>
                         </span>
                         <div className="mt-1 d-flex flex-wrap gap-2 align-items-center skating-advance-pause__actions">
@@ -1711,44 +1879,32 @@ const SkatingOpsPage = () => {
                     {obsError ? (
                       <div className="small text-danger mb-2 d-flex flex-wrap align-items-center gap-2">
                         <span>{obsError}</span>
-                        <CButton type="button" size="sm" color="link" className="p-0" onClick={retryObservation}>
+                        <CButton
+                          type="button"
+                          size="sm"
+                          color="link"
+                          className="p-0"
+                          onClick={retryObservation}
+                        >
                           Try again
                         </CButton>
                       </div>
                     ) : null}
-                    {DEFAULT_RAPID_KPIS.map(({ key, label }) => (
-                      <div
-                        key={key}
-                        className={`rapid-kpi-row mb-2 d-flex align-items-center flex-wrap gap-2${obsFlashKeys.has(key) ? ' rapid-kpi-row--flash' : ''}`}
-                      >
-                        <span className="small" style={{ minWidth: 88 }}>
-                          {label}
-                        </span>
-                        <CButtonGroup role="group" aria-label={`${label} score`}>
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <CButton
-                              key={n}
-                              type="button"
-                              size="sm"
-                              color={obsScores[key] === n ? 'primary' : 'light'}
-                              className={obsScores[key] === n ? 'rapid-kpi-chip--active' : ''}
-                              disabled={
-                                obsSaving || uiPaused || opsState === 'ended' || !lapStudentId
-                              }
-                              onClick={() => applyObsTap(key, n)}
-                            >
-                              {n}
-                            </CButton>
-                          ))}
-                        </CButtonGroup>
-                      </div>
-                    ))}
+                    <QualitativeObservationStrip
+                      obsScores={obsScores}
+                      obsFlashKeys={obsFlashKeys}
+                      disabled={obsSaving || uiPaused || opsState === 'ended' || !lapStudentId}
+                      onTap={applyObsTap}
+                    />
                     <details
                       className="small mt-2"
                       open={obsNotesOpen}
                       onToggle={(e) => setObsNotesOpen(e.target.open)}
                     >
-                      <summary className="text-body-secondary user-select-none" style={{ cursor: 'pointer' }}>
+                      <summary
+                        className="text-body-secondary user-select-none"
+                        style={{ cursor: 'pointer' }}
+                      >
                         Add a short note (optional)
                       </summary>
                       <CFormInput
@@ -1781,19 +1937,23 @@ const SkatingOpsPage = () => {
                     ) : null}
                   </div>
                   {lastProgression ? (
-                    <CAlert color="info" className={`mt-3 py-2 small${coachLive ? ' border-0 bg-transparent px-0' : ''}`}>
+                    <CAlert
+                      color="info"
+                      className={`mt-3 py-2 small${coachLive ? ' border-0 bg-transparent px-0' : ''}`}
+                    >
                       {lastProgression.applied ? (
                         <>
                           <span className="fw-medium">Logged — </span>
-                          {lastProgression.skillName || lastProgression.skillId} → {lastProgression.status}
+                          {lastProgression.skillName || lastProgression.skillId} →{' '}
+                          {lastProgression.status}
                           {coachLive ? (
                             <span className="text-body-secondary"> · looks right for now.</span>
                           ) : null}
                         </>
                       ) : (
                         <>
-                          No auto skill bump ({lastProgression.reason || 'n/a'}) — that happens; you can adjust
-                          later if needed.
+                          No auto skill bump ({lastProgression.reason || 'n/a'}) — that happens; you
+                          can adjust later if needed.
                         </>
                       )}
                       {!coachLive ? (
@@ -1810,7 +1970,7 @@ const SkatingOpsPage = () => {
             {bundle?.recentLaps?.length ? (
               <div className="mt-3">
                 <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
-                  <span className="fw-semibold">Recent laps</span>
+                  <span className="fw-semibold">{SESSION_OPS_COPY.recentLapsTitle}</span>
                   {coachLive && bundle.recentLaps.length > 6 ? (
                     <CButton
                       color="link"
@@ -1830,7 +1990,7 @@ const SkatingOpsPage = () => {
                       <CTableRow>
                         <CTableHeaderCell className="text-nowrap">Time</CTableHeaderCell>
                         <CTableHeaderCell>Skater</CTableHeaderCell>
-                        <CTableHeaderCell>Race</CTableHeaderCell>
+                        <CTableHeaderCell>{SESSION_OPS_COPY.timingLaneColumn}</CTableHeaderCell>
                         <CTableHeaderCell className="text-end">Lap (s)</CTableHeaderCell>
                       </CTableRow>
                     </CTableHead>
@@ -1842,7 +2002,9 @@ const SkatingOpsPage = () => {
                             Pending…
                           </CTableDataCell>
                           <CTableDataCell>{pendingLapPreview.studentName}</CTableDataCell>
-                          <CTableDataCell className="small">{pendingLapPreview.raceLabel}</CTableDataCell>
+                          <CTableDataCell className="small">
+                            {pendingLapPreview.raceLabel}
+                          </CTableDataCell>
                           <CTableDataCell className="text-end font-monospace">
                             {(pendingLapPreview.lapMs / 1000).toFixed(2)}
                           </CTableDataCell>
@@ -1856,9 +2018,15 @@ const SkatingOpsPage = () => {
                           <CTableDataCell className="text-nowrap">
                             {formatTime(row.recordedAt ?? row.recorded_at)}
                           </CTableDataCell>
-                          <CTableDataCell>{row.studentName ?? row.student_full_name ?? row.student_id}</CTableDataCell>
-                          <CTableDataCell className="small">{raceLabelForLap(row, bundle.races)}</CTableDataCell>
-                          <CTableDataCell className="text-end font-monospace">{lapSecondsFromRow(row)}</CTableDataCell>
+                          <CTableDataCell>
+                            {row.studentName ?? row.student_full_name ?? row.student_id}
+                          </CTableDataCell>
+                          <CTableDataCell className="small">
+                            {raceLabelForLap(row, bundle.races)}
+                          </CTableDataCell>
+                          <CTableDataCell className="text-end font-monospace">
+                            {lapSecondsFromRow(row)}
+                          </CTableDataCell>
                         </CTableRow>
                       ))}
                     </CTableBody>
@@ -1885,61 +2053,59 @@ const SkatingOpsPage = () => {
         onClose={closeCaptureDrawer}
       />
 
-      <CModal visible={showCreate} onClose={() => setShowCreate(false)}>
-        <CModalHeader>New training session</CModalHeader>
+      <StartSessionModal
+        visible={showStartLiveModal}
+        onClose={() => setShowStartLiveModal(false)}
+        dateYmd={dateYmd}
+        places={places}
+        skaters={skaters}
+        defaultPlaceId={defaultPlaceForModal}
+        defaultRink={defaultRinkForModal}
+        currentUserId={currentUserId}
+        onSessionStarted={onSessionStartedFromModal}
+      />
+
+      <CModal
+        visible={showAddAthletesModal}
+        onClose={() => setShowAddAthletesModal(false)}
+        alignment="center"
+      >
+        <CModalHeader>Add athletes to session</CModalHeader>
         <CModalBody>
-          <CFormLabel>Place (smart default from last)</CFormLabel>
-          <CFormSelect
-            className="mb-2"
-            value={createPlaceId}
-            onChange={(e) => setCreatePlaceId(e.target.value)}
-          >
-            <option value="">—</option>
-            {places.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </CFormSelect>
-          <CFormLabel>Rink / road</CFormLabel>
-          <CFormSelect
-            className="mb-2"
-            value={createRink}
-            onChange={(e) => setCreateRink(e.target.value)}
-          >
-            <option>Rink</option>
-            <option>Road</option>
-          </CFormSelect>
-          <CFormLabel>Notes</CFormLabel>
-          <CFormInput
-            className="mb-2"
-            value={createNotes}
-            onChange={(e) => setCreateNotes(e.target.value)}
-          />
-          <div className="fw-semibold mb-1">Roster</div>
-          <div className="d-flex flex-column gap-1" style={{ maxHeight: 220, overflow: 'auto' }}>
+          <p className="small text-body-secondary">
+            Select athletes to add to this session roster.
+          </p>
+          <div className="d-flex flex-column gap-1" style={{ maxHeight: 280, overflow: 'auto' }}>
             {skaters.map((s) => (
               <CFormCheck
                 key={s.id}
-                id={`sk-${s.id}`}
+                id={`add-sk-${s.id}`}
                 label={s.full_name}
-                checked={createSkaterIds.has(String(s.id))}
+                checked={addAthletesPick.has(String(s.id))}
                 onChange={(e) => {
-                  const next = new Set(createSkaterIds)
+                  const next = new Set(addAthletesPick)
                   if (e.target.checked) next.add(String(s.id))
                   else next.delete(String(s.id))
-                  setCreateSkaterIds(next)
+                  setAddAthletesPick(next)
                 }}
               />
             ))}
           </div>
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setShowCreate(false)}>
-            Cancel
+          <CButton
+            color="secondary"
+            variant="outline"
+            onClick={() => setShowAddAthletesModal(false)}
+          >
+            {SESSION_OPS_COPY.cancel}
           </CButton>
-          <CButton color="primary" onClick={onCreateSession}>
-            Create
+          <CButton
+            color="primary"
+            disabled={addAthletesSaving}
+            onClick={() => void saveAddAthletes()}
+          >
+            {addAthletesSaving ? <CSpinner size="sm" /> : 'Save'}
           </CButton>
         </CModalFooter>
       </CModal>
