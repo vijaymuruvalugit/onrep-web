@@ -481,7 +481,7 @@ const SkatingOpsPage = () => {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [selectedSessionId])
 
   useEffect(() => {
     if (selectedSessionId) loadBundle(selectedSessionId)
@@ -627,24 +627,43 @@ const SkatingOpsPage = () => {
   }
 
   const rosterForSession = useMemo(() => {
-    const resolved = bundle?.resolvedAthletes
-    if (Array.isArray(resolved) && resolved.length > 0) {
-      const order = resolved.map((r) => String(r.student_id))
-      const byId = new Map(skaters.map((s) => [String(s.id), s]))
-      return order.map((id) => byId.get(id)).filter(Boolean)
+    const byId = new Map(skaters.map((s) => [String(s.id), s]))
+    const seen = new Set()
+    const orderedIds = []
+
+    const pushId = (id) => {
+      const s = String(id || '').trim()
+      if (!s || seen.has(s)) return
+      seen.add(s)
+      orderedIds.push(s)
     }
-    const ids = bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []
-    const set = new Set(ids.map(String))
-    return skaters.filter((s) => set.has(String(s.id)))
+
+    const resolved = bundle?.resolvedAthletes
+    if (Array.isArray(resolved)) {
+      for (const r of resolved) pushId(r.student_id)
+    }
+    const sessionIds = bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []
+    for (const id of sessionIds) pushId(id)
+    for (const g of bundle?.groups || []) {
+      const gk = g.skaterIds || g.skater_ids || []
+      for (const id of gk) pushId(id)
+    }
+
+    return orderedIds.map((id) => byId.get(id)).filter(Boolean)
   }, [bundle, skaters])
 
   const rosterWithSource = useMemo(() => {
     const src = new Map((bundle?.resolvedAthletes || []).map((r) => [String(r.student_id), r.source]))
-    return rosterForSession.map((r) => ({
-      ...r,
-      rosterSource: src.get(String(r.id)) || null,
-    }))
-  }, [rosterForSession, bundle?.resolvedAthletes])
+    const sessionSet = new Set(
+      (bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []).map(String)
+    )
+    return rosterForSession.map((r) => {
+      const id = String(r.id)
+      let source = src.get(id)
+      if (!source && sessionSet.has(id)) source = 'manual_session_override'
+      return { ...r, rosterSource: source || null }
+    })
+  }, [rosterForSession, bundle?.resolvedAthletes, bundle?.session])
 
   const rosterFiltered = useMemo(() => {
     const q = rosterFilter.trim().toLowerCase()
