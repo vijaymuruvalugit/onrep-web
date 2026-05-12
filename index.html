@@ -67,6 +67,35 @@
           // Never block app boot — fall through to the normal React route.
         }
       })();
+
+      // Legacy email-link rewriter.
+      //
+      // Older backend builds emailed verification + reset-password links as
+      // `<origin>/verify-email?token=...` and `<origin>/reset-password?token=...`
+      // (no hash). With HashRouter that lands the user on `/` with the token
+      // stranded in `window.location.search` — the `/` fallback then bounces
+      // unauthenticated users to login, and the token is never consumed.
+      //
+      // The backend now emits the correct `#/auth/verify-email` form, but
+      // already-delivered emails are still in inboxes. This shim restores
+      // the intended hash route so those links still work.
+      (function restoreOwnerAuthHash() {
+        try {
+          if (window.location.hash && window.location.hash.length > 1) return;
+          var pathname = window.location.pathname || '/';
+          var search = window.location.search || '';
+          var stripped = pathname.replace(/\/$/, '');
+          var map = {
+            '/verify-email': '/auth/verify-email',
+            '/reset-password': '/auth/reset-password',
+          };
+          var target = map[stripped];
+          if (!target) return;
+          window.location.replace(window.location.origin + '/#' + target + search);
+        } catch (e) {
+          /* fall through */
+        }
+      })();
     </script>
     <script type="module" src="/src/index.jsx"></script>
   </body>
