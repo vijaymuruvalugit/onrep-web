@@ -8,6 +8,8 @@ export default function SessionCommandHeader({
   elapsedLabel,
   todaySummaryParts,
   guidanceLine,
+  /** Optional next-step taps (e.g. Add athletes) — keep sparse; primary actions stay in the header button row. */
+  guidanceActions,
   onPauseToggle,
   pauseLabel,
   onEnd,
@@ -65,6 +67,22 @@ export default function SessionCommandHeader({
       ) : null}
       {guidanceLine ? (
         <div className="small text-body-secondary fst-italic">{guidanceLine}</div>
+      ) : null}
+      {guidanceActions?.length ? (
+        <div className="d-flex flex-wrap align-items-center gap-2 mt-2">
+          {guidanceActions.map((a) => (
+            <CButton
+              key={a.key}
+              type="button"
+              size="sm"
+              color={a.color || 'primary'}
+              variant={a.variant || 'outline'}
+              onClick={a.onClick}
+            >
+              {a.label}
+            </CButton>
+          ))}
+        </div>
       ) : null}
     </div>
   )

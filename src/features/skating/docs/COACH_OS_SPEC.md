@@ -11,7 +11,7 @@ Authoritative product framing lives in the skating coach OS plan; this document 
 | APIs | **Aligned** | `GET /skating/students/:id/coach-summary` — glance bundle (`coachSummaryVersion`, progress counts, laps PB sample, momentum heuristic, note snippet). `POST /skating/training/sessions/:sessionId/rapid-observation` — `student_assessments` row with `kind: skating_rapid_observation`. Training bundle + laps unchanged as primary rhythm. |
 | DB | **Aligned** | Assessments via existing `student_assessments` JSON payload + `schemaVersion`; no parallel skating-only table required for Rapid Observation v1. |
 | Progression | **Unchanged contract** | Lap-driven progression remains on training lap APIs; coach summary is **read-only** visibility. |
-| Assessments | **Rapid Observation v1** | Five fixed KPI keys in UI (`rapidObservationKpis.js`); server validates 1–5 scores, 1–5 keys per submit. |
+| Assessments | **Rapid Observation v1** | Bounded KPI keys in UI (`rapidObservationKpis.js`); server accepts **1–9** score keys per submit (values 1–5). |
 
 ---
 
@@ -20,7 +20,7 @@ Authoritative product framing lives in the skating coach OS plan; this document 
 | Surface | Role | Mapping |
 |---------|------|---------|
 | **Primary shell** | Continuous operational context | [`SkatingOpsPage.jsx`](../pages/SkatingOpsPage.jsx) — single `/coach/skating` anchor; no new route per feature. |
-| **Tray / rail** | Fast athlete rotation | Roster table + skater `<select>` — same session context. |
+| **Tray / rail** | Fast athlete rotation | [`AthletesInSessionPanel`](../components/AthletesInSessionPanel.jsx) + [`SessionAthleteGrid`](../components/SessionAthleteGrid.jsx) — **sole** session skater picker (no duplicate roster `<select>` on capture surfaces). |
 | **Peek** | Low-density glance elsewhere | [`StudentSkatingSnapshotCard.jsx`](../components/StudentSkatingSnapshotCard.jsx) — coach-summary only; not a dashboard. |
 | **Capture sheet** | Structured KPI capture | “Rapid observation” block — chips 1–5, optional notes. |
 | **Session context strip** | Situational awareness | Session id prefix, place, rink/road, ops badge — no navigation. |
@@ -45,8 +45,8 @@ Shared rules: **preserve selection** where possible; **no full-page blocking** d
 
 ## Rapid Observation model
 
-- **≤ 5 KPIs** per capture (fixed list for muscle memory).
-- **Scores** 1–5 integers; **≥ 1** KPI required per submit (server allows up to 5 keys).
+- **≤ 9 KPIs** per capture (fixed list for muscle memory; server allows 1–9 keys per request).
+- **Scores** 1–5 integers; **≥ 1** KPI required per submit.
 - **Payload** (Layer 2): `schemaVersion: 1`, `kind: skating_rapid_observation`, `activityType: skating`, `trainingSessionId`, optional `raceId`, `scores`, optional `notes`.
 - **Throughput goal**: UI supports **≤ 2 taps per KPI** after athlete selected (chip = one tap).
 
@@ -70,7 +70,7 @@ When a full timeline ships, it must be **signal-first**:
 |-------------|---------------------------|
 | Draft persistence | Lap draft in `sessionStorage` (`SK_LAP_DRAFT`); session id in `SK_ACTIVE_SESSION`. |
 | Optimistic / pending | Pending lap row + spinner on lap submit. |
-| Resume | `visibilitychange` refreshes bundle + snapshot. |
+| Resume | `visibilitychange` refreshes bundle + snapshot **without** full-page spinners (silent refetch when tab regains focus). |
 | No panic UX | Lap failure: message + **Retry** (refetch bundle); observation failure: inline alert. |
 | Retry queue | **Out of scope v1** — explicit button retry only. |
 
@@ -176,6 +176,13 @@ Session anchor strip shows: truncated session id, place, rink/road, ops state ba
 ## Extraction threshold gate
 
 Shared primitives (shared React components, generic timeline) ship only when **≥ 2 activities** share the same operational semantics and rhythm — see plan. Skating-specific code remains until then.
+
+---
+
+## Flow mode v1 + internal metrics (plan §4 / §15)
+
+- **Flow:** [`FLOW_MODE.md`](./FLOW_MODE.md) — athlete list is the sole picker; lap save returns focus to the roster when live; future keyboard/swipe “next athlete” assist stays **out of v1**.
+- **Internal counters:** [`utils/skatingOpsInternalMetrics.js`](../utils/skatingOpsInternalMetrics.js) — in-memory adoption signals (lap save, observation save, session start/end, add lane, add athletes). Expose via `getSkatingOpsInternalMetrics()` in DevTools; optional `console.debug` in **development** only. **Not** shown in coach UI.
 
 ---
 
