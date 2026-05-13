@@ -24,10 +24,12 @@ function formatListScheduleSnapshot(snap) {
 function parseBatchCoachesJson(batch) {
   const raw = batch.batchCoaches ?? batch.batch_coaches
   if (Array.isArray(raw)) {
-    return raw.map((r) => ({
-      id: String(r.id ?? r.user_id ?? ''),
-      name: r.name != null ? String(r.name) : '',
-    })).filter((r) => r.id)
+    return raw
+      .map((r) => ({
+        id: String(r.id ?? r.user_id ?? ''),
+        name: r.name != null ? String(r.name) : '',
+      }))
+      .filter((r) => r.id)
   }
   if (raw && typeof raw === 'string') {
     try {
@@ -61,8 +63,7 @@ function normalizeBatch(batch) {
   const hasUpcomingClass =
     Boolean(batch.hasUpcomingClass ?? batch.has_upcoming_class) || upcomingSessionsCount > 0
 
-  const todaySessionSnapshot =
-    batch.todaySessionSnapshot ?? batch.today_session_snapshot ?? null
+  const todaySessionSnapshot = batch.todaySessionSnapshot ?? batch.today_session_snapshot ?? null
   const nextSessionSnapshot = batch.nextSessionSnapshot ?? batch.next_session_snapshot ?? null
 
   const batchCoaches = parseBatchCoachesJson(batch)
@@ -82,7 +83,12 @@ function normalizeBatch(batch) {
     batch.lead_coach_name ??
     (batchCoaches.length ? batchCoaches[0].name : null)
   const coachNamesJoined =
-    batchCoaches.length > 0 ? batchCoaches.map((c) => c.name).filter(Boolean).join(', ') : null
+    batchCoaches.length > 0
+      ? batchCoaches
+          .map((c) => c.name)
+          .filter(Boolean)
+          .join(', ')
+      : null
 
   return {
     ...batch,
@@ -97,12 +103,7 @@ function normalizeBatch(batch) {
     coachUserIds,
     leadCoachUserId,
     leadCoachName,
-    coachName:
-      batch.coachName ??
-      batch.coach_name ??
-      coachNamesJoined ??
-      leadCoachName ??
-      null,
+    coachName: batch.coachName ?? batch.coach_name ?? coachNamesJoined ?? leadCoachName ?? null,
     defaultPlaceId: batch.defaultPlaceId ?? batch.default_place_id ?? null,
     defaultPlaceName: batch.defaultPlaceName ?? batch.default_place_name ?? null,
     location:
@@ -180,6 +181,10 @@ export const batchesApi = {
     return data || {}
   },
 
+  /**
+   * Legacy batch-wide session materialization. Prefer server rolling generation;
+   * retained for rare ops/debug.
+   */
   async generateClasses(payload) {
     const { data } = await http.post('/batch-schedules/generate', payload)
     return data || {}

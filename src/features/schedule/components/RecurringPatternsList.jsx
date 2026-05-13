@@ -52,7 +52,6 @@ function PatternCard({
   onEdit,
   onSkipNext,
   onAdjustNext,
-  onGenerateMissing,
   onDeactivate,
   hasUpcomingForPattern,
 }) {
@@ -106,12 +105,6 @@ function PatternCard({
               </CDropdownToggle>
               <CDropdownMenu>
                 <CDropdownItem
-                  onClick={() => onGenerateMissing(pattern)}
-                  disabled={!pattern.isActive}
-                >
-                  Generate missing sessions
-                </CDropdownItem>
-                <CDropdownItem
                   onClick={() => onSkipNext(pattern)}
                   disabled={!hasUpcomingForPattern}
                 >
@@ -143,8 +136,7 @@ function PatternCard({
 /**
  * Render a list of recurring session patterns as cards, plus an "Add" button.
  * Each card has Edit + a per-pattern operations menu (Skip next / Adjust next
- * / Generate missing / Disable). The advanced-operations accordion is retired
- * in favor of this per-pattern menu.
+ * / Disable). Future sessions are maintained automatically by the platform.
  */
 export default function RecurringPatternsList({
   patterns,
@@ -156,10 +148,8 @@ export default function RecurringPatternsList({
   onEdit,
   onSkipNext,
   onAdjustNext,
-  onGenerateMissing,
   onDeactivate,
   onRefresh,
-  onGenerateBatchWide,
 }) {
   const active = patterns.filter((p) => p.isActive)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -171,7 +161,8 @@ export default function RecurringPatternsList({
         <div>
           <div className="onrep-type-label">Recurring session patterns</div>
           <div className="small text-body-secondary mt-1">
-            A batch can have multiple recurring patterns (morning, evening, weekend, etc.).
+            A batch can have multiple recurring patterns (morning, evening, weekend, etc.). Upcoming
+            calendar sessions are filled automatically — no manual “generate” step.
           </div>
         </div>
         <div className="d-flex gap-2 flex-shrink-0">
@@ -184,18 +175,6 @@ export default function RecurringPatternsList({
               disabled={loading}
             >
               Refresh
-            </CButton>
-          ) : null}
-          {batchId ? (
-            <CButton
-              size="sm"
-              color="secondary"
-              variant="outline"
-              onClick={onGenerateBatchWide}
-              disabled={loading || active.length === 0}
-              title="Materialize upcoming sessions from every active pattern on this batch"
-            >
-              Generate missing for batch
             </CButton>
           ) : null}
           <CButton size="sm" color="primary" disabled={!batchId} onClick={onAdd}>
@@ -218,7 +197,8 @@ export default function RecurringPatternsList({
 
       {!loading && !patterns.length && batchId ? (
         <CAlert color="info" className="mb-0 py-2 small">
-          No recurring patterns yet — add one to start generating sessions.
+          No recurring patterns yet — add one to define when this batch trains. Sessions appear on
+          the calendar automatically.
         </CAlert>
       ) : null}
       {!loading && !batchId ? (
@@ -234,7 +214,6 @@ export default function RecurringPatternsList({
           onEdit={onEdit}
           onSkipNext={onSkipNext}
           onAdjustNext={onAdjustNext}
-          onGenerateMissing={onGenerateMissing}
           onDeactivate={onDeactivate}
           hasUpcomingForPattern={Boolean(hasUpcomingByPatternId?.[p.id])}
         />
@@ -260,7 +239,6 @@ export default function RecurringPatternsList({
                   onEdit={() => {}}
                   onSkipNext={() => {}}
                   onAdjustNext={() => {}}
-                  onGenerateMissing={() => {}}
                   onDeactivate={() => {}}
                   hasUpcomingForPattern={false}
                 />

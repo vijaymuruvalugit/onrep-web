@@ -24,11 +24,6 @@ export const scheduleApi = {
     return data || {}
   },
 
-  async generateClasses(payload) {
-    const { data } = await http.post('/batch-schedules/generate', payload)
-    return data || {}
-  },
-
   /**
    * Audit-safe pattern edit. Body matches {@link UpdateRecurringPatternRequest}
    * in `@onrep/contracts/recurring-patterns`. Always end-and-replace under the
@@ -54,7 +49,10 @@ export const scheduleApi = {
     return data || {}
   },
 
-  /** Pattern-scoped session generation. */
+  /**
+   * Manual pattern-scoped generation (legacy). Prefer automatic rolling
+   * materialization on the server; kept for ops/debug scripts only.
+   */
   async generateForPattern(patternId, payload) {
     const { data } = await http.post(
       `/recurring-patterns/${encodeURIComponent(patternId)}/generate`,

@@ -28,7 +28,6 @@ import {
   normalizeTrainingSessionRow,
 } from '../../classes/utils/sessionRow'
 import batchesApi from '../../batches/api/batchesApi'
-import scheduleApi from '../api/scheduleApi'
 import useClasses from '../../classes/hooks/useClasses'
 import {
   mergeBatchSessionInstances,
@@ -405,60 +404,6 @@ const SchedulePage = () => {
     [deactivatePattern, refreshAll],
   )
 
-  const handleGenerateForPattern = useCallback(
-    async (pattern) => {
-      if (!pattern?.id) return
-      try {
-        const end = new Date()
-        end.setDate(end.getDate() + 45)
-        const y = end.getFullYear()
-        const m = String(end.getMonth() + 1).padStart(2, '0')
-        const d = String(end.getDate()).padStart(2, '0')
-        const res = await scheduleApi.generateForPattern(pattern.id, {
-          fromDate: todayIso,
-          toDate: `${y}-${m}-${d}`,
-        })
-        setPageNotice({
-          type: 'success',
-          text: `Generated ${res?.created ?? 0} session${res?.created === 1 ? '' : 's'} for “${pattern.name || 'this schedule'}”.`,
-        })
-        refreshAll()
-      } catch (e) {
-        setPageNotice({
-          type: 'danger',
-          text: e?.response?.data?.error || e?.message || 'Could not generate sessions.',
-        })
-      }
-    },
-    [todayIso, refreshAll],
-  )
-
-  const handleGenerateBatchWide = useCallback(async () => {
-    if (!effectiveBatchId) return
-    try {
-      const end = new Date()
-      end.setDate(end.getDate() + 45)
-      const y = end.getFullYear()
-      const m = String(end.getMonth() + 1).padStart(2, '0')
-      const d = String(end.getDate()).padStart(2, '0')
-      const res = await batchesApi.generateClasses({
-        batchId: effectiveBatchId,
-        fromDate: todayIso,
-        toDate: `${y}-${m}-${d}`,
-      })
-      setPageNotice({
-        type: 'success',
-        text: `Generated ${res?.created ?? 0} session${res?.created === 1 ? '' : 's'} across active patterns.`,
-      })
-      refreshAll()
-    } catch (e) {
-      setPageNotice({
-        type: 'danger',
-        text: e?.response?.data?.error || e?.message || 'Could not generate sessions.',
-      })
-    }
-  }, [effectiveBatchId, todayIso, refreshAll])
-
   const handleSkipNextForPattern = useCallback(
     async (pattern) => {
       const row = nextSessionByPatternId[pattern.id]
@@ -560,10 +505,8 @@ const SchedulePage = () => {
           onEdit={openEditPattern}
           onSkipNext={handleSkipNextForPattern}
           onAdjustNext={openAdjustNext}
-          onGenerateMissing={handleGenerateForPattern}
           onDeactivate={handleDeactivatePattern}
           onRefresh={() => fetchSchedule(effectiveBatchId)}
-          onGenerateBatchWide={handleGenerateBatchWide}
         />
       </section>
 

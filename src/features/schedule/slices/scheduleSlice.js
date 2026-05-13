@@ -7,7 +7,6 @@ const initialState = {
   items: [],
   loading: false,
   saving: false,
-  generating: false,
   error: null,
   mutationError: null,
 }
@@ -32,18 +31,6 @@ export const createSchedule = createAsyncThunk(
       const response = await scheduleApi.createSchedule(payload)
       const row = response.schedule || null
       return row ? normalizeScheduleRowForUi(row) : null
-    } catch (error) {
-      return thunkApi.rejectWithValue(normalizeApiError(error))
-    }
-  },
-)
-
-export const regenerateClasses = createAsyncThunk(
-  'schedule/regenerateClasses',
-  async (payload, thunkApi) => {
-    try {
-      const response = await scheduleApi.generateClasses(payload)
-      return response
     } catch (error) {
       return thunkApi.rejectWithValue(normalizeApiError(error))
     }
@@ -113,17 +100,6 @@ const scheduleSlice = createSlice({
       .addCase(createSchedule.rejected, (state, action) => {
         state.saving = false
         state.mutationError = action.payload || { message: 'Unable to save schedule.' }
-      })
-      .addCase(regenerateClasses.pending, (state) => {
-        state.generating = true
-        state.mutationError = null
-      })
-      .addCase(regenerateClasses.fulfilled, (state) => {
-        state.generating = false
-      })
-      .addCase(regenerateClasses.rejected, (state, action) => {
-        state.generating = false
-        state.mutationError = action.payload || { message: 'Unable to generate classes.' }
       })
       .addCase(updatePattern.pending, (state) => {
         state.saving = true

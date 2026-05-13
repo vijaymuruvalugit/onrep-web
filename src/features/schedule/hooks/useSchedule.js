@@ -5,7 +5,6 @@ import {
   createSchedule,
   deactivatePattern,
   fetchSchedule,
-  regenerateClasses,
   updatePattern,
 } from '../slices/scheduleSlice'
 
@@ -14,7 +13,6 @@ export function useSchedule() {
   const state = useSelector((rootState) => rootState.schedule)
   const loadSchedule = useCallback((batchId) => dispatch(fetchSchedule(batchId)), [dispatch])
   const addSchedule = useCallback((payload) => dispatch(createSchedule(payload)), [dispatch])
-  const generateClasses = useCallback((payload) => dispatch(regenerateClasses(payload)), [dispatch])
   const editPattern = useCallback((payload) => dispatch(updatePattern(payload)), [dispatch])
   const disablePattern = useCallback((payload) => dispatch(deactivatePattern(payload)), [dispatch])
   const clearErrors = useCallback(() => dispatch(clearScheduleErrors()), [dispatch])
@@ -24,12 +22,11 @@ export function useSchedule() {
       ...state,
       fetchSchedule: loadSchedule,
       createSchedule: addSchedule,
-      regenerateClasses: generateClasses,
       updatePattern: editPattern,
       deactivatePattern: disablePattern,
       clearErrors,
     }),
-    [state, loadSchedule, addSchedule, generateClasses, editPattern, disablePattern, clearErrors],
+    [state, loadSchedule, addSchedule, editPattern, disablePattern, clearErrors],
   )
 }
 
