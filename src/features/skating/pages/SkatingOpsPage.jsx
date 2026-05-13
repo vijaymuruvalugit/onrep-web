@@ -347,38 +347,50 @@ const SkatingOpsPage = () => {
     clearPendingObsAdvance()
   }, [clearPendingObsAdvance])
 
-  const loadSnapshot = useCallback(async () => {
-    setSnapLoading(true)
-    setSnapError(null)
+  const loadSnapshot = useCallback(async (opts = {}) => {
+    const silent = Boolean(opts.silent)
+    if (!silent) {
+      setSnapLoading(true)
+      setSnapError(null)
+    }
     try {
       const data = await skatingOpsApi.getOpsSnapshot(dateYmd)
       setSnapshot(data)
+      if (silent) setSnapError(null)
     } catch (e) {
-      setSnapError(e?.message || 'Could not load training snapshot.')
-      setSnapshot(null)
+      const msg = e?.message || 'Could not load training snapshot.'
+      setSnapError(msg)
+      if (!silent) setSnapshot(null)
     } finally {
-      setSnapLoading(false)
+      if (!silent) setSnapLoading(false)
     }
   }, [dateYmd])
 
-  const loadBundle = useCallback(async (sessionId) => {
+  const loadBundle = useCallback(async (sessionId, opts = {}) => {
+    const silent = Boolean(opts.silent)
     if (!sessionId) {
       setBundle(null)
+      setBundleFetchedAt(null)
       return
     }
-    setBundleLoading(true)
-    setBundleError(null)
+    if (!silent) {
+      setBundleLoading(true)
+      setBundleError(null)
+    }
     try {
       const b = await skatingOpsApi.getSessionBundle(sessionId, { recentLapLimit: 120 })
       setBundle(b)
       setBundleFetchedAt(Date.now())
       setLapRaceId((prev) => prev || b?.suggestedFocusRaceId || '')
+      if (silent) setBundleError(null)
     } catch (e) {
       setBundleError(e?.message || 'Could not load session bundle.')
-      setBundle(null)
-      setBundleFetchedAt(null)
+      if (!silent) {
+        setBundle(null)
+        setBundleFetchedAt(null)
+      }
     } finally {
-      setBundleLoading(false)
+      if (!silent) setBundleLoading(false)
     }
   }, [])
 
@@ -512,12 +524,12 @@ const SkatingOpsPage = () => {
     else setBundle(null)
   }, [selectedSessionId, loadBundle])
 
-  /** Reconnect / tab return — refresh bundle + snapshot; quiet “you’re still here” when coaching. */
+  /** Reconnect / tab return — refresh data without swapping the UI for spinners (avoids “full refresh” feel). */
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState !== 'visible') return
-      if (selectedSessionId) loadBundle(selectedSessionId)
-      loadSnapshot()
+      if (selectedSessionId) void loadBundle(selectedSessionId, { silent: true })
+      void loadSnapshot({ silent: true })
       const snap = flowSnapRef.current
       if (snap.coachLive && snap.sessionId && (snap.studentName || snap.place)) {
         const line = snap.studentName
