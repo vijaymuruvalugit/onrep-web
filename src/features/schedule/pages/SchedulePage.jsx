@@ -51,7 +51,7 @@ const SchedulePage = () => {
   const activeActivityId = useSelector((s) => s.workspace.activeActivityId)
 
   const { items: batches, fetchBatches } = useBatches()
-  const { items: places, listLoading: placesLoading, fetchPlaces } = usePlaces()
+  const { items: places, fetchPlaces } = usePlaces()
   const {
     items,
     loading,
@@ -69,7 +69,6 @@ const SchedulePage = () => {
   const isWide = useIsScheduleWide()
   const upcomingCap = isWide ? 4 : 3
 
-  const [placeId, setPlaceId] = useState('')
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const [sessionsError, setSessionsError] = useState(null)
   const [sessionRows, setSessionRows] = useState([])
@@ -154,17 +153,6 @@ const SchedulePage = () => {
   }, [batches, effectiveBatchId, searchParams, setSearchParams])
 
   useEffect(() => {
-    const fromQuery = searchParams.get('placeId')
-    if (fromQuery) {
-      setPlaceId(fromQuery)
-      return
-    }
-    if (!places.length || placesLoading) return
-    const active = places.filter((p) => p.isActive !== false)
-    if (active.length === 1) setPlaceId(active[0].id)
-  }, [searchParams, places, placesLoading])
-
-  useEffect(() => {
     if (!effectiveBatchId) return
     fetchSchedule(effectiveBatchId)
   }, [effectiveBatchId, fetchSchedule])
@@ -208,6 +196,7 @@ const SchedulePage = () => {
   }, [effectiveBatchId, todayIso])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loadSessions() owns its loading/error state; setState happens inside its async body, not in this effect
     loadSessions()
   }, [loadSessions])
 
@@ -287,11 +276,11 @@ const SchedulePage = () => {
     setDrawerSeedRow(null)
   }
 
-  const refreshAll = () => {
+  const refreshAll = useCallback(() => {
     if (effectiveBatchId) fetchSchedule(effectiveBatchId)
     loadSessions()
     fetchTodayClasses()
-  }
+  }, [effectiveBatchId, fetchSchedule, fetchTodayClasses, loadSessions])
 
   const handleStartSession = useCallback(
     async (row) => {
