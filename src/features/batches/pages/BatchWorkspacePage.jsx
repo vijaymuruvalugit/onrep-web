@@ -28,6 +28,7 @@ import { stripDemoSuffix } from '../utils/batchDisplayUtils'
 import {
   computeOperationalFocus,
   formatCadenceLine,
+  formatCadenceLines,
   formatHeaderOperationalWhen,
   mergeBatchSessionInstances,
   todayIsoLocal,
@@ -282,6 +283,7 @@ const BatchWorkspacePage = () => {
   )
 
   const cadenceLine = useMemo(() => formatCadenceLine(schedules), [schedules])
+  const cadenceLines = useMemo(() => formatCadenceLines(schedules), [schedules])
 
   const hasMoreTimeline = fullMergedTimeline.length > timelineCap
 
@@ -441,8 +443,19 @@ const BatchWorkspacePage = () => {
           <div className="onrep-batch-ops-stack">
             <CCard className="mb-3 border-0 onrep-surface-b shadow-none">
               <CCardBody className="py-3 px-3">
-                <div className="onrep-type-label mb-2">Regular schedule</div>
-                {cadenceLine ? (
+                <div className="onrep-type-label mb-2">Recurring session patterns</div>
+                {cadenceLines.length > 1 ? (
+                  <div className="d-flex flex-column gap-1">
+                    {cadenceLines.map((entry, idx) => (
+                      <div key={entry.id || idx} className="d-flex flex-column">
+                        {entry.name ? <span className="fw-medium">{entry.name}</span> : null}
+                        <span className={entry.name ? 'text-body-secondary small' : 'fw-medium'}>
+                          {entry.line}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : cadenceLine ? (
                   <div className="fw-medium">{cadenceLine}</div>
                 ) : (
                   <div className="text-body-secondary">No recurring schedule yet.</div>

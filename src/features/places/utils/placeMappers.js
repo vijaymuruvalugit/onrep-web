@@ -50,6 +50,23 @@ export function normalizeScheduleRowForUi(row) {
   const startTime = row.startTime ?? row.start_time ?? null
   const endTime = row.endTime ?? row.end_time ?? null
   const slotName = row.slotName ?? row.slot_name ?? null
+  const name = row.name ?? slotName ?? null
+  const coachId = row.coachId ?? row.coach_id ?? null
+  const coachName = row.coachName ?? row.coach_name ?? null
+  const sessionFocus = row.sessionFocus ?? row.session_focus ?? null
+  const effectiveFrom = row.effectiveFrom ?? row.effective_from ?? null
+  const effectiveUntil = row.effectiveUntil ?? row.effective_until ?? null
+  const isActive = row.isActive ?? row.is_active ?? true
+  const replacesPatternId = row.replacesPatternId ?? row.replaces_schedule_id ?? null
+  const replacedByPatternId = row.replacedByPatternId ?? row.replaced_by_schedule_id ?? null
+  const toYmd = (v) => {
+    if (!v) return null
+    try {
+      return new Date(v).toISOString().slice(0, 10)
+    } catch {
+      return typeof v === 'string' ? v.slice(0, 10) : null
+    }
+  }
   return {
     ...row,
     placeId: placeId != null ? String(placeId) : null,
@@ -58,5 +75,14 @@ export function normalizeScheduleRowForUi(row) {
     startTime,
     endTime,
     slotName,
+    name,
+    coachId: coachId != null ? String(coachId) : null,
+    coachName,
+    sessionFocus,
+    effectiveFrom: toYmd(effectiveFrom),
+    effectiveUntil: toYmd(effectiveUntil),
+    isActive: Boolean(isActive),
+    replacesPatternId: replacesPatternId != null ? String(replacesPatternId) : null,
+    replacedByPatternId: replacedByPatternId != null ? String(replacedByPatternId) : null,
   }
 }

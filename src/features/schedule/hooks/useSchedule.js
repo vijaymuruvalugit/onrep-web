@@ -3,8 +3,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
   clearScheduleErrors,
   createSchedule,
+  deactivatePattern,
   fetchSchedule,
   regenerateClasses,
+  updatePattern,
 } from '../slices/scheduleSlice'
 
 export function useSchedule() {
@@ -13,6 +15,8 @@ export function useSchedule() {
   const loadSchedule = useCallback((batchId) => dispatch(fetchSchedule(batchId)), [dispatch])
   const addSchedule = useCallback((payload) => dispatch(createSchedule(payload)), [dispatch])
   const generateClasses = useCallback((payload) => dispatch(regenerateClasses(payload)), [dispatch])
+  const editPattern = useCallback((payload) => dispatch(updatePattern(payload)), [dispatch])
+  const disablePattern = useCallback((payload) => dispatch(deactivatePattern(payload)), [dispatch])
   const clearErrors = useCallback(() => dispatch(clearScheduleErrors()), [dispatch])
 
   return useMemo(
@@ -21,9 +25,11 @@ export function useSchedule() {
       fetchSchedule: loadSchedule,
       createSchedule: addSchedule,
       regenerateClasses: generateClasses,
+      updatePattern: editPattern,
+      deactivatePattern: disablePattern,
       clearErrors,
     }),
-    [state, loadSchedule, addSchedule, generateClasses, clearErrors],
+    [state, loadSchedule, addSchedule, generateClasses, editPattern, disablePattern, clearErrors],
   )
 }
 

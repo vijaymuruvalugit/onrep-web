@@ -7,7 +7,6 @@ import {
   CCard,
   CCardBody,
   CCardHeader,
-  CCollapse,
   CCol,
   CFormLabel,
   CSpinner,
@@ -15,8 +14,9 @@ import {
 import { useBatches } from '../../batches/hooks/useBatches'
 import usePlaces from '../../places/hooks/usePlaces'
 import { useSchedule } from '../hooks/useSchedule'
-import ScheduleBuilderCard from '../components/ScheduleBuilderCard'
-import ScheduleAdvancedAccordion from '../components/ScheduleAdvancedAccordion'
+import RecurringPatternsList from '../components/RecurringPatternsList'
+import PatternEditorDrawer from '../components/PatternEditorDrawer'
+import AdjustNextSessionModal from '../components/AdjustNextSessionModal'
 import ScheduleBatchSwitcher from '../components/ScheduleBatchSwitcher'
 import CreateOneTimeSessionDrawer from '../components/CreateOneTimeSessionDrawer'
 import SessionDetailDrawer from '../components/SessionDetailDrawer'
@@ -28,17 +28,18 @@ import {
   normalizeTrainingSessionRow,
 } from '../../classes/utils/sessionRow'
 import batchesApi from '../../batches/api/batchesApi'
+import scheduleApi from '../api/scheduleApi'
 import useClasses from '../../classes/hooks/useClasses'
 import {
   mergeBatchSessionInstances,
   todayIsoLocal,
-  formatCadenceLine,
-  firstNonCancelledSession,
 } from '../../batches/utils/batchWorkspaceOperations'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
 import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { useIsScheduleWide } from '../../../hooks/useMediaQuery'
+import { listStaffCoaches } from '../../directory/api/directoryApi'
+import { RECURRING_PATTERN_EDIT_MODE } from '@onrep/contracts/recurring-patterns'
 import './SchedulePage.scss'
 
 const SchedulePage = () => {
@@ -51,8 +52,18 @@ const SchedulePage = () => {
 
   const { items: batches, fetchBatches } = useBatches()
   const { items: places, listLoading: placesLoading, fetchPlaces } = usePlaces()
-  const { items, loading, saving, error, mutationError, fetchSchedule, createSchedule } =
-    useSchedule()
+  const {
+    items,
+    loading,
+    saving,
+    error,
+    mutationError,
+    fetchSchedule,
+    createSchedule,
+    updatePattern,
+    deactivatePattern,
+    clearErrors,
+  } = useSchedule()
   const { today, fetchTodayClasses } = useClasses()
 
   const isWide = useIsScheduleWide()
@@ -62,7 +73,6 @@ const SchedulePage = () => {
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const [sessionsError, setSessionsError] = useState(null)
   const [sessionRows, setSessionRows] = useState([])
-  const [weeklyPatternOpen, setWeeklyPatternOpen] = useState(false)
   const [showAllUpcoming, setShowAllUpcoming] = useState(false)
   const [drawerSessionId, setDrawerSessionId] = useState(null)
   const [drawerSeedRow, setDrawerSeedRow] = useState(null)
@@ -70,6 +80,15 @@ const SchedulePage = () => {
   const [sessionKindFilter, setSessionKindFilter] = useState(
     () => /** @type {'all' | 'regular' | 'one_off' | 'cancelled'} */ ('all'),
   )
+  const [patternDrawerOpen, setPatternDrawerOpen] = useState(false)
+  const [patternDrawerMode, setPatternDrawerMode] = useState('create')
+  const [patternDrawerSeed, setPatternDrawerSeed] = useState(null)
+  const [adjustNextOpen, setAdjustNextOpen] = useState(false)
+  const [adjustNextSession, setAdjustNextSession] = useState(null)
+  const [adjustNextError, setAdjustNextError] = useState(null)
+  const [adjustNextBusy, setAdjustNextBusy] = useState(false)
+  const [pageNotice, setPageNotice] = useState(null)
+  const [coaches, setCoaches] = useState([])
 
   const todayIso = todayIsoLocal()
 
@@ -80,6 +99,28 @@ const SchedulePage = () => {
   useEffect(() => {
     fetchPlaces({ status: 'active', limit: 200 })
   }, [fetchPlaces])
+
+  useEffect(() => {
+    let cancelled = false
+    listStaffCoaches()
+      .then((rows) => {
+        if (cancelled) return
+        setCoaches(
+          (rows || [])
+            .map((r) => ({
+              id: String(r.id || r.userId || r.user_id || ''),
+              name: r.name || r.fullName || '',
+            }))
+            .filter((r) => r.id),
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setCoaches([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const batchIdFromUrl = searchParams.get('batchId')
 
@@ -195,21 +236,31 @@ const SchedulePage = () => {
     })
   }, [mergedTimelineRaw, sessionKindFilter])
 
-  const skippableSessionId = useMemo(() => {
-    const row = firstNonCancelledSession(mergedTimelineRaw)
-    return row?.sessionId || row?.id || ''
+  // Per-pattern "next session" map for the kebab menu (Skip next / Adjust next).
+  // Uses the same merged timeline but groups by `schedule_id` so each pattern's
+  // own next session is found independently. Sessions with no schedule_id are
+  // excluded (they're one-offs / ad-hoc, edited via the session detail drawer).
+  const nextSessionByPatternId = useMemo(() => {
+    const map = {}
+    for (const r of mergedTimelineRaw) {
+      if (r.isCancelled) continue
+      const pid = r.scheduleId || r.schedule_id
+      if (!pid) continue
+      const key = String(pid)
+      if (!map[key]) map[key] = r
+    }
+    return map
   }, [mergedTimelineRaw])
 
-  const hasSkippableSession = Boolean(skippableSessionId)
+  const hasUpcomingByPatternId = useMemo(() => {
+    const out = {}
+    for (const [pid, row] of Object.entries(nextSessionByPatternId)) {
+      out[pid] = Boolean(row)
+    }
+    return out
+  }, [nextSessionByPatternId])
 
-  const cadenceSummary = useMemo(() => formatCadenceLine(items), [items])
-
-  const summaryPlace = useMemo(() => {
-    const fromBatch = selectedBatch?.location || selectedBatch?.placeName
-    const fromSchedule = items.find((s) => s.placeName)?.placeName
-    const raw = fromSchedule || fromBatch
-    return raw ? stripDemoSuffix(raw) : ''
-  }, [items, selectedBatch])
+  const activePatterns = useMemo(() => items.filter((p) => p.isActive !== false), [items])
 
   const displayedUpcoming = useMemo(() => {
     if (showAllUpcoming || mergedTimeline.length <= upcomingCap) return mergedTimeline
@@ -267,6 +318,217 @@ const SchedulePage = () => {
     [navigate, refreshAll],
   )
 
+  // -------------------- pattern card actions --------------------
+
+  const openAddPattern = useCallback(() => {
+    clearErrors()
+    setPatternDrawerMode('create')
+    setPatternDrawerSeed(null)
+    setPatternDrawerOpen(true)
+  }, [clearErrors])
+
+  const openEditPattern = useCallback(
+    (pattern) => {
+      clearErrors()
+      setPatternDrawerMode('edit')
+      setPatternDrawerSeed(pattern)
+      setPatternDrawerOpen(true)
+    },
+    [clearErrors],
+  )
+
+  const handleSavePattern = useCallback(
+    async ({ payload, editMode, effectiveFrom }) => {
+      if (!effectiveBatchId) return
+      try {
+        if (patternDrawerMode === 'create') {
+          await createSchedule({
+            batchId: effectiveBatchId,
+            daysOfWeek: payload.daysOfWeek,
+            startTime: payload.startTime,
+            endTime: payload.endTime || undefined,
+            slotName: payload.name,
+            placeId: payload.placeId || undefined,
+            coachId: payload.coachId || undefined,
+            sessionFocus: payload.sessionFocus || undefined,
+          }).unwrap()
+          setPageNotice({ type: 'success', text: 'Recurring session added.' })
+        } else if (patternDrawerSeed?.id) {
+          const response = await updatePattern({
+            patternId: patternDrawerSeed.id,
+            mode: editMode,
+            effectiveFrom:
+              editMode === RECURRING_PATTERN_EDIT_MODE.NEW_FROM ? effectiveFrom : undefined,
+            changes: payload,
+          }).unwrap()
+          const deleted = response?.deletedFutureSessions ?? 0
+          const kept = response?.keptFutureSessions ?? 0
+          const generated = response?.generatedFutureSessions ?? 0
+          setPageNotice({
+            type: 'success',
+            text: `Schedule updated. ${generated} upcoming regenerated, ${kept} past kept on the old schedule${
+              deleted ? `, ${deleted} planned removed` : ''
+            }.`,
+          })
+        }
+        setPatternDrawerOpen(false)
+        refreshAll()
+      } catch {
+        // mutationError surfaces via the drawer alert
+      }
+    },
+    [
+      effectiveBatchId,
+      patternDrawerMode,
+      patternDrawerSeed,
+      createSchedule,
+      updatePattern,
+      refreshAll,
+    ],
+  )
+
+  const handleDeactivatePattern = useCallback(
+    async (pattern) => {
+      if (!pattern?.id) return
+      if (
+        !window.confirm(
+          `Disable “${pattern.name || 'this schedule'}”? Future un-touched sessions will be removed; past attendance is preserved.`,
+        )
+      ) {
+        return
+      }
+      try {
+        const res = await deactivatePattern({ patternId: pattern.id }).unwrap()
+        const deleted = res?.deletedFutureSessions ?? 0
+        const kept = res?.keptFutureSessions ?? 0
+        setPageNotice({
+          type: 'success',
+          text: `Schedule disabled. ${deleted} future planned removed${kept ? `, ${kept} kept` : ''}.`,
+        })
+        refreshAll()
+      } catch (e) {
+        setPageNotice({
+          type: 'danger',
+          text: e?.response?.data?.error || e?.message || 'Could not disable schedule.',
+        })
+      }
+    },
+    [deactivatePattern, refreshAll],
+  )
+
+  const handleGenerateForPattern = useCallback(
+    async (pattern) => {
+      if (!pattern?.id) return
+      try {
+        const end = new Date()
+        end.setDate(end.getDate() + 45)
+        const y = end.getFullYear()
+        const m = String(end.getMonth() + 1).padStart(2, '0')
+        const d = String(end.getDate()).padStart(2, '0')
+        const res = await scheduleApi.generateForPattern(pattern.id, {
+          fromDate: todayIso,
+          toDate: `${y}-${m}-${d}`,
+        })
+        setPageNotice({
+          type: 'success',
+          text: `Generated ${res?.created ?? 0} session${res?.created === 1 ? '' : 's'} for “${pattern.name || 'this schedule'}”.`,
+        })
+        refreshAll()
+      } catch (e) {
+        setPageNotice({
+          type: 'danger',
+          text: e?.response?.data?.error || e?.message || 'Could not generate sessions.',
+        })
+      }
+    },
+    [todayIso, refreshAll],
+  )
+
+  const handleGenerateBatchWide = useCallback(async () => {
+    if (!effectiveBatchId) return
+    try {
+      const end = new Date()
+      end.setDate(end.getDate() + 45)
+      const y = end.getFullYear()
+      const m = String(end.getMonth() + 1).padStart(2, '0')
+      const d = String(end.getDate()).padStart(2, '0')
+      const res = await batchesApi.generateClasses({
+        batchId: effectiveBatchId,
+        fromDate: todayIso,
+        toDate: `${y}-${m}-${d}`,
+      })
+      setPageNotice({
+        type: 'success',
+        text: `Generated ${res?.created ?? 0} session${res?.created === 1 ? '' : 's'} across active patterns.`,
+      })
+      refreshAll()
+    } catch (e) {
+      setPageNotice({
+        type: 'danger',
+        text: e?.response?.data?.error || e?.message || 'Could not generate sessions.',
+      })
+    }
+  }, [effectiveBatchId, todayIso, refreshAll])
+
+  const handleSkipNextForPattern = useCallback(
+    async (pattern) => {
+      const row = nextSessionByPatternId[pattern.id]
+      const sid = row?.sessionId || row?.id
+      if (!sid) return
+      if (!window.confirm('Skip this session? It will show as cancelled for students.')) return
+      try {
+        await batchesApi.cancelSession(sid, { reason: 'Skipped from schedule' })
+        setPageNotice({
+          type: 'success',
+          text: `Skipped next session on “${pattern.name || 'this schedule'}”.`,
+        })
+        refreshAll()
+      } catch (e) {
+        setPageNotice({
+          type: 'danger',
+          text: e?.response?.data?.error || e?.message || 'Could not skip session.',
+        })
+      }
+    },
+    [nextSessionByPatternId, refreshAll],
+  )
+
+  const openAdjustNext = useCallback(
+    (pattern) => {
+      const row = nextSessionByPatternId[pattern.id]
+      if (!row?.sessionId && !row?.id) return
+      setAdjustNextSession({
+        id: row.sessionId || row.id,
+        sessionDate: row.sessionDate || row.session_date || null,
+        startTime: row.startTime ? String(row.startTime).slice(0, 5) : '',
+        endTime: row.endTime ? String(row.endTime).slice(0, 5) : '',
+      })
+      setAdjustNextError(null)
+      setAdjustNextOpen(true)
+    },
+    [nextSessionByPatternId],
+  )
+
+  const handleAdjustNextSave = useCallback(
+    async ({ sessionId, startTime, endTime }) => {
+      if (!sessionId) return
+      setAdjustNextBusy(true)
+      setAdjustNextError(null)
+      try {
+        await batchesApi.patchSession(sessionId, { startTime, endTime })
+        setAdjustNextOpen(false)
+        setAdjustNextSession(null)
+        setPageNotice({ type: 'success', text: 'Session time updated.' })
+        refreshAll()
+      } catch (e) {
+        setAdjustNextError(e?.response?.data?.error || e?.message || 'Could not update.')
+      } finally {
+        setAdjustNextBusy(false)
+      }
+    },
+    [refreshAll],
+  )
+
   return (
     <div className="schedule-page">
       <CCard className="mb-4 schedule-page__toolbar onrep-surface-b border-0">
@@ -289,91 +551,42 @@ const SchedulePage = () => {
       </CCard>
 
       <section className="mb-5 schedule-page__section-weekly">
-        <CCard className="onrep-surface-b border-0 mb-3">
-          <CCardBody className="py-3 px-3 px-md-4 d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
-            <div className="min-w-0 flex-grow-1">
-              <div className="onrep-type-label mb-2">Weekly schedule</div>
-              <div className="onrep-type-level2 text-break">
-                {cadenceSummary || 'No schedule saved yet'}
-              </div>
-              {summaryPlace ? (
-                <div className="onrep-type-muted small mt-2 text-break">{summaryPlace}</div>
-              ) : null}
-              {effectiveBatchId && error ? (
-                <CAlert color="danger" className="mt-3 mb-0 py-2">
-                  {error.message}
-                </CAlert>
-              ) : null}
-              {effectiveBatchId && loading ? (
-                <div className="d-flex align-items-center gap-2 mt-3 text-body-secondary small">
-                  <CSpinner size="sm" /> Loading schedule…
-                </div>
-              ) : null}
-              {!effectiveBatchId ? (
-                <CAlert color="light" className="mt-3 mb-0 py-2 small">
-                  Select a batch above to view and edit the weekly schedule.
-                </CAlert>
-              ) : null}
-              {!loading && effectiveBatchId && !items.length && !error ? (
-                <CAlert color="info" className="mt-3 mb-0 py-2 small">
-                  No saved pattern yet—use Edit to add your weekly schedule.
-                </CAlert>
-              ) : null}
-            </div>
-            <div className="d-flex flex-wrap gap-2 flex-shrink-0 align-items-center">
-              {effectiveBatchId ? (
-                <CButton
-                  size="sm"
-                  color="secondary"
-                  variant="outline"
-                  className="text-decoration-none"
-                  onClick={() => fetchSchedule(effectiveBatchId)}
-                  disabled={loading}
-                >
-                  Refresh
-                </CButton>
-              ) : null}
-              <CButton
-                color="primary"
-                size="sm"
-                disabled={!effectiveBatchId}
-                onClick={() => setWeeklyPatternOpen((o) => !o)}
-              >
-                {weeklyPatternOpen ? 'Done' : 'Edit'}
-              </CButton>
-            </div>
-          </CCardBody>
-          <CCollapse visible={weeklyPatternOpen}>
-            <div className="border-top border-light-subtle px-3 px-md-4 pb-4 pt-3">
-              <div className="schedule-page__pattern-editor mx-auto">
-                <ScheduleBuilderCard
-                  embedded
-                  batchId={effectiveBatchId}
-                  places={places}
-                  placeId={placeId}
-                  onPlaceIdChange={setPlaceId}
-                  onSave={async (payload) => {
-                    try {
-                      await createSchedule(payload).unwrap()
-                      if (effectiveBatchId) fetchSchedule(effectiveBatchId)
-                    } catch {
-                      /* mutationError */
-                    }
-                  }}
-                  saving={saving}
-                  mutationError={mutationError}
-                />
-              </div>
-            </div>
-          </CCollapse>
-        </CCard>
+        {pageNotice ? (
+          <CAlert
+            color={pageNotice.type || 'info'}
+            className="py-2 d-flex justify-content-between align-items-center flex-wrap gap-2"
+            dismissible
+            onClose={() => setPageNotice(null)}
+          >
+            <span>{pageNotice.text}</span>
+          </CAlert>
+        ) : null}
+        <RecurringPatternsList
+          patterns={items}
+          loading={loading}
+          error={error}
+          batchId={effectiveBatchId}
+          hasUpcomingByPatternId={hasUpcomingByPatternId}
+          onAdd={openAddPattern}
+          onEdit={openEditPattern}
+          onSkipNext={handleSkipNextForPattern}
+          onAdjustNext={openAdjustNext}
+          onGenerateMissing={handleGenerateForPattern}
+          onDeactivate={handleDeactivatePattern}
+          onRefresh={() => fetchSchedule(effectiveBatchId)}
+          onGenerateBatchWide={handleGenerateBatchWide}
+        />
       </section>
 
       <section className="mb-5 schedule-page__section-upcoming">
         <div className="d-flex flex-column flex-lg-row justify-content-between align-items-stretch align-items-lg-center gap-3 mb-3">
           <h2 className="schedule-page__section-title mb-0">Upcoming sessions</h2>
           <div className="schedule-page__filters-toolbar">
-            <div className="schedule-page__session-filters" role="group" aria-label="Session filters">
+            <div
+              className="schedule-page__session-filters"
+              role="group"
+              aria-label="Session filters"
+            >
               {[
                 { key: 'all', label: 'All' },
                 { key: 'regular', label: 'Regular' },
@@ -425,10 +638,7 @@ const SchedulePage = () => {
                 const isTodayRow = Boolean(todayIso && ymd === todayIso)
                 const hasActualStart = Boolean(row.actualStartTime ?? row.actual_start_time)
                 const canStartToday =
-                  isTodayRow &&
-                  !row.attendanceMarked &&
-                  !row.isCancelled &&
-                  !hasActualStart
+                  isTodayRow && !row.attendanceMarked && !row.isCancelled && !hasActualStart
                 return (
                   <CompactSessionRow
                     key={sid}
@@ -459,25 +669,38 @@ const SchedulePage = () => {
         </CCard>
       </section>
 
-      <section className="schedule-page__section-advanced mb-5">
-        <div className="onrep-surface-c px-3 py-4 px-md-4 rounded-3 border border-light-subtle shadow-none">
-          <ScheduleAdvancedAccordion
-            batchId={effectiveBatchId}
-            placeId={placeId}
-            skippableSessionId={skippableSessionId}
-            hasSkippableSession={hasSkippableSession}
-            todayIso={todayIso}
-            onDone={refreshAll}
-          />
-        </div>
-      </section>
-
       <CreateOneTimeSessionDrawer
         visible={createOneTimeOpen}
         batch={selectedBatch}
         places={places}
+        patterns={activePatterns}
         onClose={() => setCreateOneTimeOpen(false)}
         onCreated={refreshAll}
+      />
+
+      <PatternEditorDrawer
+        visible={patternDrawerOpen}
+        mode={patternDrawerMode}
+        pattern={patternDrawerSeed}
+        batch={selectedBatch}
+        places={places}
+        coaches={coaches}
+        onClose={() => setPatternDrawerOpen(false)}
+        onSubmit={handleSavePattern}
+        saving={saving}
+        mutationError={mutationError}
+      />
+
+      <AdjustNextSessionModal
+        visible={adjustNextOpen}
+        session={adjustNextSession}
+        onClose={() => {
+          setAdjustNextOpen(false)
+          setAdjustNextSession(null)
+        }}
+        onSave={handleAdjustNextSave}
+        busy={adjustNextBusy}
+        error={adjustNextError}
       />
 
       <SessionDetailDrawer

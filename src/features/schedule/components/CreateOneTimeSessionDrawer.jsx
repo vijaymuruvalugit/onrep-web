@@ -36,12 +36,18 @@ function CoachSelect({ coaches = [], value, onChange, disabled }) {
 
 /**
  * Full operational one-off session creation for a batch.
+ *
+ * Optionally attaches the one-off to a recurring pattern via `recurringPatternId`
+ * — useful when a coach treats it as a make-up for an existing pattern (e.g.
+ * "Saturday makeup for Evening endurance"). Leaving the select empty keeps
+ * the session standalone.
  */
 export default function CreateOneTimeSessionDrawer({
   visible,
   onClose,
   batch,
   places = [],
+  patterns = [],
   onCreated,
 }) {
   const batchId = batch?.id || batch?._id
@@ -78,6 +84,7 @@ export default function CreateOneTimeSessionDrawer({
   const [sessionType, setSessionType] = useState('')
   const [visibilityEnabled, setVisibilityEnabled] = useState(true)
   const [attendanceEnabled, setAttendanceEnabled] = useState(true)
+  const [recurringPatternId, setRecurringPatternId] = useState('')
 
   /** Map studentId -> { guest } */
   const [roster, setRoster] = useState(() => new Map())
@@ -90,6 +97,7 @@ export default function CreateOneTimeSessionDrawer({
     setPlaceId(defaultPlaceId ? String(defaultPlaceId) : '')
     const lead = batch?.leadCoachUserId ?? batch?.lead_coach_user_id
     setCoachId(lead ? String(lead) : '')
+    setRecurringPatternId('')
     setError(null)
     setAddOpen(false)
     setAddQuery('')
@@ -215,6 +223,7 @@ export default function CreateOneTimeSessionDrawer({
         sessionType: sessionType || undefined,
         visibilityEnabled,
         attendanceEnabled,
+        recurringPatternId: recurringPatternId || undefined,
       })
       onCreated?.()
       onClose?.()
@@ -293,7 +302,7 @@ export default function CreateOneTimeSessionDrawer({
               disabled={busy}
             />
           </div>
-          <div>
+          <div className="mb-3">
             <CFormLabel className="small mb-1">Place</CFormLabel>
             <CFormSelect
               value={placeId}
@@ -308,6 +317,28 @@ export default function CreateOneTimeSessionDrawer({
               ))}
             </CFormSelect>
           </div>
+          {patterns.length > 0 ? (
+            <div>
+              <CFormLabel className="small mb-1">
+                Belongs to schedule <span className="fw-normal">(optional)</span>
+              </CFormLabel>
+              <CFormSelect
+                value={recurringPatternId}
+                onChange={(e) => setRecurringPatternId(e.target.value)}
+                disabled={busy}
+              >
+                <option value="">Standalone one-off (no schedule)</option>
+                {patterns.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name || 'Recurring session'}
+                  </option>
+                ))}
+              </CFormSelect>
+              <div className="small text-body-secondary mt-1">
+                Use this when the session counts as a make-up or extra for a recurring pattern.
+              </div>
+            </div>
+          ) : null}
         </section>
 
         <section>

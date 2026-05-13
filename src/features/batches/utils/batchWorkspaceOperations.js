@@ -74,19 +74,53 @@ export function mergeBatchSessionInstances(
 /**
  * @param {object[]} schedules normalized schedule rows
  */
-export function formatCadenceLine(schedules) {
-  if (!schedules?.length) return null
-  const first = schedules[0]
-  const rawDays = first.daysOfWeek || []
+function formatOneScheduleLine(row) {
+  const rawDays = row.daysOfWeek || []
   const labels = apiDaysToUiLabels(rawDays)
   const ordered = [...labels].sort(
     (a, b) => UI_DAY_LABELS_ORDERED.indexOf(a) - UI_DAY_LABELS_ORDERED.indexOf(b),
   )
   const dayPart = ordered.length ? ordered.join(' · ') : 'Custom schedule'
-  const start = formatSessionClock(first.startTime)
-  const end = formatSessionClock(first.endTime)
+  const start = formatSessionClock(row.startTime)
+  const end = formatSessionClock(row.endTime)
   const timePart = start !== '—' && end !== '—' ? `${start} – ${end}` : start !== '—' ? start : ''
   return [dayPart, timePart].filter(Boolean).join(' · ')
+}
+
+/**
+ * Single-line summary used on dense surfaces (batch tile, list view).
+ *
+ * Single-pattern batches: returns one cadence string (legacy behavior, no UI regression).
+ * Multi-pattern batches: returns a "{name} · {cadence}" composite — caller may render
+ * via `formatCadenceLines` instead for stacked display.
+ */
+export function formatCadenceLine(schedules) {
+  if (!schedules?.length) return null
+  const active = schedules.filter((s) => s.isActive !== false)
+  const rows = active.length ? active : schedules
+  if (rows.length === 1) return formatOneScheduleLine(rows[0])
+  // Compact summary for cases where only one line of vertical space exists.
+  return rows
+    .map((row) => {
+      const line = formatOneScheduleLine(row)
+      return row.name ? `${row.name}: ${line}` : line
+    })
+    .join(' · ')
+}
+
+/**
+ * Multi-line summary for use in batch detail tiles where vertical space allows.
+ * Returns an array of `{ id, name, line }` rows; caller renders one per <div>.
+ */
+export function formatCadenceLines(schedules) {
+  if (!schedules?.length) return []
+  const active = schedules.filter((s) => s.isActive !== false)
+  const rows = active.length ? active : schedules
+  return rows.map((row) => ({
+    id: row.id || row.scheduleId || null,
+    name: row.name || row.slotName || null,
+    line: formatOneScheduleLine(row),
+  }))
 }
 
 export function formatHeaderWhenNext(mergedTimeline, todayIso) {
