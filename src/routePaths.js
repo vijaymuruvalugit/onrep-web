@@ -9,6 +9,7 @@ export const ONREP_ROUTE_DEFS = [
 
   { path: '/coach/dashboard', name: 'Dashboard', exact: true },
   { path: '/coach/skating', name: 'Skating ops', exact: true },
+  { path: '/coach/ops/sessions/:sessionId', name: 'Session', exact: true },
   { path: '/coach/batches', name: 'Batches', exact: true },
   { path: '/coach/batches/:batchId', name: 'Batch Workspace', exact: true },
   { path: '/coach/schedule', name: 'Schedule', exact: true },

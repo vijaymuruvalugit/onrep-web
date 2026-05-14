@@ -4,10 +4,23 @@
  */
 
 /**
- * @param {{ opsState?: string, uiPaused?: boolean }} input
+ * @param {{ opsState?: string, uiPaused?: boolean, operationalState?: string|null }} input
  * @returns {{ key: SessionLifecycleKey, badgeColor: string, label: string }}
  */
-export function deriveSessionLifecycle({ opsState, uiPaused }) {
+export function deriveSessionLifecycle({ opsState, uiPaused, operationalState }) {
+  const op = String(operationalState || '').toLowerCase()
+  if (op === 'paused') {
+    return { key: 'paused', badgeColor: 'warning', label: 'Paused' }
+  }
+  if (op === 'cancelled') {
+    return { key: 'ended', badgeColor: 'dark', label: 'Cancelled' }
+  }
+  if (op === 'completed' || op === 'archived') {
+    return { key: 'ended', badgeColor: 'dark', label: 'Completed' }
+  }
+  if (op === 'scheduled') {
+    return { key: 'upcoming', badgeColor: 'secondary', label: 'Scheduled' }
+  }
   const raw = (opsState || 'upcoming').toLowerCase()
   if (raw === 'ended') {
     return { key: 'ended', badgeColor: 'dark', label: 'Ended' }

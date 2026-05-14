@@ -41,6 +41,10 @@ import StartSessionModal from '../components/StartSessionModal'
 import { deriveSessionLifecycle, formatElapsedLiveLabel } from '../utils/sessionLifecycle'
 import { bumpSkatingOpsMetric } from '../utils/skatingOpsInternalMetrics'
 import { computeSessionSummary } from '../utils/sessionTodaySummary'
+import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
+import { selectPrimaryFocusSessionId } from '../../../domain/operationalSessions/selectors/selectPrimaryFocusSession'
+import { operationalStateToLegacyOpsState } from '../../../domain/operationalSessions/helpers/stateLabels'
+import OperationalSessionCard from '../../../domain/operationalSessions/components/OperationalSessionCard'
 import '../skating-ops.css'
 
 const SK_LAST_PLACE = 'onrep.skating.lastPlaceId'
@@ -71,13 +75,6 @@ function computeAdvancePauseMs(rhythmStep) {
     OBS_ADVANCE_PAUSE_MIN_MS,
     OBS_ADVANCE_PAUSE_BASE_MS - n * OBS_ADVANCE_PAUSE_STEP_MS,
   )
-}
-
-function opsBadgeColor(state) {
-  if (state === 'active') return 'success'
-  if (state === 'ended') return 'dark'
-  if (state === 'upcoming') return 'secondary'
-  return 'secondary'
 }
 
 function formatTime(isoOrDate) {
@@ -232,7 +229,7 @@ const SkatingOpsPage = () => {
   const focusFromUrl = searchParams.get('focus') === '1'
 
   const [dateYmd, setDateYmd] = useState(() => formatLocalYmd())
-  const [snapshot, setSnapshot] = useState(null)
+  const [dayBoard, setDayBoard] = useState(null)
   const [snapLoading, setSnapLoading] = useState(false)
   const [snapError, setSnapError] = useState(null)
 
@@ -348,7 +345,7 @@ const SkatingOpsPage = () => {
     clearPendingObsAdvance()
   }, [clearPendingObsAdvance])
 
-  const loadSnapshot = useCallback(
+  const loadDayBoard = useCallback(
     async (opts = {}) => {
       const silent = Boolean(opts.silent)
       if (!silent) {
@@ -356,13 +353,13 @@ const SkatingOpsPage = () => {
         setSnapError(null)
       }
       try {
-        const data = await skatingOpsApi.getOpsSnapshot(dateYmd)
-        setSnapshot(data)
+        const data = await operationalSessionsApi.getDayBoard(dateYmd)
+        setDayBoard(data)
         if (silent) setSnapError(null)
       } catch (e) {
-        const msg = e?.message || 'Could not load training snapshot.'
+        const msg = e?.message || 'Could not load sessions for this day.'
         setSnapError(msg)
-        if (!silent) setSnapshot(null)
+        if (!silent) setDayBoard(null)
       } finally {
         if (!silent) setSnapLoading(false)
       }
@@ -403,8 +400,8 @@ const SkatingOpsPage = () => {
   }, [dateYmd])
 
   useEffect(() => {
-    loadSnapshot()
-  }, [loadSnapshot])
+    loadDayBoard()
+  }, [loadDayBoard])
 
   useEffect(() => {
     const id = setInterval(() => setBundleAgeTick((t) => t + 1), 1000)
@@ -533,7 +530,7 @@ const SkatingOpsPage = () => {
     const onVis = () => {
       if (document.visibilityState !== 'visible') return
       if (selectedSessionId) void loadBundle(selectedSessionId, { silent: true })
-      void loadSnapshot({ silent: true })
+      void loadDayBoard({ silent: true })
       const snap = flowSnapRef.current
       if (snap.coachLive && snap.sessionId && (snap.studentName || snap.place)) {
         const line = snap.studentName
@@ -545,12 +542,12 @@ const SkatingOpsPage = () => {
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
-  }, [selectedSessionId, loadBundle, loadSnapshot])
+  }, [selectedSessionId, loadBundle, loadDayBoard])
 
   /** Restore active session: URL wins; else last stored; else primary active for the day. */
   useEffect(() => {
-    if (!snapshot || sessionParam || restoredRef.current) return
-    const list = snapshot.sessions || []
+    if (!dayBoard || sessionParam || restoredRef.current) return
+    const list = dayBoard.sessions || []
     const ids = new Set(list.map((s) => String(s.id)))
     let pick = null
     try {
@@ -559,12 +556,9 @@ const SkatingOpsPage = () => {
     } catch {
       /* ignore */
     }
-    if (
-      !pick &&
-      snapshot.primaryFocusSessionId &&
-      ids.has(String(snapshot.primaryFocusSessionId))
-    ) {
-      pick = String(snapshot.primaryFocusSessionId)
+    if (!pick) {
+      const focusId = selectPrimaryFocusSessionId(list)
+      if (focusId && ids.has(String(focusId))) pick = String(focusId)
     }
     if (pick) {
       restoredRef.current = true
@@ -572,7 +566,7 @@ const SkatingOpsPage = () => {
       next.set('session', pick)
       setSearchParams(next)
     }
-  }, [snapshot, sessionParam, searchParams, setSearchParams])
+  }, [dayBoard, sessionParam, searchParams, setSearchParams])
 
   useEffect(() => {
     try {
@@ -801,7 +795,7 @@ const SkatingOpsPage = () => {
     })
     await skatingOpsApi.addRace(selectedSessionId, 'main', {})
     await loadBundle(selectedSessionId)
-    await loadSnapshot()
+    await loadDayBoard()
   }
 
   const addTimingLane = async () => {
@@ -811,7 +805,7 @@ const SkatingOpsPage = () => {
       await skatingOpsApi.addRace(selectedSessionId, 'main', {})
       bumpSkatingOpsMetric('timingLaneCreated')
       await loadBundle(selectedSessionId)
-      await loadSnapshot()
+      await loadDayBoard()
     } catch (err) {
       setLapError(err?.message || 'Could not add timing lane.')
     }
@@ -905,7 +899,7 @@ const SkatingOpsPage = () => {
         setUndoOffer(null)
       }
       await loadBundle(selectedSessionId)
-      await loadSnapshot()
+      await loadDayBoard()
       setLapSeconds('')
       bumpSkatingOpsMetric('lapSaveSuccess')
       requestAnimationFrame(() => {
@@ -934,7 +928,7 @@ const SkatingOpsPage = () => {
       setUndoOffer(null)
       setLastProgression(null)
       await loadBundle(selectedSessionId)
-      await loadSnapshot()
+      await loadDayBoard()
     } catch (err) {
       setLapError(err?.message || 'Could not undo lap.')
     } finally {
@@ -960,7 +954,7 @@ const SkatingOpsPage = () => {
     await skatingOpsApi.patchSession(selectedSessionId, { endedAt: new Date().toISOString() })
     bumpSkatingOpsMetric('sessionEnded')
     await loadBundle(selectedSessionId)
-    await loadSnapshot()
+    await loadDayBoard()
   }
 
   const startSession = async () => {
@@ -968,17 +962,28 @@ const SkatingOpsPage = () => {
     await skatingOpsApi.patchSession(selectedSessionId, { startedAt: new Date().toISOString() })
     bumpSkatingOpsMetric('sessionStartedOnIce')
     await loadBundle(selectedSessionId)
-    await loadSnapshot()
+    await loadDayBoard()
   }
 
-  const sessions = snapshot?.sessions || []
+  const sessions = dayBoard?.sessions || []
   const selSession = sessions.find((s) => String(s.id) === String(selectedSessionId))
-  const opsState = selSession?.opsState || bundle?.session?.opsState
-  const coachLive = opsState === 'active' && Boolean(selectedSessionId)
+  const legacyOpsFromCanonical = selSession?.state
+    ? operationalStateToLegacyOpsState(selSession.state)
+    : null
+  const opsState = bundle?.session?.opsState || legacyOpsFromCanonical || 'upcoming'
+  const coachLive =
+    Boolean(selectedSessionId) &&
+    (bundle?.session?.opsState === 'active' ||
+      ['active', 'paused'].includes(String(selSession?.state || '').toLowerCase()))
 
   const lifecycle = useMemo(
-    () => deriveSessionLifecycle({ opsState, uiPaused }),
-    [opsState, uiPaused],
+    () =>
+      deriveSessionLifecycle({
+        opsState,
+        uiPaused,
+        operationalState: selSession?.state,
+      }),
+    [opsState, uiPaused, selSession?.state],
   )
 
   const nameByStudentId = useMemo(() => {
@@ -1014,14 +1019,16 @@ const SkatingOpsPage = () => {
     if (!selectedSessionId || !bundle) return null
     if (lifecycle.key !== 'active' && lifecycle.key !== 'paused') return null
     const started =
-      selSession?.startedAt ??
-      selSession?.started_at ??
-      bundle.session?.startedAt ??
+      selSession?.actualStartAt ||
+      selSession?.startedAt ||
+      selSession?.started_at ||
+      bundle.session?.startedAt ||
       bundle.session?.started_at
     const ended =
-      selSession?.endedAt ??
-      selSession?.ended_at ??
-      bundle.session?.endedAt ??
+      selSession?.actualEndAt ||
+      selSession?.endedAt ||
+      selSession?.ended_at ||
+      bundle.session?.endedAt ||
       bundle.session?.ended_at
     if (!started) return null
     return formatElapsedLiveLabel(started, { endedAtIso: ended })
@@ -1308,7 +1315,7 @@ const SkatingOpsPage = () => {
   }
 
   const onSessionStartedFromModal = (sid) => {
-    void loadSnapshot()
+    void loadDayBoard()
     if (sid) selectSession(sid)
   }
 
@@ -1325,7 +1332,7 @@ const SkatingOpsPage = () => {
       setAddAthletesPick(new Set())
       bumpSkatingOpsMetric('athleteAddedToSession')
       await loadBundle(selectedSessionId)
-      await loadSnapshot()
+      await loadDayBoard()
     } catch (e) {
       setLapError(e?.message || 'Could not update athletes.')
     } finally {
@@ -1343,7 +1350,12 @@ const SkatingOpsPage = () => {
               style={{ maxWidth: '85%' }}
             >
               {selSession?.placeName || bundle?.session?.placeName || 'This session'} ·{' '}
-              {formatTime(selSession?.startedAt ?? selSession?.started_at)}
+              {formatTime(
+                selSession?.actualStartAt ||
+                  selSession?.scheduledStartAt ||
+                  selSession?.startedAt ||
+                  selSession?.started_at,
+              )}
             </span>
             <CButton
               color="link"
@@ -1376,7 +1388,7 @@ const SkatingOpsPage = () => {
                   color="secondary"
                   size="sm"
                   variant="outline"
-                  onClick={() => loadSnapshot()}
+                  onClick={() => loadDayBoard()}
                 >
                   {SESSION_OPS_COPY.refresh}
                 </CButton>
@@ -1417,7 +1429,7 @@ const SkatingOpsPage = () => {
                       <CTableRow>
                         <CTableDataCell colSpan={4} className="text-center py-4">
                           <div className="text-body-secondary small mb-3">
-                            No training sessions on this day.
+                            {SESSION_OPS_COPY.emptyDayBoardBody}
                           </div>
                           <CButton color="primary" size="sm" onClick={openStartLiveModal}>
                             {SESSION_OPS_COPY.newSessionCta}
@@ -1426,39 +1438,13 @@ const SkatingOpsPage = () => {
                       </CTableRow>
                     ) : (
                       sessions.map((s) => (
-                        <CTableRow
+                        <OperationalSessionCard
                           key={s.id}
-                          className={
-                            String(s.id) === String(selectedSessionId) ? 'table-active' : ''
-                          }
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => selectSession(s.id)}
-                        >
-                          <CTableDataCell>
-                            {s.sessionDate ?? s.session_date} ·{' '}
-                            {formatTime(s.startedAt ?? s.started_at)}{' '}
-                            {(s.endedAt ?? s.ended_at)
-                              ? `→ ${formatTime(s.endedAt ?? s.ended_at)}`
-                              : ''}
-                          </CTableDataCell>
-                          <CTableDataCell>{(s.placeName ?? s.place_name) || '—'}</CTableDataCell>
-                          <CTableDataCell>
-                            <CBadge color={opsBadgeColor(s.opsState)}>{s.opsState}</CBadge>
-                          </CTableDataCell>
-                          <CTableDataCell className="text-end">
-                            <CButton
-                              size="sm"
-                              color="primary"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                selectSession(s.id)
-                              }}
-                            >
-                              Open
-                            </CButton>
-                          </CTableDataCell>
-                        </CTableRow>
+                          session={s}
+                          selected={String(s.id) === String(selectedSessionId)}
+                          onSelect={(id) => selectSession(id)}
+                          uiPaused={uiPaused && String(s.id) === String(selectedSessionId)}
+                        />
                       ))
                     )}
                   </CTableBody>

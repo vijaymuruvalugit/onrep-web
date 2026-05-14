@@ -9,6 +9,7 @@ const PARENT_COACH_PATHS = ONREP_ROUTE_DEFS.map((d) => d.path).filter(
     p === '/coach/parents' ||
     p === '/coach/dashboard' ||
     p === '/coach/skating' ||
+    p === '/coach/ops/sessions/:sessionId' ||
     p === '/coach/onboarding/coaches',
 )
 

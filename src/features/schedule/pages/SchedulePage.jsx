@@ -25,17 +25,14 @@ import { normalizeSessionDateYmd } from '../../classes/utils/sessionDisplay'
 import {
   isOperationalOneOff,
   isOperationalRecurring,
-  normalizeTrainingSessionRow,
 } from '../../classes/utils/sessionRow'
 import batchesApi from '../../batches/api/batchesApi'
-import useClasses from '../../classes/hooks/useClasses'
-import {
-  mergeBatchSessionInstances,
-  todayIsoLocal,
-} from '../../batches/utils/batchWorkspaceOperations'
+import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
+import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
 import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
+import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 import { useIsScheduleWide } from '../../../hooks/useMediaQuery'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
 import { RECURRING_PATTERN_EDIT_MODE } from '@onrep/contracts/recurring-patterns'
@@ -63,8 +60,6 @@ const SchedulePage = () => {
     deactivatePattern,
     clearErrors,
   } = useSchedule()
-  const { today, fetchTodayClasses } = useClasses()
-
   const isWide = useIsScheduleWide()
   const upcomingCap = isWide ? 4 : 3
 
@@ -176,14 +171,10 @@ const SchedulePage = () => {
       const y = end.getFullYear()
       const m = String(end.getMonth() + 1).padStart(2, '0')
       const d = String(end.getDate()).padStart(2, '0')
-      const { sessions } = await batchesApi.listClasses({
-        batchId: effectiveBatchId,
-        fromDate: todayIso,
-        toDate: `${y}-${m}-${d}`,
-        includeCancelled: true,
-      })
+      const toYmd = `${y}-${m}-${d}`
+      const { sessions } = await operationalSessionsApi.getBoardRange(todayIso, toYmd, effectiveBatchId)
       const rows = Array.isArray(sessions)
-        ? sessions.map((s) => normalizeTrainingSessionRow(s))
+        ? sessions.map((s) => operationalSessionToScheduleCompactRow(s)).filter(Boolean)
         : []
       setSessionRows(rows)
     } catch (e) {
@@ -199,21 +190,7 @@ const SchedulePage = () => {
     loadSessions()
   }, [loadSessions])
 
-  useEffect(() => {
-    fetchTodayClasses()
-  }, [fetchTodayClasses, effectiveBatchId])
-
-  const todayBatchClasses = useMemo(() => {
-    return today.filter(
-      (item) => String(item.batchId || item.batch?.id || '') === String(effectiveBatchId),
-    )
-  }, [today, effectiveBatchId])
-
-  const mergedTimelineRaw = useMemo(
-    () =>
-      mergeBatchSessionInstances(effectiveBatchId, todayBatchClasses, sessionRows, todayIso, 80),
-    [effectiveBatchId, todayBatchClasses, sessionRows, todayIso],
-  )
+  const mergedTimelineRaw = useMemo(() => sessionRows || [], [sessionRows])
 
   const mergedTimeline = useMemo(() => {
     return mergedTimelineRaw.filter((r) => {
@@ -278,8 +255,7 @@ const SchedulePage = () => {
   const refreshAll = useCallback(() => {
     if (effectiveBatchId) fetchSchedule(effectiveBatchId)
     loadSessions()
-    fetchTodayClasses()
-  }, [effectiveBatchId, fetchSchedule, fetchTodayClasses, loadSessions])
+  }, [effectiveBatchId, fetchSchedule, loadSessions])
 
   const handleStartSession = useCallback(
     async (row) => {

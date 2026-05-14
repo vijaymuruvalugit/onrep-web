@@ -1,0 +1,19 @@
+Dead code and follow-ups — operational session migration (2026-05-14)
+================================================================================
+
+Removed or superseded (safe to delete after verification in staging)
+----------------------------------------------------------------------
+1. onrep-admin/src/features/skating/api/skatingOpsApi.js — getOpsSnapshot()
+   Replaced by GET /api/v1/operational-sessions/day-board via operationalSessionsApi.
+
+2. onrep-admin merge path — mergeBatchSessionInstances() removed from batchWorkspaceOperations.js
+   SchedulePage and BatchWorkspacePage now use GET /operational-sessions/board only.
+
+3. ezyplay-frontend Firestore coach skating hub (TrainingHomeScreen + skatingTrainingFirestoreService)
+   Still authoritative for some coach mobile flows; migrate to REST day-board + bundle in a follow-up epic.
+
+4. Backend GET /api/v1/skating/training/ops/snapshot — optional deprecation once all clients use operational-sessions.
+
+Grep checklist before deleting
+-------------------------------
+rg "getOpsSnapshot|ops/snapshot" onrep-admin ezyplay-frontend

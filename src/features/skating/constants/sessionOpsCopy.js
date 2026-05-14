@@ -1,7 +1,9 @@
 /** Coach-facing copy — session/athlete-centric; avoid lane jargon in user-visible strings. */
 export const SESSION_OPS_COPY = {
   pageTitle: 'Skating ops',
-  pageSubtitle: 'Live training sessions — the session is the workspace.',
+  pageSubtitle: 'Today’s sessions — pick one to coach on the floor.',
+  emptyDayBoardBody:
+    'No scheduled sessions on this day. Sessions from recurring schedules appear here automatically.',
   emptyRosterTitle: 'No athletes in this session yet',
   emptyRosterBody: 'Add athletes so you can observe and capture signals on the ice.',
   emptyRosterCta: 'Add athletes',

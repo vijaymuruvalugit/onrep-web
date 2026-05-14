@@ -16,59 +16,11 @@ export function todayIsoLocal() {
   return `${y}-${m}-${d}`
 }
 
-/**
- * Merge today's batch sessions with upcoming API rows into one chronological list (deduped).
- * @param {string} batchId
- * @param {object[]} todayBatchSessions normalized
- * @param {object[]} upcomingNormalized normalized
- * @param {string} todayIso YYYY-MM-DD
- * @param {number} maxRows
- */
 /** Next session that counts for operations (skips cancelled rows). */
 export function firstNonCancelledSession(mergedTimeline) {
   const list = mergedTimeline || []
   const hit = list.find((r) => !r.isCancelled)
   return hit || null
-}
-
-export function mergeBatchSessionInstances(
-  batchId,
-  todayBatchSessions,
-  upcomingNormalized,
-  todayIso,
-  maxRows = 6,
-) {
-  const bid = String(batchId)
-  const candidates = []
-
-  for (const r of todayBatchSessions || []) {
-    if (String(r.batchId || '') === bid) candidates.push(r)
-  }
-  for (const r of upcomingNormalized || []) {
-    if (String(r.batchId || '') !== bid) continue
-    const sd = r.sessionDate ? String(r.sessionDate).slice(0, 10) : ''
-    if (!sd || sd < todayIso) continue
-    candidates.push(r)
-  }
-
-  const byId = new Map()
-  for (const c of candidates) {
-    const id = String(c.sessionId || c.id || '')
-    if (!id) continue
-    byId.set(id, c)
-  }
-
-  const merged = [...byId.values()].sort((a, b) => {
-    const da = String(a.sessionDate || '').slice(0, 10)
-    const db = String(b.sessionDate || '').slice(0, 10)
-    if (da !== db) return da.localeCompare(db)
-    const oa = a.isOneTime ? 1 : 0
-    const ob = b.isOneTime ? 1 : 0
-    if (ob !== oa) return ob - oa
-    return String(a.startTime || '').localeCompare(String(b.startTime || ''))
-  })
-
-  return merged.slice(0, maxRows)
 }
 
 /**

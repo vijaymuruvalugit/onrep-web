@@ -74,11 +74,15 @@ const ManageActivitiesPage = React.lazy(
   () => import('../features/activities/pages/ManageActivitiesPage'),
 )
 const SkatingOpsPage = React.lazy(() => import('../features/skating/pages/SkatingOpsPage'))
+const CoachOpsSessionRedirectPage = React.lazy(
+  () => import('../features/skating/pages/CoachOpsSessionRedirectPage'),
+)
 
 /** @type {ReadonlyArray<{ path: string, component: React.LazyExoticComponent<React.ComponentType<any>> }>} */
 export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/coach/dashboard', component: CoachAreaDashboardPage },
   { path: '/coach/skating', component: SkatingOpsPage },
+  { path: '/coach/ops/sessions/:sessionId', component: CoachOpsSessionRedirectPage },
   { path: '/coach/batches', component: BatchesListPage },
   { path: '/coach/batches/:batchId', component: BatchWorkspacePage },
   { path: '/coach/schedule', component: SchedulePage },

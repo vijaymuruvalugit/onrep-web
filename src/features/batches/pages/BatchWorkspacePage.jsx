@@ -21,7 +21,6 @@ import {
   CTabPane,
 } from '@coreui/react'
 import { useBatches } from '../hooks/useBatches'
-import useClasses from '../../classes/hooks/useClasses'
 import CompactSessionRow from '../../schedule/components/CompactSessionRow'
 import SessionDetailDrawer from '../../schedule/components/SessionDetailDrawer'
 import { stripDemoSuffix } from '../utils/batchDisplayUtils'
@@ -30,9 +29,10 @@ import {
   formatCadenceLine,
   formatCadenceLines,
   formatHeaderOperationalWhen,
-  mergeBatchSessionInstances,
   todayIsoLocal,
 } from '../utils/batchWorkspaceOperations'
+import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
+import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
 import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
@@ -69,10 +69,8 @@ const BatchWorkspacePage = () => {
   const {
     selectedBatch,
     schedules,
-    upcomingClasses,
     detailLoading,
     schedulesLoading,
-    classesLoading,
     mutationLoading,
     detailError,
     schedulesError,
@@ -80,11 +78,11 @@ const BatchWorkspacePage = () => {
     mutationError,
     fetchBatchById,
     fetchBatchSchedules,
-    fetchBatchUpcomingClasses,
     saveBatchSettings,
   } = useBatches()
 
-  const { today, fetchTodayClasses } = useClasses()
+  const [opBoardRows, setOpBoardRows] = useState([])
+  const [opBoardLoading, setOpBoardLoading] = useState(false)
 
   /** Infer x-activity-id from batch → sub_activity → activity (API: activity_workspace_id). Scoped routes need it; GET /batches is exempt. */
   useEffect(() => {
@@ -101,16 +99,37 @@ const BatchWorkspacePage = () => {
     if (!batchId) return
     fetchBatchById(batchId)
     fetchBatchSchedules(batchId)
-    fetchBatchUpcomingClasses({ batchId })
-    fetchTodayClasses()
-  }, [
-    batchId,
-    activeActivityId,
-    fetchBatchById,
-    fetchBatchSchedules,
-    fetchBatchUpcomingClasses,
-    fetchTodayClasses,
-  ])
+  }, [batchId, activeActivityId, fetchBatchById, fetchBatchSchedules])
+
+  const reloadOpBoard = useCallback(async () => {
+    if (!batchId) return
+    const ti = todayIsoLocal()
+    const end = new Date()
+    end.setDate(end.getDate() + 90)
+    const y = end.getFullYear()
+    const m = String(end.getMonth() + 1).padStart(2, '0')
+    const d = String(end.getDate()).padStart(2, '0')
+    const toYmd = `${y}-${m}-${d}`
+    setOpBoardLoading(true)
+    try {
+      const { sessions } = await operationalSessionsApi.getBoardRange(ti, toYmd, batchId)
+      const rows = (sessions || [])
+        .map((s) => operationalSessionToScheduleCompactRow(s))
+        .filter(Boolean)
+      setOpBoardRows(rows)
+    } catch {
+      setOpBoardRows([])
+    } finally {
+      setOpBoardLoading(false)
+    }
+  }, [batchId])
+
+  /* eslint-disable react-hooks/set-state-in-effect -- mount refresh loads operational board */
+  useEffect(() => {
+    if (!batchId) return
+    void reloadOpBoard()
+  }, [batchId, activeActivityId, reloadOpBoard])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     didAutoLeadCoachRef.current = false
@@ -247,9 +266,20 @@ const BatchWorkspacePage = () => {
 
   const todayIso = todayIsoLocal()
 
-  const todayBatchClasses = useMemo(() => {
-    return today.filter((item) => String(item.batchId || item.batch?.id || '') === String(batchId))
-  }, [today, batchId])
+  const todayFromTimeline = useMemo(
+    () =>
+      (opBoardRows || []).filter(
+        (r) => String(r.sessionDate || '').slice(0, 10) === String(todayIso).slice(0, 10),
+      ),
+    [opBoardRows, todayIso],
+  )
+
+  const fullMergedTimeline = opBoardRows
+
+  const compactTimeline = useMemo(
+    () => fullMergedTimeline.slice(0, timelineCap),
+    [fullMergedTimeline, timelineCap],
+  )
 
   const primaryPlaceSingle = useMemo(() => {
     const fromSchedule = schedules.find((s) => s.placeName)?.placeName
@@ -272,16 +302,6 @@ const BatchWorkspacePage = () => {
     return parts.length ? parts.join(' · ') : null
   }, [activities, selectedBatch])
 
-  const fullMergedTimeline = useMemo(
-    () => mergeBatchSessionInstances(batchId, todayBatchClasses, upcomingClasses, todayIso, 48),
-    [batchId, todayBatchClasses, upcomingClasses, todayIso],
-  )
-
-  const compactTimeline = useMemo(
-    () => fullMergedTimeline.slice(0, timelineCap),
-    [fullMergedTimeline, timelineCap],
-  )
-
   const cadenceLine = useMemo(() => formatCadenceLine(schedules), [schedules])
   const cadenceLines = useMemo(() => formatCadenceLines(schedules), [schedules])
 
@@ -296,10 +316,10 @@ const BatchWorkspacePage = () => {
     () =>
       computeOperationalFocus({
         todayIso,
-        todayBatchSessions: todayBatchClasses,
+        todayBatchSessions: todayFromTimeline,
         mergedTimeline: fullMergedTimeline,
       }),
-    [todayIso, todayBatchClasses, fullMergedTimeline],
+    [todayIso, todayFromTimeline, fullMergedTimeline],
   )
 
   const primaryAttendanceId =
@@ -353,8 +373,8 @@ const BatchWorkspacePage = () => {
           setDrawerSeedRow(null)
         }}
         onUpdated={() => {
-          fetchBatchUpcomingClasses({ batchId })
-          fetchTodayClasses()
+          fetchBatchSchedules(batchId)
+          void reloadOpBoard()
         }}
       />
 
@@ -468,8 +488,8 @@ const BatchWorkspacePage = () => {
                 <span className="onrep-type-label">Upcoming sessions</span>
               </CCardHeader>
               <CCardBody className="pt-2 px-3">
-                {classesLoading && !compactTimeline.length ? <CSpinner size="sm" /> : null}
-                {!classesLoading && !compactTimeline.length ? (
+                {opBoardLoading && !compactTimeline.length ? <CSpinner size="sm" /> : null}
+                {!opBoardLoading && !compactTimeline.length ? (
                   <div className="small text-body-secondary py-2">Nothing scheduled in view.</div>
                 ) : null}
                 {compactTimeline.map((row) => {

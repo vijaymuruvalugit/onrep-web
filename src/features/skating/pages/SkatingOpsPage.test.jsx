@@ -7,7 +7,6 @@ import SkatingOpsPage from './SkatingOpsPage'
 
 vi.mock('../api/skatingOpsApi', () => ({
   skatingOpsApi: {
-    getOpsSnapshot: vi.fn().mockResolvedValue({ sessions: [], primaryFocusSessionId: null }),
     getSessionBundle: vi.fn().mockResolvedValue(null),
     listActiveSkaters: vi.fn().mockResolvedValue([]),
     recordLap: vi.fn(),
@@ -19,6 +18,13 @@ vi.mock('../api/skatingOpsApi', () => ({
     addRace: vi.fn(),
     listRacesAggregate: vi.fn().mockResolvedValue([]),
     postRapidObservation: vi.fn().mockResolvedValue({}),
+  },
+}))
+
+vi.mock('../../../domain/operationalSessions/operationalSessionsApi', () => ({
+  default: {
+    getDayBoard: vi.fn().mockResolvedValue({ date: '2026-01-01', sessions: [] }),
+    getBoardRange: vi.fn().mockResolvedValue({ sessions: [] }),
   },
 }))
 
