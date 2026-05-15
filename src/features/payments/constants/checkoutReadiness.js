@@ -14,6 +14,7 @@ export const CHECKOUT_READINESS_REASONS = Object.freeze({
   NO_LIVE_KEYS: 'NO_LIVE_KEYS',
   SUBSCRIPTION_INACTIVE: 'SUBSCRIPTION_INACTIVE',
   MISSING_UPI_OR_VPA: 'MISSING_UPI_OR_VPA',
+  INCOMPLETE_PAYOUT_DETAILS: 'INCOMPLETE_PAYOUT_DETAILS',
   WEBHOOK_NOT_CONFIGURED: 'WEBHOOK_NOT_CONFIGURED',
 })
 
@@ -41,6 +42,10 @@ const COPY = {
   [CHECKOUT_READINESS_REASONS.MISSING_UPI_OR_VPA]: {
     title: 'UPI ID missing',
     detail: 'Add a UPI ID (VPA) in Payment settings so parents can pay via UPI.',
+  },
+  [CHECKOUT_READINESS_REASONS.INCOMPLETE_PAYOUT_DETAILS]: {
+    title: 'Payout details incomplete',
+    detail: 'Add a complete bank account or a UPI ID in Payout details before settlements.',
   },
   [CHECKOUT_READINESS_REASONS.WEBHOOK_NOT_CONFIGURED]: {
     title: 'Payment webhooks not configured',

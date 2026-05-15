@@ -7,18 +7,18 @@ import {
   CCardBody,
   CCardHeader,
   CForm,
+  CFormCheck,
   CFormInput,
   CFormLabel,
   CSpinner,
 } from '@coreui/react'
 import { paymentSettingsApi } from '../api/paymentSettingsApi'
+import {
+  buildPayoutSavePayload,
+  inferPayoutMethodFromServer,
+  validatePayoutForm,
+} from '../utils/payoutDetailsValidation'
 
-/**
- * Bank account / payout details (Phase 5.1).
- *
- * Editing any field unverifies the row — ops must re-verify before payouts.
- * We never display the full account number; backend returns only the last 4.
- */
 const empty = {
   account_holder_name: '',
   bank_name: '',
@@ -27,8 +27,6 @@ const empty = {
   upi_id: '',
 }
 
-const IFSC_RE = /^[A-Z]{4}0[A-Z0-9]{6}$/
-
 export default function PayoutDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -36,6 +34,7 @@ export default function PayoutDetailsPage() {
   const [success, setSuccess] = useState(null)
   const [server, setServer] = useState(null)
   const [form, setForm] = useState(empty)
+  const [payoutMethod, setPayoutMethod] = useState('bank')
 
   useEffect(() => {
     let cancelled = false
@@ -52,6 +51,7 @@ export default function PayoutDetailsPage() {
             ifsc_code: data.ifsc_code || '',
             upi_id: data.upi_id || '',
           })
+          setPayoutMethod(inferPayoutMethodFromServer(data))
         }
       })
       .catch((e) => {
@@ -68,51 +68,61 @@ export default function PayoutDetailsPage() {
   const handleSave = async () => {
     setError(null)
     setSuccess(null)
-    if (form.ifsc_code && !IFSC_RE.test(form.ifsc_code.toUpperCase())) {
-      setError('IFSC must be 11 characters (e.g. HDFC0001234).')
-      return
-    }
-    if (form.account_number) {
-      const digits = String(form.account_number).replace(/\s+/g, '')
-      if (!/^[0-9]{6,20}$/.test(digits)) {
-        setError('Account number must be 6–20 digits.')
-        return
-      }
-    }
-    if (!form.account_number && !server) {
-      setError('Account number is required.')
+    const validationError = validatePayoutForm(payoutMethod, form, server)
+    if (validationError) {
+      setError(validationError)
       return
     }
     setSaving(true)
     try {
-      const out = await paymentSettingsApi.saveBankAccount({
-        account_holder_name: form.account_holder_name || null,
-        bank_name: form.bank_name || null,
-        account_number: form.account_number || null,
-        ifsc_code: form.ifsc_code ? form.ifsc_code.toUpperCase() : null,
-        upi_id: form.upi_id || null,
-      })
+      const payload = buildPayoutSavePayload(payoutMethod, form, server)
+      const out = await paymentSettingsApi.saveBankAccount(payload)
       setServer(out)
-      setForm((p) => ({ ...p, account_number: '' }))
+      setForm((p) => ({
+        ...p,
+        account_number: '',
+        account_holder_name: out?.account_holder_name || p.account_holder_name,
+        bank_name: out?.bank_name || '',
+        ifsc_code: out?.ifsc_code || '',
+        upi_id: out?.upi_id || '',
+      }))
+      setPayoutMethod(inferPayoutMethodFromServer(out))
       setSuccess('Saved. Verification by OnRep ops is required before settlements.')
     } catch (e) {
-      setError(e?.response?.data?.error || e?.message || 'Failed to save')
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        'Failed to save'
+      setError(typeof msg === 'string' ? msg : 'Failed to save')
     } finally {
       setSaving(false)
     }
   }
 
+  const payoutModeLabel =
+    server?.upi_id && server?.account_number_last4
+      ? 'Bank + UPI on file'
+      : server?.upi_id
+        ? 'UPI'
+        : server?.account_number_last4 || server?.ifsc_code
+          ? 'Bank account'
+          : null
+
   if (loading) return <CSpinner />
 
   return (
     <div className="p-4" style={{ maxWidth: 720 }}>
-      <h2 className="mb-3">Payout details</h2>
+      <h2 className="mb-2">Payout details</h2>
+      <p className="text-body-secondary small mb-3">
+        Choose how OnRep should pay out your academy — bank transfer or UPI. You only need one method.
+      </p>
       {error ? <CAlert color="danger">{error}</CAlert> : null}
       {success ? <CAlert color="success">{success}</CAlert> : null}
 
       <CCard className="mb-4">
         <CCardHeader>
-          <strong>Current bank account</strong>{' '}
+          <strong>Current payout method</strong>{' '}
           {server?.is_verified ? (
             <CBadge color="success">Verified</CBadge>
           ) : server ? (
@@ -124,81 +134,140 @@ export default function PayoutDetailsPage() {
         <CCardBody>
           {server ? (
             <dl className="row mb-0">
+              {payoutModeLabel ? (
+                <>
+                  <dt className="col-sm-4">Method</dt>
+                  <dd className="col-sm-8">{payoutModeLabel}</dd>
+                </>
+              ) : null}
               <dt className="col-sm-4">Account holder</dt>
               <dd className="col-sm-8">{server.account_holder_name || '—'}</dd>
-              <dt className="col-sm-4">Bank</dt>
-              <dd className="col-sm-8">{server.bank_name || '—'}</dd>
-              <dt className="col-sm-4">Account no.</dt>
-              <dd className="col-sm-8">
-                {server.account_number_last4 ? `•••• ${server.account_number_last4}` : '—'}
-              </dd>
-              <dt className="col-sm-4">IFSC</dt>
-              <dd className="col-sm-8">{server.ifsc_code || '—'}</dd>
-              <dt className="col-sm-4">UPI ID</dt>
-              <dd className="col-sm-8">{server.upi_id || '—'}</dd>
+              {server.account_number_last4 || server.ifsc_code ? (
+                <>
+                  <dt className="col-sm-4">Bank</dt>
+                  <dd className="col-sm-8">{server.bank_name || '—'}</dd>
+                  <dt className="col-sm-4">Account no.</dt>
+                  <dd className="col-sm-8">
+                    {server.account_number_last4 ? `•••• ${server.account_number_last4}` : '—'}
+                  </dd>
+                  <dt className="col-sm-4">IFSC</dt>
+                  <dd className="col-sm-8">{server.ifsc_code || '—'}</dd>
+                </>
+              ) : null}
+              {server.upi_id ? (
+                <>
+                  <dt className="col-sm-4">UPI ID</dt>
+                  <dd className="col-sm-8">{server.upi_id}</dd>
+                </>
+              ) : null}
             </dl>
           ) : (
-            <em>Add your bank or UPI details below.</em>
+            <em>Add bank details or a UPI ID below — one is enough.</em>
           )}
         </CCardBody>
       </CCard>
 
       <CCard>
         <CCardHeader>
-          <strong>{server ? 'Update details' : 'Add details'}</strong>
+          <strong>{server ? 'Update payout method' : 'Add payout method'}</strong>
         </CCardHeader>
         <CCardBody>
           <CForm onSubmit={(e) => e.preventDefault()}>
-            <div className="mb-3">
-              <CFormLabel htmlFor="ahn">Account holder name</CFormLabel>
-              <CFormInput
-                id="ahn"
-                value={form.account_holder_name}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, account_holder_name: e.target.value }))
-                }
-              />
-            </div>
-            <div className="mb-3">
-              <CFormLabel htmlFor="bank">Bank name</CFormLabel>
-              <CFormInput
-                id="bank"
-                value={form.bank_name}
-                onChange={(e) => setForm((p) => ({ ...p, bank_name: e.target.value }))}
-              />
-            </div>
-            <div className="mb-3">
-              <CFormLabel htmlFor="acn">Account number {server ? '(leave blank to keep existing)' : ''}</CFormLabel>
-              <CFormInput
-                id="acn"
-                autoComplete="off"
-                value={form.account_number}
-                onChange={(e) => setForm((p) => ({ ...p, account_number: e.target.value }))}
-              />
-              <div className="form-text">
-                Stored encrypted on our servers. Only the last 4 digits are ever shown back.
+            <fieldset className="mb-4">
+              <legend className="form-label fw-semibold mb-2">How should we pay you?</legend>
+              <div className="d-flex flex-wrap gap-3">
+                <CFormCheck
+                  type="radio"
+                  name="payoutMethod"
+                  id="payout-bank"
+                  label="Bank account (NEFT / IMPS)"
+                  checked={payoutMethod === 'bank'}
+                  onChange={() => setPayoutMethod('bank')}
+                />
+                <CFormCheck
+                  type="radio"
+                  name="payoutMethod"
+                  id="payout-upi"
+                  label="UPI"
+                  checked={payoutMethod === 'upi'}
+                  onChange={() => setPayoutMethod('upi')}
+                />
               </div>
-            </div>
-            <div className="mb-3">
-              <CFormLabel htmlFor="ifsc">IFSC</CFormLabel>
-              <CFormInput
-                id="ifsc"
-                value={form.ifsc_code}
-                onChange={(e) => setForm((p) => ({ ...p, ifsc_code: e.target.value.toUpperCase() }))}
-              />
-            </div>
-            <div className="mb-3">
-              <CFormLabel htmlFor="upi">UPI ID (VPA)</CFormLabel>
-              <CFormInput
-                id="upi"
-                placeholder="academy@bank"
-                value={form.upi_id}
-                onChange={(e) => setForm((p) => ({ ...p, upi_id: e.target.value }))}
-              />
-            </div>
+            </fieldset>
+
+            {payoutMethod === 'bank' ? (
+              <>
+                <div className="mb-3">
+                  <CFormLabel htmlFor="ahn">Account holder name</CFormLabel>
+                  <CFormInput
+                    id="ahn"
+                    value={form.account_holder_name}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, account_holder_name: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="mb-3">
+                  <CFormLabel htmlFor="bank">Bank name</CFormLabel>
+                  <CFormInput
+                    id="bank"
+                    value={form.bank_name}
+                    onChange={(e) => setForm((p) => ({ ...p, bank_name: e.target.value }))}
+                  />
+                </div>
+                <div className="mb-3">
+                  <CFormLabel htmlFor="acn">
+                    Account number {server?.account_number_last4 ? '(leave blank to keep existing)' : ''}
+                  </CFormLabel>
+                  <CFormInput
+                    id="acn"
+                    autoComplete="off"
+                    value={form.account_number}
+                    onChange={(e) => setForm((p) => ({ ...p, account_number: e.target.value }))}
+                  />
+                  <div className="form-text">
+                    Stored encrypted. Only the last 4 digits are shown after save.
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <CFormLabel htmlFor="ifsc">IFSC</CFormLabel>
+                  <CFormInput
+                    id="ifsc"
+                    value={form.ifsc_code}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, ifsc_code: e.target.value.toUpperCase() }))
+                    }
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-3">
+                  <CFormLabel htmlFor="ahn-upi">Account holder name (optional)</CFormLabel>
+                  <CFormInput
+                    id="ahn-upi"
+                    value={form.account_holder_name}
+                    onChange={(e) =>
+                      setForm((p) => ({ ...p, account_holder_name: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="mb-3">
+                  <CFormLabel htmlFor="upi">UPI ID (VPA)</CFormLabel>
+                  <CFormInput
+                    id="upi"
+                    placeholder="academy@okhdfcbank"
+                    value={form.upi_id}
+                    onChange={(e) => setForm((p) => ({ ...p, upi_id: e.target.value.trim() }))}
+                  />
+                  <div className="form-text">Example: yourname@ybl or academy@okhdfcbank</div>
+                </div>
+              </>
+            )}
+
             <CAlert color="info">
-              Editing any field will mark the account as unverified. OnRep ops will re-verify
-              before the next settlement.
+              Editing any field will mark the account as unverified. OnRep ops will re-verify before
+              the next settlement.
             </CAlert>
             <CButton color="primary" onClick={handleSave} disabled={saving}>
               {saving ? <CSpinner size="sm" /> : 'Save'}
