@@ -2,6 +2,7 @@
  * Coach sidebar metadata — icons resolved in coachNav.jsx (avoids duplicating CNavItem boilerplate per row).
  */
 import {
+  cilBolt,
   cilCalendar,
   cilCheckCircle,
   cilDollar,
@@ -18,6 +19,7 @@ import {
 export const COACH_NAV_REGISTRATION = Object.freeze([
   { name: 'Dashboard', to: '/coach/dashboard', icon: cilSpeedometer },
   { name: 'Skating ops', to: '/coach/skating', icon: cilMediaPlay },
+  { name: 'Skating IQ settings', to: '/coach/skating/intelligence', icon: cilBolt },
   { name: 'Batches', to: '/coach/batches', icon: cilLayers },
   { name: 'Schedule', to: '/coach/schedule', icon: cilCalendar },
   { name: 'Attendance', to: '/coach/attendance', icon: cilCheckCircle },

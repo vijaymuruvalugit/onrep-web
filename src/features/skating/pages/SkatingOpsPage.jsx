@@ -2089,6 +2089,8 @@ const SkatingOpsPage = () => {
 
       <AthleteCaptureDrawer
         visible={Boolean(captureDrawerStudentId)}
+        studentId={captureDrawerStudentId}
+        sessionId={selectedSessionId || null}
         studentName={captureStudentName}
         focusText={athleteFocusDraft}
         onChangeFocus={setAthleteFocusDraft}

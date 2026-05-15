@@ -18,6 +18,21 @@ This document lists the **unchanged** REST surface used by **Skating Ops** (`onr
 | `POST` | `/skating/training/sessions/:id/groups/:groupKey/races` | Add race (timing lane) |
 | `POST` | `/skating/training/sessions/:id/rapid-observation` | Rapid observation KPI scores |
 
+## Skating intelligence (governance + longitudinal state)
+
+Mounted on the same **`/api/v1/skating`** coach router (requires `x-activity-id`). See `ezyplay-backend/src/modules/skating/skatingIntelligence.routes.js`.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/skating/intelligence/skill-catalog` | Merged platform + custom skill definitions with academy overlay (`?studentId=` optional) |
+| `PATCH` | `/skating/intelligence/students/:id/skills/:definitionId` | Skill level tap `currentLevel` 1–5, optional `latestNote` (**trend is derived server-side**) |
+| `GET` | `/skating/intelligence/students/:id/kpi-snapshots` | KPI snapshots filtered to academy-visible KPIs |
+| `GET` | `/skating/intelligence/students/:id/timeline` | Compact history (snapshots, notes, assessments) |
+| `GET` | `/skating/intelligence/academy-settings` | Skill + KPI academy configuration |
+| `PATCH` | `/skating/intelligence/academy-settings` | Patch skills / KPIs (visibility, order, targets, thresholds) |
+| `POST` | `/skating/intelligence/custom-skills` | Create academy custom skill (+ config row) |
+| `PUT` | `/skating/intelligence/batches/:batchId/focus-skills` | Replace batch development focus (`body.skillIds` UUID array) |
+
 ## Admin UI notes (no API change)
 
 The live session header can show an **observation count** for coach rhythm. That value is **incremented client-side** on successful `POST …/rapid-observation` responses and reset when the selected session changes; the session bundle does not currently expose a total rapid-observation count.
