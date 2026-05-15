@@ -316,6 +316,7 @@ const SchedulePage = () => {
             placeId: payload.placeId || undefined,
             coachId: payload.coachId || undefined,
             sessionFocus: payload.sessionFocus || undefined,
+            effectiveFrom: effectiveFrom || undefined,
           }).unwrap()
           setPageNotice({ type: 'success', text: 'Recurring session added.' })
         } else if (patternDrawerSeed?.id) {
