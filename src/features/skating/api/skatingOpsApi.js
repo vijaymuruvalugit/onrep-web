@@ -7,6 +7,7 @@ import http from '../../../api/http'
 const BASE = '/skating/training'
 
 export const skatingOpsApi = {
+  async getSessionBundle(sessionId, params) {
     const { data } = await http.get(`${BASE}/sessions/${encodeURIComponent(sessionId)}/bundle`, {
       params,
     })

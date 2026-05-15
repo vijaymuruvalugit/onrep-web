@@ -34,21 +34,23 @@ vi.mock('../../places/api/placesApi', () => ({
   },
 }))
 
-describe('SkatingOpsPage (operational shell)', () => {
+describe('SkatingOpsPage (operational command center)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('renders stable root without full-page error after snapshot load', async () => {
-    const { container } = renderWithProviders(
+  it('renders day board by default (no session selected)', async () => {
+    renderWithProviders(
       <Routes>
         <Route path="/coach/skating" element={<SkatingOpsPage />} />
       </Routes>,
       { initialEntries: ['/coach/skating'] },
     )
     await waitFor(() => {
-      expect(container.querySelector('[data-testid="skating-ops-page"]')).toBeTruthy()
+      expect(screen.getByTestId('skating-ops-page')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('skating-ops-page')).toBeInTheDocument()
+    expect(screen.getByTestId('skating-ops-day-board')).toBeInTheDocument()
+    expect(screen.getByText("Today's skating sessions")).toBeInTheDocument()
+    expect(screen.queryByTestId('active-session-workspace-shell')).not.toBeInTheDocument()
   })
 })

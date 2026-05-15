@@ -25,4 +25,39 @@ export async function getBoardRange(fromYmd, toYmd, batchId = null) {
   }
 }
 
-export default { getDayBoard, getBoardRange }
+export async function getSession(sessionId) {
+  const { data } = await http.get(`/operational-sessions/${encodeURIComponent(sessionId)}`)
+  return data?.session ?? null
+}
+
+export async function startSession(sessionId) {
+  const { data } = await http.post(`/operational-sessions/${encodeURIComponent(sessionId)}/start`)
+  return data?.session ?? null
+}
+
+export async function pauseSession(sessionId) {
+  const { data } = await http.post(`/operational-sessions/${encodeURIComponent(sessionId)}/pause`)
+  return data?.session ?? null
+}
+
+export async function endSession(sessionId) {
+  const { data } = await http.post(`/operational-sessions/${encodeURIComponent(sessionId)}/end`)
+  return data?.session ?? null
+}
+
+export async function cancelSession(sessionId) {
+  const { data } = await http.patch(`/operational-sessions/${encodeURIComponent(sessionId)}/state`, {
+    state: 'cancelled',
+  })
+  return data?.session ?? null
+}
+
+export default {
+  getDayBoard,
+  getBoardRange,
+  getSession,
+  startSession,
+  pauseSession,
+  endSession,
+  cancelSession,
+}

@@ -1,73 +1,106 @@
 import React from 'react'
-import { CBadge, CButton, CTableDataCell, CTableRow } from '@coreui/react'
-import SessionStateBadge from './SessionStateBadge'
-
-function formatTime(isoOrDate) {
-  if (!isoOrDate) return '—'
-  try {
-    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate)
-    if (Number.isNaN(d.getTime())) return '—'
-    return d.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
-  } catch {
-    return '—'
-  }
-}
+import { CBadge, CCard, CCardBody } from '@coreui/react'
+import OperationalSessionBadge from './OperationalSessionBadge'
+import OperationalSessionActions from './OperationalSessionActions'
+import {
+  sessionDisplayTitle,
+  sessionTimeRangeLabel,
+  sessionTypeBadgeColor,
+  sessionTypeLabel,
+} from '../helpers/sessionDisplay'
+import { isLiveSession } from '../helpers/sessionActions'
 
 /**
+ * Scannable operational session card for the day board.
  * @param {{
  *   session: import('../types').OperationalSession,
  *   selected?: boolean,
- *   onSelect: (id: string) => void,
- *   uiPaused?: boolean,
+ *   pinned?: boolean,
+ *   primaryBusy?: boolean,
+ *   onPrimary: (session: import('../types').OperationalSession, action: string) => void,
+ *   onSelect?: (id: string) => void,
  * }} props
  */
 export default function OperationalSessionCard({
   session: s,
   selected = false,
+  pinned = false,
+  primaryBusy = false,
+  onPrimary,
   onSelect,
-  uiPaused = false,
 }) {
   if (!s?.id) return null
-  const whenParts = []
-  if (s.sessionDate) whenParts.push(String(s.sessionDate).slice(0, 10))
-  const startIso = s.actualStartAt || s.scheduledStartAt
-  if (startIso) whenParts.push(formatTime(startIso))
-  const endIso = s.actualEndAt || s.scheduledEndAt
-  if (endIso) whenParts.push(`→ ${formatTime(endIso)}`)
+  const type = sessionTypeLabel(s)
+  const title = sessionDisplayTitle(s)
+  const time = sessionTimeRangeLabel(s)
+  const live = isLiveSession(s)
+
+  const scheduleEditHref = s.batchId
+    ? `/coach/schedule?batchId=${encodeURIComponent(s.batchId)}`
+    : '/coach/schedule'
 
   return (
-    <CTableRow
-      className={selected ? 'table-active' : ''}
-      style={{ cursor: 'pointer' }}
-      onClick={() => onSelect(String(s.id))}
+    <CCard
+      className={[
+        'op-session-card h-100',
+        selected ? 'op-session-card--selected' : '',
+        pinned || live ? 'op-session-card--live' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onClick={() => onSelect?.(String(s.id))}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect?.(String(s.id))
+        }
+      }}
     >
-      <CTableDataCell>{whenParts.join(' · ') || '—'}</CTableDataCell>
-      <CTableDataCell>{s.placeName || s.batchName || '—'}</CTableDataCell>
-      <CTableDataCell>
-        <SessionStateBadge operationalState={s.state} uiPaused={uiPaused} />
-        {s.athleteCount > 0 ? (
-          <CBadge color="light" className="ms-1 text-dark border">
-            {s.athleteCount} athletes
-          </CBadge>
-        ) : null}
-      </CTableDataCell>
-      <CTableDataCell className="text-end">
-        <CButton
-          size="sm"
-          color="primary"
-          variant="ghost"
-          onClick={(e) => {
-            e.stopPropagation()
-            onSelect(String(s.id))
-          }}
+      <CCardBody className="d-flex flex-column gap-3 p-3 p-md-4">
+        <div className="flex-grow-1" style={{ minWidth: 0 }}>
+          <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+            <OperationalSessionBadge state={s.state} />
+            <CBadge color={sessionTypeBadgeColor(type)} className="text-capitalize">
+              {type}
+            </CBadge>
+            {pinned ? (
+              <span className="small fw-semibold text-success text-uppercase">Coaching now</span>
+            ) : null}
+          </div>
+          <h3 className="h6 fw-semibold mb-1 text-body">{title}</h3>
+          <p className="small text-body-secondary mb-0">{time}</p>
+        </div>
+
+        <dl className="op-session-card__meta small mb-0">
+          <div className="op-session-card__meta-row">
+            <dt>Place</dt>
+            <dd>{s.placeName || '—'}</dd>
+          </div>
+          <div className="op-session-card__meta-row">
+            <dt>Coach</dt>
+            <dd>{s.coachName || '—'}</dd>
+          </div>
+          <div className="op-session-card__meta-row">
+            <dt>Athletes</dt>
+            <dd>{s.athleteCount > 0 ? s.athleteCount : '—'}</dd>
+          </div>
+        </dl>
+
+        <div
+          className="mt-auto pt-1"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
         >
-          Open
-        </CButton>
-      </CTableDataCell>
-    </CTableRow>
+          <OperationalSessionActions
+            session={s}
+            onPrimary={onPrimary}
+            primaryBusy={primaryBusy}
+            scheduleEditHref={scheduleEditHref}
+          />
+        </div>
+      </CCardBody>
+    </CCard>
   )
 }

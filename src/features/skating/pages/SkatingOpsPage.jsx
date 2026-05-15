@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import {
   CAlert,
   CBadge,
@@ -44,7 +44,11 @@ import { computeSessionSummary } from '../utils/sessionTodaySummary'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
 import { selectPrimaryFocusSessionId } from '../../../domain/operationalSessions/selectors/selectPrimaryFocusSession'
 import { operationalStateToLegacyOpsState } from '../../../domain/operationalSessions/helpers/stateLabels'
-import OperationalSessionCard from '../../../domain/operationalSessions/components/OperationalSessionCard'
+import { devLogEmptyDayBoard } from '../../../domain/operationalSessions/helpers/devDayBoardLog'
+import { sortDayBoardSessions } from '../../../domain/operationalSessions/helpers/sortDayBoardSessions'
+import SkatingOpsDayBoard from '../../../domain/operationalSessions/components/SkatingOpsDayBoard'
+import SkatingOpsWorkspaceChrome from '../components/SkatingOpsWorkspaceChrome'
+import ActiveSessionWorkspaceShell from '../components/ActiveSessionWorkspaceShell'
 import '../skating-ops.css'
 
 const SK_LAST_PLACE = 'onrep.skating.lastPlaceId'
@@ -232,6 +236,7 @@ const SkatingOpsPage = () => {
   const [dayBoard, setDayBoard] = useState(null)
   const [snapLoading, setSnapLoading] = useState(false)
   const [snapError, setSnapError] = useState(null)
+  const [cardActionBusyId, setCardActionBusyId] = useState(null)
 
   const [bundle, setBundle] = useState(null)
   const [bundleLoading, setBundleLoading] = useState(false)
@@ -280,7 +285,6 @@ const SkatingOpsPage = () => {
   const [obsPulse, setObsPulse] = useState(false)
   const [obsFlashKeys, setObsFlashKeys] = useState(() => new Set())
   const [lastObsLabel, setLastObsLabel] = useState('')
-  const [sessionsPanelOpen, setSessionsPanelOpen] = useState(true)
   const [recentLapsExpanded, setRecentLapsExpanded] = useState(false)
   const [obsAdvancePending, setObsAdvancePending] = useState(null)
   const [obsReturnSkater, setObsReturnSkater] = useState(null)
@@ -354,6 +358,7 @@ const SkatingOpsPage = () => {
       }
       try {
         const data = await operationalSessionsApi.getDayBoard(dateYmd)
+        devLogEmptyDayBoard(dateYmd, data?.sessions)
         setDayBoard(data)
         if (silent) setSnapError(null)
       } catch (e) {
@@ -544,21 +549,20 @@ const SkatingOpsPage = () => {
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [selectedSessionId, loadBundle, loadDayBoard])
 
-  /** Restore active session: URL wins; else last stored; else primary active for the day. */
+  /** Prefer live session on the day board; else last stored; URL param wins if already set. */
   useEffect(() => {
     if (!dayBoard || sessionParam || restoredRef.current) return
-    const list = dayBoard.sessions || []
+    const list = sortDayBoardSessions(dayBoard.sessions || [])
     const ids = new Set(list.map((s) => String(s.id)))
-    let pick = null
-    try {
-      const st = sessionStorage.getItem(SK_ACTIVE_SESSION)
-      if (st && ids.has(st)) pick = st
-    } catch {
-      /* ignore */
-    }
+    let pick = selectPrimaryFocusSessionId(list)
+    if (pick && !ids.has(String(pick))) pick = null
     if (!pick) {
-      const focusId = selectPrimaryFocusSessionId(list)
-      if (focusId && ids.has(String(focusId))) pick = String(focusId)
+      try {
+        const st = sessionStorage.getItem(SK_ACTIVE_SESSION)
+        if (st && ids.has(st)) pick = st
+      } catch {
+        /* ignore */
+      }
     }
     if (pick) {
       restoredRef.current = true
@@ -951,7 +955,7 @@ const SkatingOpsPage = () => {
     clearPendingObsAdvance()
     advancePauseRhythmRef.current = 0
     setObsReturnSkater(null)
-    await skatingOpsApi.patchSession(selectedSessionId, { endedAt: new Date().toISOString() })
+    await operationalSessionsApi.endSession(selectedSessionId)
     bumpSkatingOpsMetric('sessionEnded')
     await loadBundle(selectedSessionId)
     await loadDayBoard()
@@ -959,13 +963,16 @@ const SkatingOpsPage = () => {
 
   const startSession = async () => {
     if (!selectedSessionId) return
-    await skatingOpsApi.patchSession(selectedSessionId, { startedAt: new Date().toISOString() })
+    await operationalSessionsApi.startSession(selectedSessionId)
     bumpSkatingOpsMetric('sessionStartedOnIce')
     await loadBundle(selectedSessionId)
     await loadDayBoard()
   }
 
-  const sessions = dayBoard?.sessions || []
+  const sessions = useMemo(
+    () => sortDayBoardSessions(dayBoard?.sessions || []),
+    [dayBoard?.sessions],
+  )
   const selSession = sessions.find((s) => String(s.id) === String(selectedSessionId))
   const legacyOpsFromCanonical = selSession?.state
     ? operationalStateToLegacyOpsState(selSession.state)
@@ -1073,11 +1080,6 @@ const SkatingOpsPage = () => {
     if (!coachLive || bundleFetchedAt == null || bundleLoading) return false
     return Date.now() - bundleFetchedAt < 12_000
   }, [coachLive, bundleFetchedAt, bundleLoading, bundleAgeTick])
-
-  useEffect(() => {
-    if (coachLive && selectedSessionId) setSessionsPanelOpen(false)
-    else setSessionsPanelOpen(true)
-  }, [coachLive, selectedSessionId])
 
   useEffect(() => {
     if (coachLive) setTimingPanelOpen(false)
@@ -1293,8 +1295,6 @@ const SkatingOpsPage = () => {
     executeObsAdvance(p.fromId, p.fromName, p.targetId)
   }
 
-  const slimSessionBar = coachLive && selectedSessionId && !sessionsPanelOpen
-
   const retryObservation = () => {
     const k = String(lapStudentId)
     if (k) delete obsLastSentByStudentRef.current[k]
@@ -1317,6 +1317,43 @@ const SkatingOpsPage = () => {
   const onSessionStartedFromModal = (sid) => {
     void loadDayBoard()
     if (sid) selectSession(sid)
+  }
+
+  const exitWorkspace = () => selectSession(null)
+
+  const handleCardPrimary = async (session, action) => {
+    const id = String(session?.id || '')
+    if (!id) return
+    if (action === 'cancel') {
+      if (!window.confirm('Cancel this session?')) return
+      setCardActionBusyId(id)
+      try {
+        await operationalSessionsApi.cancelSession(id)
+        await loadDayBoard()
+        if (String(selectedSessionId) === id) exitWorkspace()
+      } catch (e) {
+        setSnapError(e?.message || 'Could not cancel session.')
+      } finally {
+        setCardActionBusyId(null)
+      }
+      return
+    }
+    if (action === 'start' || action === 'resume') {
+      setCardActionBusyId(id)
+      try {
+        await operationalSessionsApi.startSession(id)
+        selectSession(id)
+        await loadDayBoard()
+        await loadBundle(id)
+      } catch (e) {
+        setSnapError(e?.message || 'Could not start session.')
+      } finally {
+        setCardActionBusyId(null)
+      }
+      return
+    }
+    selectSession(id)
+    await loadBundle(id)
   }
 
   const saveAddAthletes = async () => {
@@ -1342,120 +1379,26 @@ const SkatingOpsPage = () => {
 
   const inner = (
     <>
-      <CCard className="mb-3">
-        {slimSessionBar ? (
-          <CCardBody className="py-2 px-3 d-flex flex-wrap align-items-center gap-2 border-bottom-0">
-            <span
-              className="small text-body-secondary text-truncate flex-grow-1"
-              style={{ maxWidth: '85%' }}
-            >
-              {selSession?.placeName || bundle?.session?.placeName || 'This session'} ·{' '}
-              {formatTime(
-                selSession?.actualStartAt ||
-                  selSession?.scheduledStartAt ||
-                  selSession?.startedAt ||
-                  selSession?.started_at,
-              )}
-            </span>
-            <CButton
-              color="link"
-              size="sm"
-              className="p-0 text-decoration-none"
-              onClick={() => setSessionsPanelOpen(true)}
-            >
-              {SESSION_OPS_COPY.switchSession}
-            </CButton>
-          </CCardBody>
-        ) : null}
-        {(!slimSessionBar || sessionsPanelOpen) && (
-          <>
-            <CCardHeader className="d-flex flex-wrap justify-content-between align-items-center gap-2">
-              <div>
-                <strong>{SESSION_OPS_COPY.pageTitle}</strong>
-                <span className="text-body-secondary small ms-2">
-                  {SESSION_OPS_COPY.pageSubtitle}
-                </span>
-              </div>
-              <div className="d-flex flex-wrap gap-2 align-items-center">
-                <CFormLabel className="mb-0 small">{SESSION_OPS_COPY.dayLabel}</CFormLabel>
-                <CFormInput
-                  type="date"
-                  value={dateYmd}
-                  onChange={(e) => setDateYmd(e.target.value)}
-                  className="w-auto"
-                />
-                <CButton
-                  color="secondary"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => loadDayBoard()}
-                >
-                  {SESSION_OPS_COPY.refresh}
-                </CButton>
-                <CButton color="primary" size="sm" onClick={openStartLiveModal}>
-                  {SESSION_OPS_COPY.newSessionCta}
-                </CButton>
-                <CButton as={Link} size="sm" color="light" variant="outline" to="/coach/attendance">
-                  {SESSION_OPS_COPY.attendanceLink}
-                </CButton>
-                {coachLive && selectedSessionId ? (
-                  <CButton
-                    color="secondary"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSessionsPanelOpen(false)}
-                  >
-                    {SESSION_OPS_COPY.minimizeList}
-                  </CButton>
-                ) : null}
-              </div>
-            </CCardHeader>
-            <CCardBody>
-              {snapError ? <CAlert color="danger">{snapError}</CAlert> : null}
-              {snapLoading ? (
-                <CSpinner />
-              ) : (
-                <CTable hover responsive small>
-                  <CTableHead>
-                    <CTableRow>
-                      <CTableHeaderCell>When</CTableHeaderCell>
-                      <CTableHeaderCell>Place</CTableHeaderCell>
-                      <CTableHeaderCell>State</CTableHeaderCell>
-                      <CTableHeaderCell />
-                    </CTableRow>
-                  </CTableHead>
-                  <CTableBody>
-                    {sessions.length === 0 ? (
-                      <CTableRow>
-                        <CTableDataCell colSpan={4} className="text-center py-4">
-                          <div className="text-body-secondary small mb-3">
-                            {SESSION_OPS_COPY.emptyDayBoardBody}
-                          </div>
-                          <CButton color="primary" size="sm" onClick={openStartLiveModal}>
-                            {SESSION_OPS_COPY.newSessionCta}
-                          </CButton>
-                        </CTableDataCell>
-                      </CTableRow>
-                    ) : (
-                      sessions.map((s) => (
-                        <OperationalSessionCard
-                          key={s.id}
-                          session={s}
-                          selected={String(s.id) === String(selectedSessionId)}
-                          onSelect={(id) => selectSession(id)}
-                          uiPaused={uiPaused && String(s.id) === String(selectedSessionId)}
-                        />
-                      ))
-                    )}
-                  </CTableBody>
-                </CTable>
-              )}
-            </CCardBody>
-          </>
-        )}
-      </CCard>
-
-      {selectedSessionId ? (
+      {!selectedSessionId ? (
+        <SkatingOpsDayBoard
+          dateYmd={dateYmd}
+          onDateChange={setDateYmd}
+          sessions={sessions}
+          loading={snapLoading}
+          error={snapError}
+          cardActionBusyId={cardActionBusyId}
+          onRefresh={() => loadDayBoard()}
+          onAdHoc={openStartLiveModal}
+          onCardPrimary={(s, a) => void handleCardPrimary(s, a)}
+          onSelectSession={(id) => {
+            const row = sessions.find((x) => String(x.id) === String(id))
+            if (row) void handleCardPrimary(row, 'view')
+          }}
+        />
+      ) : (
+        <>
+          <SkatingOpsWorkspaceChrome session={selSession ?? null} onBack={exitWorkspace} />
+          <ActiveSessionWorkspaceShell>
         <CCard className={`mb-3${opsState === 'active' ? ' coach-session-live' : ''}`}>
           <CCardHeader className="d-flex flex-wrap justify-content-end align-items-center gap-2">
             {!coachLive ? (
@@ -1477,7 +1420,7 @@ const SkatingOpsPage = () => {
               pauseLabel={uiPaused ? 'Resume' : 'Pause'}
               onEnd={() => void endSession()}
               onStart={() => void startSession()}
-              onSwitchSession={coachLive ? () => setSessionsPanelOpen(true) : undefined}
+              onSwitchSession={() => exitWorkspace()}
               canStart={opsState === 'upcoming'}
               canPause={opsState === 'active'}
               canEnd={opsState === 'active' || opsState === 'upcoming'}
@@ -2116,13 +2059,8 @@ const SkatingOpsPage = () => {
             ) : null}
           </CCardBody>
         </CCard>
-      ) : (
-        <CAlert color="light" className="border">
-          <div className="mb-2">Select a training session above or start one for this day.</div>
-          <CButton color="primary" size="sm" onClick={openStartLiveModal}>
-            {SESSION_OPS_COPY.newSessionCta}
-          </CButton>
-        </CAlert>
+          </ActiveSessionWorkspaceShell>
+        </>
       )}
 
       <AthleteCaptureDrawer

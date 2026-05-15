@@ -9,6 +9,9 @@
  */
 export function deriveSessionLifecycle({ opsState, uiPaused, operationalState }) {
   const op = String(operationalState || '').toLowerCase()
+  if (op === 'active') {
+    return { key: 'active', badgeColor: 'success', label: 'Live' }
+  }
   if (op === 'paused') {
     return { key: 'paused', badgeColor: 'warning', label: 'Paused' }
   }
@@ -29,7 +32,7 @@ export function deriveSessionLifecycle({ opsState, uiPaused, operationalState })
     return { key: 'paused', badgeColor: 'warning', label: 'Paused' }
   }
   if (raw === 'active') {
-    return { key: 'active', badgeColor: 'success', label: 'Active' }
+    return { key: 'active', badgeColor: 'success', label: 'Live' }
   }
   return { key: 'upcoming', badgeColor: 'secondary', label: 'Upcoming' }
 }
