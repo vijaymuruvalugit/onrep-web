@@ -17,6 +17,10 @@
  * @property {string|null} batchName
  * @property {string|null} placeId
  * @property {string|null} placeName
+ * @property {string|null} [timezone] IANA timezone for local display
+ * @property {string|null} [operationalDayLocal] YYYY-MM-DD local operational day
+ * @property {string|null} [startsAtLocal] Local wall-clock start (no Z)
+ * @property {string|null} [endsAtLocal] Local wall-clock end (no Z)
  * @property {string|null} scheduledStartAt
  * @property {string|null} scheduledEndAt
  * @property {string|null} actualStartAt
