@@ -54,6 +54,7 @@ export function validatePayoutForm(method, form, server) {
 export function buildPayoutSavePayload(method, form, server) {
   if (method === 'upi') {
     return {
+      payout_method: 'upi',
       account_holder_name: form.account_holder_name?.trim() || null,
       bank_name: null,
       account_number: null,
@@ -62,6 +63,7 @@ export function buildPayoutSavePayload(method, form, server) {
     }
   }
   return {
+    payout_method: 'bank',
     account_holder_name: form.account_holder_name?.trim() || null,
     bank_name: form.bank_name?.trim() || null,
     account_number: form.account_number?.trim() || null,

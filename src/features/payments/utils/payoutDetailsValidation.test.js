@@ -12,6 +12,16 @@ describe('payoutDetailsValidation', () => {
     ).toBeNull()
   })
 
+  it('allows UPI with optional holder name', () => {
+    expect(
+      validatePayoutForm(
+        'upi',
+        { upi_id: '9606309303@ybl', account_holder_name: 'Vijay Muruvalu' },
+        null,
+      ),
+    ).toBeNull()
+  })
+
   it('rejects empty UPI path', () => {
     expect(validatePayoutForm('upi', { upi_id: '' }, null)).toMatch(/UPI ID/)
   })
