@@ -29,6 +29,8 @@ export const API_CLASSIFICATION = Object.freeze({
   scoped: Object.freeze([
     '/dashboard/today',
     '/batch-schedules',
+    '/operational-sessions',
+    '/recurring-patterns',
     '/places',
     '/skating',
     '/sessions',

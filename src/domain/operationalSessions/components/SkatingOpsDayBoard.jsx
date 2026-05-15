@@ -28,6 +28,8 @@ import '../operational-sessions-board.css'
  *   onAdHoc: () => void,
  *   onCardPrimary: (session: import('../types').OperationalSession, action: string) => void,
  *   onSelectSession: (id: string) => void,
+ *   emptyVariant?: 'default'|'no_workspace'|'wrong_capability',
+ *   workspaceName?: string|null,
  * }} props
  */
 export default function SkatingOpsDayBoard({
@@ -42,6 +44,8 @@ export default function SkatingOpsDayBoard({
   onAdHoc,
   onCardPrimary,
   onSelectSession,
+  emptyVariant = 'default',
+  workspaceName = null,
 }) {
   const sorted = useMemo(() => sortDayBoardSessions(sessions), [sessions])
   const liveId = useMemo(() => sorted.find((s) => isLiveSession(s))?.id ?? null, [sorted])
@@ -82,7 +86,14 @@ export default function SkatingOpsDayBoard({
         </div>
       ) : null}
 
-      {!loading && sorted.length === 0 ? <DayBoardEmptyState onAdHoc={onAdHoc} /> : null}
+      {!loading && sorted.length === 0 ? (
+        <DayBoardEmptyState
+          onAdHoc={onAdHoc}
+          variant={emptyVariant}
+          workspaceName={workspaceName}
+          dateYmd={dateYmd}
+        />
+      ) : null}
 
       {sorted.length > 0 ? (
         <CRow className="g-3 g-lg-4">

@@ -21,6 +21,8 @@ describe('apiActivityContext', () => {
     expect(requestRequiresActivityWorkspace('/batch-schedules/b1')).toBe(true)
     expect(requestRequiresActivityWorkspace('/sessions')).toBe(true)
     expect(requestRequiresActivityWorkspace('/dashboard/today')).toBe(true)
+    expect(requestRequiresActivityWorkspace('/operational-sessions/day-board')).toBe(true)
+    expect(requestRequiresActivityWorkspace('/recurring-patterns/x')).toBe(true)
   })
 
   it('does not require workspace for students list', () => {

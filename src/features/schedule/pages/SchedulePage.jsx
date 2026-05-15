@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import {
   CAlert,
   CButton,
@@ -30,7 +30,6 @@ import batchesApi from '../../batches/api/batchesApi'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
 import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
-import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 import { useIsScheduleWide } from '../../../hooks/useMediaQuery'
@@ -39,7 +38,6 @@ import { RECURRING_PATTERN_EDIT_MODE } from '@onrep/contracts/recurring-patterns
 import './SchedulePage.scss'
 
 const SchedulePage = () => {
-  const dispatch = useDispatch()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const activities = useSelector((s) => s.workspace.activities)
@@ -151,18 +149,21 @@ const SchedulePage = () => {
     fetchSchedule(effectiveBatchId)
   }, [effectiveBatchId, fetchSchedule])
 
-  useEffect(() => {
-    if (!bootstrapComplete || !selectedBatch || !effectiveBatchId) return
-    if (String(selectedBatch.id || selectedBatch._id) !== String(effectiveBatchId)) return
-    const wid = selectedBatch.activityWorkspaceId
-    if (!wid || !isValidUuid(String(wid))) return
-    if (activities.length && !activities.some((a) => String(a.id) === String(wid))) return
-    if (String(activeActivityId || '') === String(wid)) return
-    dispatch(setActiveWorkspace(String(wid)))
-  }, [bootstrapComplete, selectedBatch, effectiveBatchId, activities, activeActivityId, dispatch])
+  const batchWorkspaceMismatch = useMemo(() => {
+    if (!selectedBatch || !activeActivityId) return null
+    const wid = selectedBatch.activityWorkspaceId ?? selectedBatch.activity_workspace_id
+    if (!wid || !isValidUuid(String(wid))) return null
+    if (String(wid) === String(activeActivityId)) return null
+    const batchAct = activities.find((a) => String(a.id) === String(wid))
+    const activeAct = activities.find((a) => String(a.id) === String(activeActivityId))
+    return {
+      batchActivityName: batchAct?.name || batchAct?.label || 'another program',
+      activeWorkspaceName: activeAct?.name || activeAct?.label || 'current workspace',
+    }
+  }, [selectedBatch, activeActivityId, activities])
 
   const loadSessions = useCallback(async () => {
-    if (!effectiveBatchId) return
+    if (!effectiveBatchId || batchWorkspaceMismatch) return
     setSessionsLoading(true)
     setSessionsError(null)
     try {
@@ -183,7 +184,7 @@ const SchedulePage = () => {
     } finally {
       setSessionsLoading(false)
     }
-  }, [effectiveBatchId, todayIso])
+  }, [effectiveBatchId, todayIso, batchWorkspaceMismatch])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- loadSessions() owns its loading/error state; setState happens inside its async body, not in this effect
@@ -526,6 +527,13 @@ const SchedulePage = () => {
         </div>
         <CCard className="schedule-page__upcoming-card onrep-surface-a border-0">
           <CCardBody className="py-3 px-3 px-md-4">
+            {batchWorkspaceMismatch ? (
+              <CAlert color="warning">
+                This batch belongs to <strong>{batchWorkspaceMismatch.batchActivityName}</strong>, but
+                you are working in <strong>{batchWorkspaceMismatch.activeWorkspaceName}</strong>. Switch
+                program in the header to view this batch&apos;s sessions.
+              </CAlert>
+            ) : null}
             {sessionsError ? <CAlert color="danger">{sessionsError}</CAlert> : null}
             {sessionsLoading ? (
               <div className="text-center py-3">

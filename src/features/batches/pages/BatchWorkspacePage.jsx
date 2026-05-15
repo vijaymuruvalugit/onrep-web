@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   CAlert,
@@ -34,7 +34,6 @@ import {
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
 import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
-import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
 import { getCoachUiConfig } from '../../academy/api/academyUiApi'
 import BatchStudentsTab from '../components/batchStudents/BatchStudentsTab'
@@ -45,7 +44,6 @@ const VALID_TABS = new Set(['schedule', 'students', 'settings'])
 const WORKSPACE_REQUIRED = 'WORKSPACE_REQUIRED'
 
 const BatchWorkspacePage = () => {
-  const dispatch = useDispatch()
   const activities = useSelector((s) => s.workspace.activities)
   const bootstrapComplete = useSelector((s) => s.workspace.bootstrapComplete)
   const activeActivityId = useSelector((s) => s.workspace.activeActivityId)
@@ -84,16 +82,18 @@ const BatchWorkspacePage = () => {
   const [opBoardRows, setOpBoardRows] = useState([])
   const [opBoardLoading, setOpBoardLoading] = useState(false)
 
-  /** Infer x-activity-id from batch → sub_activity → activity (API: activity_workspace_id). Scoped routes need it; GET /batches is exempt. */
-  useEffect(() => {
-    if (!bootstrapComplete || !selectedBatch || !batchId) return
-    if (String(selectedBatch.id) !== String(batchId)) return
-    const wid = selectedBatch.activityWorkspaceId
-    if (!wid || !isValidUuid(String(wid))) return
-    if (activities.length && !activities.some((a) => String(a.id) === String(wid))) return
-    if (String(activeActivityId || '') === String(wid)) return
-    dispatch(setActiveWorkspace(String(wid)))
-  }, [batchId, bootstrapComplete, selectedBatch, activities, activeActivityId, dispatch])
+  const batchWorkspaceMismatch = useMemo(() => {
+    if (!selectedBatch || !activeActivityId) return null
+    const wid = selectedBatch.activityWorkspaceId ?? selectedBatch.activity_workspace_id
+    if (!wid || !isValidUuid(String(wid))) return null
+    if (String(wid) === String(activeActivityId)) return null
+    const batchAct = activities.find((a) => String(a.id) === String(wid))
+    const activeAct = activities.find((a) => String(a.id) === String(activeActivityId))
+    return {
+      batchActivityName: batchAct?.name || batchAct?.label || 'another program',
+      activeWorkspaceName: activeAct?.name || activeAct?.label || 'current workspace',
+    }
+  }, [selectedBatch, activeActivityId, activities])
 
   useEffect(() => {
     if (!batchId) return
@@ -102,7 +102,7 @@ const BatchWorkspacePage = () => {
   }, [batchId, activeActivityId, fetchBatchById, fetchBatchSchedules])
 
   const reloadOpBoard = useCallback(async () => {
-    if (!batchId) return
+    if (!batchId || batchWorkspaceMismatch) return
     const ti = todayIsoLocal()
     const end = new Date()
     end.setDate(end.getDate() + 90)
@@ -122,7 +122,7 @@ const BatchWorkspacePage = () => {
     } finally {
       setOpBoardLoading(false)
     }
-  }, [batchId])
+  }, [batchId, batchWorkspaceMismatch])
 
   /* eslint-disable react-hooks/set-state-in-effect -- mount refresh loads operational board */
   useEffect(() => {
@@ -449,6 +449,13 @@ const BatchWorkspacePage = () => {
 
       {workspaceGateError ? (
         <div className="onrep-batch-workspace-hint mb-3">{workspaceGateError.message}</div>
+      ) : null}
+      {batchWorkspaceMismatch ? (
+        <CAlert color="warning" className="mb-3">
+          This batch belongs to <strong>{batchWorkspaceMismatch.batchActivityName}</strong>, but you are
+          working in <strong>{batchWorkspaceMismatch.activeWorkspaceName}</strong>. Switch program in the
+          header to view this batch&apos;s sessions.
+        </CAlert>
       ) : null}
       {detailError && detailError.code !== WORKSPACE_REQUIRED ? (
         <CAlert color="danger">{detailError.message}</CAlert>

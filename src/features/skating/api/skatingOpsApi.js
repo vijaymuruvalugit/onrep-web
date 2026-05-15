@@ -1,6 +1,6 @@
 /**
  * Coach skating training REST (`/api/v1/skating/training/*`) — requires activity workspace (x-activity-id).
- * Aggregates: `/ops/snapshot`, `/sessions/:id/bundle` are low-chatter operational surfaces.
+ * In-session only: bundle, laps, observations. Day lists use operationalSessionsApi day-board.
  */
 import http from '../../../api/http'
 

@@ -1,19 +1,21 @@
-Dead code and follow-ups — operational session migration (2026-05-14)
-================================================================================
+Operational session cutover — dead code removed (2026-05-15)
+==========================================================
 
-Removed or superseded (safe to delete after verification in staging)
-----------------------------------------------------------------------
-1. onrep-admin/src/features/skating/api/skatingOpsApi.js — getOpsSnapshot()
-   Replaced by GET /api/v1/operational-sessions/day-board via operationalSessionsApi.
+Removed
+-------
+- GET /api/v1/skating/training/ops/snapshot (backend) — use GET /operational-sessions/day-board
+- getTrainingOpsSnapshot + READ_CANONICAL_OPS_SNAPSHOT (backend training.service.js)
+- getOpsSnapshot() (onrep-admin skatingOpsApi — was already removed)
+- Silent setActiveWorkspace from batch on SchedulePage / BatchWorkspacePage
+- Backend activityContext fallback to first available activity
 
-2. onrep-admin merge path — mergeBatchSessionInstances() removed from batchWorkspaceOperations.js
-   SchedulePage and BatchWorkspacePage now use GET /operational-sessions/board only.
+Canonical paths (only)
+----------------------
+- Workspace: Redux workspaceSlice + x-activity-id (http.js)
+- Day list: operationalSessionsApi.getDayBoard / getBoardRange
+- In-session: skatingOpsApi.getSessionBundle, laps, observations
+- Lifecycle: operationalSessionsApi start / pause / end
 
-3. ezyplay-frontend Firestore coach skating hub (TrainingHomeScreen + skatingTrainingFirestoreService)
-   Still authoritative for some coach mobile flows; migrate to REST day-board + bundle in a follow-up epic.
-
-4. Backend GET /api/v1/skating/training/ops/snapshot — optional deprecation once all clients use operational-sessions.
-
-Grep checklist before deleting
--------------------------------
-rg "getOpsSnapshot|ops/snapshot" onrep-admin ezyplay-frontend
+Grep gate before any reintroduction
+-----------------------------------
+rg "getOpsSnapshot|ops/snapshot|getTrainingOpsSnapshot|READ_CANONICAL"

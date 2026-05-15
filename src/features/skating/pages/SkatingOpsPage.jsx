@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
 import {
   CAlert,
@@ -49,7 +50,15 @@ import { sortDayBoardSessions } from '../../../domain/operationalSessions/helper
 import SkatingOpsDayBoard from '../../../domain/operationalSessions/components/SkatingOpsDayBoard'
 import SkatingOpsWorkspaceChrome from '../components/SkatingOpsWorkspaceChrome'
 import ActiveSessionWorkspaceShell from '../components/ActiveSessionWorkspaceShell'
+import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
 import '../skating-ops.css'
+
+function activeActivityHasSkatingCapability(activity) {
+  if (!activity) return false
+  const caps = activity.capabilities
+  if (caps && typeof caps === 'object' && caps.skatingRoutes) return true
+  return String(activity.type || '').toLowerCase() === 'skating'
+}
 
 const SK_LAST_PLACE = 'onrep.skating.lastPlaceId'
 const SK_LAST_RINK = 'onrep.skating.lastRinkOrRoad'
@@ -228,6 +237,8 @@ function isFullObservationSet(obsScores) {
 const SkatingOpsPage = () => {
   const auth = useAuth()
   const currentUserId = auth?.user?.id || auth?.user?.sub || ''
+  const activeActivity = useSelector(selectActiveActivity)
+  const activeActivityId = useSelector((s) => s.workspace.activeActivityId)
   const [searchParams, setSearchParams] = useSearchParams()
   const sessionParam = searchParams.get('session') || ''
   const focusFromUrl = searchParams.get('focus') === '1'
@@ -969,6 +980,17 @@ const SkatingOpsPage = () => {
     await loadDayBoard()
   }
 
+  const dayBoardEmptyVariant = useMemo(() => {
+    if (!activeActivityId) return 'no_workspace'
+    if (!activeActivityHasSkatingCapability(activeActivity)) return 'wrong_capability'
+    return 'default'
+  }, [activeActivityId, activeActivity])
+
+  const workspaceDisplayName = useMemo(() => {
+    if (!activeActivity) return null
+    return activeActivity.label || activeActivity.name || null
+  }, [activeActivity])
+
   const sessions = useMemo(
     () => sortDayBoardSessions(dayBoard?.sessions || []),
     [dayBoard?.sessions],
@@ -1387,6 +1409,8 @@ const SkatingOpsPage = () => {
           loading={snapLoading}
           error={snapError}
           cardActionBusyId={cardActionBusyId}
+          emptyVariant={dayBoardEmptyVariant}
+          workspaceName={workspaceDisplayName}
           onRefresh={() => loadDayBoard()}
           onAdHoc={openStartLiveModal}
           onCardPrimary={(s, a) => void handleCardPrimary(s, a)}
