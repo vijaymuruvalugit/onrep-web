@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   CAlert,
   CButton,
@@ -12,6 +12,11 @@ import {
   CFormLabel,
   CFormSelect,
   CFormCheck,
+  CModal,
+  CModalBody,
+  CModalFooter,
+  CModalHeader,
+  CModalTitle,
   CNav,
   CNavItem,
   CNavLink,
@@ -25,10 +30,12 @@ import CompactSessionRow from '../../schedule/components/CompactSessionRow'
 import SessionDetailDrawer from '../../schedule/components/SessionDetailDrawer'
 import { stripDemoSuffix } from '../utils/batchDisplayUtils'
 import {
+  analyzeSessionStartWindow,
   computeOperationalFocus,
   formatCadenceLine,
   formatCadenceLines,
   formatHeaderOperationalWhen,
+  formatRowScheduledWhenLine,
   todayIsoLocal,
 } from '../utils/batchWorkspaceOperations'
 import {
@@ -89,7 +96,11 @@ const BatchWorkspacePage = () => {
   const [opBoardLoading, setOpBoardLoading] = useState(false)
   /** Academy/activity calendar "today" from board API (IANA TZ); avoids browser-TZ skew vs India ops. */
   const [boardOperationalToday, setBoardOperationalToday] = useState(null)
+  const [startOutsideModal, setStartOutsideModal] = useState(null)
+  const [startNavigating, setStartNavigating] = useState(false)
+  const [startSessionError, setStartSessionError] = useState(null)
 
+  const navigate = useNavigate()
   const batchWorkspaceMismatch = useMemo(() => {
     if (!selectedBatch || !activeActivityId) return null
     const wid = selectedBatch.activityWorkspaceId ?? selectedBatch.activity_workspace_id
@@ -345,6 +356,34 @@ const BatchWorkspacePage = () => {
   const primaryAttendanceId =
     operationalFocus.primarySession?.sessionId || operationalFocus.primarySession?.id
 
+  const handleStartAttendanceForRow = useCallback(
+    async (row, opts) => {
+      const force = Boolean(opts && opts.force)
+      const sessionId = String(row?.sessionId || row?.id || '').trim()
+      if (!sessionId) return
+      setStartSessionError(null)
+      const { inside } = analyzeSessionStartWindow(row)
+      if (!inside && !force) {
+        setStartOutsideModal({ sessionId, row })
+        return
+      }
+      setStartNavigating(true)
+      try {
+        await operationalSessionsApi.startSession(sessionId)
+        navigate(`/coach/attendance/class/${encodeURIComponent(sessionId)}`)
+        setStartOutsideModal(null)
+      } catch (e) {
+        const msg =
+          (e?.response?.data?.error || e?.response?.data?.message || e?.message || '').trim() ||
+          'Unable to start session'
+        setStartSessionError(String(msg))
+      } finally {
+        setStartNavigating(false)
+      }
+    },
+    [navigate],
+  )
+
   /** Lightweight same-day status — not a dashboard; bridges the gap after a session ends. */
   const scheduleContinuityLine = useMemo(() => {
     if (operationalFocus.kind === 'attendance_pending') {
@@ -398,6 +437,50 @@ const BatchWorkspacePage = () => {
         }}
       />
 
+      <CModal
+        alignment="center"
+        visible={Boolean(startOutsideModal)}
+        onClose={() => {
+          if (!startNavigating) setStartOutsideModal(null)
+        }}
+        backdrop="static"
+      >
+        <CModalHeader>
+          <CModalTitle>Start outside scheduled time?</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          <p className="mb-2">
+            This class is planned for{' '}
+            <strong>
+              {formatRowScheduledWhenLine(startOutsideModal?.row, todayIso) || 'the scheduled slot'}
+            </strong>
+            . You are starting more than 10 minutes before it begins, or after it has ended (with a 10
+            minute grace).
+          </p>
+          <p className="mb-0 text-body-secondary small">
+            If you continue, the session start time is recorded as right now. The end time is recorded when
+            you end the session from ops or when attendance is finalized.
+          </p>
+        </CModalBody>
+        <CModalFooter>
+          <CButton
+            color="secondary"
+            variant="outline"
+            disabled={startNavigating}
+            onClick={() => setStartOutsideModal(null)}
+          >
+            Cancel
+          </CButton>
+          <CButton
+            color="primary"
+            disabled={startNavigating}
+            onClick={() => void handleStartAttendanceForRow(startOutsideModal?.row, { force: true })}
+          >
+            {startNavigating ? 'Starting…' : 'Start anyway'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
       <CCard className="mb-3">
         <CCardHeader className="d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-start gap-3">
           <div className="onrep-batch-header flex-grow-1 min-w-0">
@@ -436,13 +519,13 @@ const BatchWorkspacePage = () => {
           {primaryAttendanceId && operationalFocus.kind === 'attendance_pending' ? (
             <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
               <CButton
-                as={Link}
                 color="primary"
                 size="lg"
                 className="w-100 w-sm-auto"
-                to={`/coach/attendance/class/${encodeURIComponent(primaryAttendanceId)}`}
+                disabled={startNavigating || Boolean(batchWorkspaceMismatch)}
+                onClick={() => void handleStartAttendanceForRow(operationalFocus.primarySession)}
               >
-                {operationalFocus.primaryLabel || 'Start session'}
+                {startNavigating ? 'Starting…' : operationalFocus.primaryLabel || 'Start session'}
               </CButton>
             </div>
           ) : null}
@@ -484,6 +567,7 @@ const BatchWorkspacePage = () => {
         <CAlert color="danger">{classesError.message}</CAlert>
       ) : null}
       {mutationError ? <CAlert color="danger">{mutationError.message}</CAlert> : null}
+      {startSessionError ? <CAlert color="warning">{startSessionError}</CAlert> : null}
 
       <CTabContent>
         <CTabPane visible={activeTab === 'schedule'}>
@@ -531,9 +615,7 @@ const BatchWorkspacePage = () => {
                       todayIso={todayIso}
                       placeFallback={primaryPlaceSingle || ''}
                       canStartToday={canStartToday}
-                      attendancePath={
-                        sid ? `/coach/attendance/class/${encodeURIComponent(sid)}` : undefined
-                      }
+                      onStartSession={(r) => void handleStartAttendanceForRow(r)}
                       onViewSession={(id, r) => {
                         setDrawerSessionId(id)
                         setDrawerSeedRow(r)

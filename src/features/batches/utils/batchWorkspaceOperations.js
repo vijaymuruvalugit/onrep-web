@@ -1,8 +1,10 @@
 import {
+  effectiveOperationalSessionDateYmd,
   formatOperationalSessionLine,
   formatOperationalSessionRange,
   formatSessionClock,
   getNextSessionHighlightIndex,
+  normalizeSessionDateYmd,
   parseSessionLocalDate,
   sessionStartsAt,
 } from '../../classes/utils/sessionDisplay'
@@ -178,4 +180,46 @@ export function showTomorrowDivider(prevRow, row, todayIso) {
   if (!t || !c) return false
   const diff = Math.round((c.getTime() - t.getTime()) / 86400000)
   return diff === 1
+}
+
+/** ±10 minutes around the scheduled slot for “start outside window” warnings. */
+export const SESSION_SLOT_TOLERANCE_MS = 10 * 60 * 1000
+
+/**
+ * Whether the current time falls within the scheduled session window (± tolerance).
+ * If scheduled instants are missing, treats as inside (no warning).
+ *
+ * @returns {{ inside: boolean, reason: 'early'|'late'|null }}
+ */
+export function analyzeSessionStartWindow(row, now = new Date()) {
+  const startIso = row?.scheduledStartAt || row?.scheduled_start_at
+  if (!startIso) return { inside: true, reason: null }
+  const startMs = new Date(startIso).getTime()
+  if (Number.isNaN(startMs)) return { inside: true, reason: null }
+  const endIso = row?.scheduledEndAt || row?.scheduled_end_at
+  const endMs = endIso ? new Date(endIso).getTime() : NaN
+  const tol = SESSION_SLOT_TOLERANCE_MS
+  const t = now.getTime()
+  const windowStart = startMs - tol
+  const windowEnd = Number.isNaN(endMs) ? startMs + 6 * 60 * 60 * 1000 : endMs + tol
+  const inside = t >= windowStart && t <= windowEnd
+  if (inside) return { inside: true, reason: null }
+  if (t < windowStart) return { inside: false, reason: 'early' }
+  return { inside: false, reason: 'late' }
+}
+
+/**
+ * One-line scheduled time for modals (uses academy-local session date when available).
+ */
+export function formatRowScheduledWhenLine(row, todayIso) {
+  const date =
+    effectiveOperationalSessionDateYmd(row) ||
+    normalizeSessionDateYmd(row?.sessionDate ?? row?.session_date) ||
+    row?.sessionDate ||
+    row?.session_date ||
+    ''
+  const st = row?.startTime ?? row?.start_time
+  if (!st) return null
+  const et = row?.endTime ?? row?.end_time
+  return formatOperationalSessionRange(date, st, et || null, todayIso || todayIsoLocal())
 }
