@@ -80,8 +80,10 @@ const SchedulePage = () => {
   const [adjustNextBusy, setAdjustNextBusy] = useState(false)
   const [pageNotice, setPageNotice] = useState(null)
   const [coaches, setCoaches] = useState([])
+  /** Academy/activity calendar "today" from board API; null until first successful load. */
+  const [operationalTodayYmd, setOperationalTodayYmd] = useState(null)
 
-  const todayIso = todayIsoLocal()
+  const todayIso = operationalTodayYmd ?? todayIsoLocal()
 
   useEffect(() => {
     fetchBatches()
@@ -149,6 +151,10 @@ const SchedulePage = () => {
     fetchSchedule(effectiveBatchId)
   }, [effectiveBatchId, fetchSchedule])
 
+  useEffect(() => {
+    setOperationalTodayYmd(null)
+  }, [effectiveBatchId, activeActivityId])
+
   const batchWorkspaceMismatch = useMemo(() => {
     if (!selectedBatch || !activeActivityId) return null
     const wid = selectedBatch.activityWorkspaceId ?? selectedBatch.activity_workspace_id
@@ -173,7 +179,15 @@ const SchedulePage = () => {
       const m = String(end.getMonth() + 1).padStart(2, '0')
       const d = String(end.getDate()).padStart(2, '0')
       const toYmd = `${y}-${m}-${d}`
-      const { sessions } = await operationalSessionsApi.getBoardRange(todayIso, toYmd, effectiveBatchId)
+      const fromYmd = todayIsoLocal()
+      const { sessions, operationalToday } = await operationalSessionsApi.getBoardRange(
+        fromYmd,
+        toYmd,
+        effectiveBatchId,
+      )
+      if (operationalToday && /^\d{4}-\d{2}-\d{2}$/.test(String(operationalToday))) {
+        setOperationalTodayYmd(String(operationalToday).slice(0, 10))
+      }
       const rows = Array.isArray(sessions)
         ? sessions.map((s) => operationalSessionToScheduleCompactRow(s)).filter(Boolean)
         : []
@@ -184,7 +198,7 @@ const SchedulePage = () => {
     } finally {
       setSessionsLoading(false)
     }
-  }, [effectiveBatchId, todayIso, batchWorkspaceMismatch])
+  }, [effectiveBatchId, batchWorkspaceMismatch])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- loadSessions() owns its loading/error state; setState happens inside its async body, not in this effect

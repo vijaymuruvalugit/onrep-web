@@ -31,6 +31,7 @@ import {
   formatHeaderOperationalWhen,
   todayIsoLocal,
 } from '../utils/batchWorkspaceOperations'
+import { normalizeSessionDateYmd } from '../../classes/utils/sessionDisplay'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
 import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
@@ -81,6 +82,8 @@ const BatchWorkspacePage = () => {
 
   const [opBoardRows, setOpBoardRows] = useState([])
   const [opBoardLoading, setOpBoardLoading] = useState(false)
+  /** Academy/activity calendar "today" from board API (IANA TZ); avoids browser-TZ skew vs India ops. */
+  const [boardOperationalToday, setBoardOperationalToday] = useState(null)
 
   const batchWorkspaceMismatch = useMemo(() => {
     if (!selectedBatch || !activeActivityId) return null
@@ -112,10 +115,19 @@ const BatchWorkspacePage = () => {
     const toYmd = `${y}-${m}-${d}`
     setOpBoardLoading(true)
     try {
-      const { sessions } = await operationalSessionsApi.getBoardRange(ti, toYmd, batchId)
+      const { sessions, operationalToday } = await operationalSessionsApi.getBoardRange(ti, toYmd, batchId)
+      if (operationalToday && /^\d{4}-\d{2}-\d{2}$/.test(String(operationalToday))) {
+        setBoardOperationalToday(String(operationalToday).slice(0, 10))
+      }
       const rows = (sessions || [])
         .map((s) => operationalSessionToScheduleCompactRow(s))
         .filter(Boolean)
+        .sort((a, b) => {
+          const da = normalizeSessionDateYmd(a.sessionDate)
+          const db = normalizeSessionDateYmd(b.sessionDate)
+          if (da && db && da !== db) return da.localeCompare(db)
+          return String(a.startTime || '').localeCompare(String(b.startTime || ''))
+        })
       setOpBoardRows(rows)
     } catch {
       setOpBoardRows([])
@@ -134,6 +146,10 @@ const BatchWorkspacePage = () => {
   useEffect(() => {
     didAutoLeadCoachRef.current = false
   }, [batchId])
+
+  useEffect(() => {
+    setBoardOperationalToday(null)
+  }, [batchId, activeActivityId])
 
   useEffect(() => {
     if (!batchId) return
@@ -264,12 +280,12 @@ const BatchWorkspacePage = () => {
     })
   }, [batchId, searchParams])
 
-  const todayIso = todayIsoLocal()
+  const todayIso = boardOperationalToday ?? todayIsoLocal()
 
   const todayFromTimeline = useMemo(
     () =>
       (opBoardRows || []).filter(
-        (r) => String(r.sessionDate || '').slice(0, 10) === String(todayIso).slice(0, 10),
+        (r) => normalizeSessionDateYmd(r.sessionDate ?? r.session_date) === String(todayIso).slice(0, 10),
       ),
     [opBoardRows, todayIso],
   )
@@ -501,8 +517,7 @@ const BatchWorkspacePage = () => {
                 ) : null}
                 {compactTimeline.map((row) => {
                   const sid = row.sessionId || row.id
-                  const rowDate =
-                    String(row.sessionDate || '').match(/(\d{4}-\d{2}-\d{2})/)?.[1] || ''
+                  const rowDate = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
                   const isToday = rowDate === todayIso
                   const canStartToday = isToday && !row.attendanceMarked && !row.isCancelled
                   return (

@@ -136,19 +136,32 @@ function BatchStatusBadges({ m }) {
   )
 }
 
+function stopCardNavigate(e) {
+  e.stopPropagation()
+}
+
 function BatchTileCard({ m }) {
+  const navigate = useNavigate()
   const d = m.nextSessionDisplay
+  const openBatch = () => navigate(`${m.base}?tab=schedule`)
 
   return (
-    <CCard className="h-100 border onrep-batch-tile onrep-surface-b shadow-sm">
+    <CCard
+      className="h-100 border onrep-batch-tile onrep-batch-tile--clickable onrep-surface-b shadow-sm"
+      role="button"
+      tabIndex={0}
+      aria-label={`Open batch ${m.batchNameOnly}`}
+      onClick={openBatch}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          openBatch()
+        }
+      }}
+    >
       <CCardBody className="d-flex flex-column onrep-batch-tile__body">
         <div className="onrep-batch-tile__header">
-          <Link
-            to={`${m.base}?tab=schedule`}
-            className="onrep-batch-tile__title text-decoration-none text-body"
-          >
-            {m.batchNameOnly}
-          </Link>
+          <span className="onrep-batch-tile__title text-body">{m.batchNameOnly}</span>
           <BatchStatusBadges m={m} />
         </div>
 
@@ -174,7 +187,11 @@ function BatchTileCard({ m }) {
             {m.needSchedule ? (
               <>
                 <span className="text-body-secondary">Not set.</span>{' '}
-                <Link to={m.scheduleHref} className="text-primary text-decoration-none">
+                <Link
+                  to={m.scheduleHref}
+                  className="text-primary text-decoration-none onrep-batch-tile__nested-link"
+                  onClick={stopCardNavigate}
+                >
                   Add schedule
                 </Link>
               </>
@@ -208,7 +225,11 @@ function BatchTileCard({ m }) {
             {m.needCoach ? (
               <>
                 <span className="text-body-secondary">Not assigned.</span>{' '}
-                <Link to={`${m.base}?tab=settings`} className="text-primary text-decoration-none">
+                <Link
+                  to={`${m.base}?tab=settings`}
+                  className="text-primary text-decoration-none onrep-batch-tile__nested-link"
+                  onClick={stopCardNavigate}
+                >
                   Assign
                 </Link>
               </>
@@ -216,28 +237,6 @@ function BatchTileCard({ m }) {
               <span>{m.coachDisplay || '—'}</span>
             )}
           </div>
-        </div>
-
-        <div className="onrep-batch-tile__actions mt-auto pt-3">
-          <Link to={`${m.base}?tab=schedule`} className="onrep-batch-tile__action-link">
-            Open batch
-          </Link>
-          <span className="onrep-batch-tile__action-sep" aria-hidden>
-            |
-          </span>
-          <Link to={m.scheduleHref} className="onrep-batch-tile__action-link">
-            Full schedule
-          </Link>
-          {m.needCoach ? (
-            <>
-              <span className="onrep-batch-tile__action-sep" aria-hidden>
-                |
-              </span>
-              <Link to={`${m.base}?tab=settings`} className="onrep-batch-tile__action-link">
-                Assign coach
-              </Link>
-            </>
-          ) : null}
         </div>
       </CCardBody>
     </CCard>

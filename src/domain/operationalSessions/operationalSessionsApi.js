@@ -21,6 +21,7 @@ export async function getBoardRange(fromYmd, toYmd, batchId = null) {
     from: data?.from,
     to: data?.to,
     batchId: data?.batchId ?? null,
+    operationalToday: data?.operationalToday ?? null,
     sessions: Array.isArray(data?.sessions) ? data.sessions : [],
   }
 }

@@ -14,12 +14,30 @@
   border-radius: 0.75rem;
   transition:
     box-shadow 0.15s ease,
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
-.onrep-batch-tile:hover {
+.onrep-batch-tile--clickable {
+  cursor: pointer;
+}
+
+.onrep-batch-tile--clickable:focus {
+  outline: none;
+}
+
+.onrep-batch-tile--clickable:focus-visible {
+  outline: 2px solid var(--cui-primary);
+  outline-offset: 2px;
+}
+
+.onrep-batch-tile--clickable:hover {
   box-shadow: 0 0.35rem 1.25rem rgba(15, 23, 42, 0.08) !important;
   border-color: color-mix(in srgb, var(--cui-border-color) 70%, var(--cui-primary) 30%) !important;
+}
+
+.onrep-batch-tile--clickable:active {
+  transform: scale(0.995);
 }
 
 .onrep-batch-tile__body {
@@ -97,29 +115,10 @@
   margin-top: 0.2rem;
 }
 
-.onrep-batch-tile__actions {
-  border-top: 1px solid var(--cui-border-color);
-  font-size: 0.8125rem;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.25rem;
-}
-
-.onrep-batch-tile__action-link {
-  color: var(--cui-primary);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.onrep-batch-tile__action-link:hover {
-  text-decoration: underline;
-}
-
-.onrep-batch-tile__action-sep {
-  opacity: 0.35;
-  user-select: none;
-  margin: 0 0.15rem;
+/* In-card links sit above the card click target */
+.onrep-batch-tile__nested-link {
+  position: relative;
+  z-index: 1;
 }
 
 /* ---- List table ---- */

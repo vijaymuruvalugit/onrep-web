@@ -24,7 +24,7 @@ vi.mock('../api/skatingOpsApi', () => ({
 vi.mock('../../../domain/operationalSessions/operationalSessionsApi', () => ({
   default: {
     getDayBoard: vi.fn().mockResolvedValue({ date: '2026-01-01', sessions: [] }),
-    getBoardRange: vi.fn().mockResolvedValue({ sessions: [] }),
+    getBoardRange: vi.fn().mockResolvedValue({ sessions: [], operationalToday: '2026-01-15' }),
   },
 }))
 
