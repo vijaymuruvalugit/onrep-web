@@ -3,6 +3,7 @@ import { CBadge, CButton } from '@coreui/react'
 import {
   formatOperationalSessionRange,
   normalizeSessionDateYmd,
+  effectiveOperationalSessionDateYmd,
 } from '../../classes/utils/sessionDisplay'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { sessionTypeLabel } from '../constants/sessionTypes'
@@ -27,10 +28,12 @@ export default function CompactSessionRow({
   canStartToday = false,
   onStartSession,
 }) {
-  const ymd = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
+  const calendarYmd =
+    effectiveOperationalSessionDateYmd(row) || normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
+  const ymd = normalizeSessionDateYmd(calendarYmd)
   const isToday = Boolean(todayIso && ymd === todayIso)
   const dateLine = formatOperationalSessionRange(
-    row.sessionDate ?? row.session_date,
+    calendarYmd || (row.sessionDate ?? row.session_date),
     row.startTime ?? row.start_time,
     row.endTime ?? row.end_time,
     todayIso,

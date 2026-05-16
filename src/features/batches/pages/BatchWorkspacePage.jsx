@@ -31,7 +31,12 @@ import {
   formatHeaderOperationalWhen,
   todayIsoLocal,
 } from '../utils/batchWorkspaceOperations'
-import { normalizeSessionDateYmd } from '../../classes/utils/sessionDisplay'
+import {
+  compareOperationalSessionsChronological,
+  effectiveOperationalSessionDateYmd,
+  isOperationalSessionStillUpcoming,
+  normalizeSessionDateYmd,
+} from '../../classes/utils/sessionDisplay'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
 import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
@@ -122,15 +127,11 @@ const BatchWorkspacePage = () => {
       const rows = (sessions || [])
         .map((s) => operationalSessionToScheduleCompactRow(s))
         .filter(Boolean)
-        .sort((a, b) => {
-          const da = normalizeSessionDateYmd(a.sessionDate)
-          const db = normalizeSessionDateYmd(b.sessionDate)
-          if (da && db && da !== db) return da.localeCompare(db)
-          return String(a.startTime || '').localeCompare(String(b.startTime || ''))
-        })
+        .sort(compareOperationalSessionsChronological)
       setOpBoardRows(rows)
     } catch {
       setOpBoardRows([])
+      setBoardOperationalToday(null)
     } finally {
       setOpBoardLoading(false)
     }
@@ -146,10 +147,6 @@ const BatchWorkspacePage = () => {
   useEffect(() => {
     didAutoLeadCoachRef.current = false
   }, [batchId])
-
-  useEffect(() => {
-    setBoardOperationalToday(null)
-  }, [batchId, activeActivityId])
 
   useEffect(() => {
     if (!batchId) return
@@ -285,16 +282,23 @@ const BatchWorkspacePage = () => {
   const todayFromTimeline = useMemo(
     () =>
       (opBoardRows || []).filter(
-        (r) => normalizeSessionDateYmd(r.sessionDate ?? r.session_date) === String(todayIso).slice(0, 10),
+        (r) => effectiveOperationalSessionDateYmd(r) === String(todayIso).slice(0, 10),
       ),
     [opBoardRows, todayIso],
   )
 
   const fullMergedTimeline = opBoardRows
 
+  const upcomingBoardRows = useMemo(() => {
+    const now = new Date()
+    return (fullMergedTimeline || []).filter(
+      (r) => !r.isCancelled && isOperationalSessionStillUpcoming(r, now),
+    )
+  }, [fullMergedTimeline])
+
   const compactTimeline = useMemo(
-    () => fullMergedTimeline.slice(0, timelineCap),
-    [fullMergedTimeline, timelineCap],
+    () => upcomingBoardRows.slice(0, timelineCap),
+    [upcomingBoardRows, timelineCap],
   )
 
   const primaryPlaceSingle = useMemo(() => {
@@ -321,11 +325,11 @@ const BatchWorkspacePage = () => {
   const cadenceLine = useMemo(() => formatCadenceLine(schedules), [schedules])
   const cadenceLines = useMemo(() => formatCadenceLines(schedules), [schedules])
 
-  const hasMoreTimeline = fullMergedTimeline.length > timelineCap
+  const hasMoreTimeline = upcomingBoardRows.length > timelineCap
 
   const headerOperational = useMemo(
-    () => formatHeaderOperationalWhen(fullMergedTimeline, todayIso),
-    [fullMergedTimeline, todayIso],
+    () => formatHeaderOperationalWhen(upcomingBoardRows, todayIso),
+    [upcomingBoardRows, todayIso],
   )
 
   const operationalFocus = useMemo(
@@ -333,9 +337,9 @@ const BatchWorkspacePage = () => {
       computeOperationalFocus({
         todayIso,
         todayBatchSessions: todayFromTimeline,
-        mergedTimeline: fullMergedTimeline,
+        mergedTimeline: upcomingBoardRows,
       }),
-    [todayIso, todayFromTimeline, fullMergedTimeline],
+    [todayIso, todayFromTimeline, upcomingBoardRows],
   )
 
   const primaryAttendanceId =
@@ -517,12 +521,12 @@ const BatchWorkspacePage = () => {
                 ) : null}
                 {compactTimeline.map((row) => {
                   const sid = row.sessionId || row.id
-                  const rowDate = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
+                  const rowDate = effectiveOperationalSessionDateYmd(row) || normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
                   const isToday = rowDate === todayIso
                   const canStartToday = isToday && !row.attendanceMarked && !row.isCancelled
                   return (
                     <CompactSessionRow
-                      key={sid || row.sessionDate}
+                      key={sid ? `${sid}-${row.scheduledStartAt || ''}` : rowDate}
                       row={row}
                       todayIso={todayIso}
                       placeFallback={primaryPlaceSingle || ''}

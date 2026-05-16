@@ -159,10 +159,67 @@ export function parseSessionLocalDate(isoDate) {
 }
 
 /**
- * @param {{ sessionDate?: string, session_date?: string, startTime?: string, start_time?: string }} session
+ * Best-effort calendar day for an operational row (API may omit `sessionDate` on edge joins).
+ * @param {{ sessionDate?: string, session_date?: string, operationalDayLocal?: string, operational_day_local?: string, scheduledStartAt?: string, scheduled_start_at?: string, timezone?: string }} row
+ * @returns {string} YYYY-MM-DD or ''
+ */
+export function effectiveOperationalSessionDateYmd(row) {
+  if (!row) return ''
+  const direct = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
+  if (direct) return direct
+  const opDay = normalizeSessionDateYmd(row.operationalDayLocal ?? row.operational_day_local)
+  if (opDay) return opDay
+  const iso = row.scheduledStartAt ?? row.scheduled_start_at
+  const tz = row.timezone
+  if (iso && tz && String(tz).trim()) {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: String(tz).trim(),
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(iso))
+    } catch {
+      /* fall through */
+    }
+  }
+  if (iso) return normalizeSessionDateYmd(new Date(iso).toISOString())
+  return ''
+}
+
+function operationalSessionChronologicalKey(row) {
+  const iso = row?.scheduledStartAt ?? row?.scheduled_start_at
+  if (iso) return String(iso)
+  const da = effectiveOperationalSessionDateYmd(row)
+  const t = String(row?.startTime ?? row?.start_time ?? '').slice(0, 8)
+  return da ? `${da}T${t || '00:00:00'}` : ''
+}
+
+/** Stable chronological ordering for board / timeline rows. */
+export function compareOperationalSessionsChronological(a, b) {
+  return operationalSessionChronologicalKey(a).localeCompare(operationalSessionChronologicalKey(b))
+}
+
+/** False once the planned end time is in the past (cancelled rows excluded by caller if desired). */
+export function isOperationalSessionStillUpcoming(row, now = new Date()) {
+  if (!row) return false
+  const end = row.scheduledEndAt ?? row.scheduled_end_at
+  if (end == null || end === '') return true
+  const t = new Date(end).getTime()
+  if (Number.isNaN(t)) return true
+  return t > now.getTime()
+}
+
+/**
+ * @param {{ sessionDate?: string, session_date?: string, startTime?: string, start_time?: string, scheduledStartAt?: string, scheduled_start_at?: string }} session
  * @returns {Date|null}
  */
 export function sessionStartsAt(session) {
+  const iso = session?.scheduledStartAt ?? session?.scheduled_start_at
+  if (iso) {
+    const d = new Date(iso)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
   const rawDate = session?.sessionDate ?? session?.session_date
   const date = normalizeSessionDateYmd(rawDate) || String(rawDate || '').slice(0, 10)
   const time = session?.startTime ?? session?.start_time
