@@ -8,6 +8,7 @@ import {
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { sessionTypeLabel } from '../constants/sessionTypes'
 import { isOperationalOneOff, isOperationalRecurring } from '../../classes/utils/sessionRow'
+import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 
 function shortPlaceLabel(raw, maxLen = 42) {
   const s = stripDemoSuffix(String(raw || '').trim())
@@ -26,7 +27,10 @@ export default function CompactSessionRow({
   onViewSession,
   /** When true, show Start — calls onStartSession(row) after confirm (parent handles navigation + API). */
   canStartToday = false,
+  /** When true, show Mark attendance — session is active or closed; parent navigates to attendance. */
+  canMarkAttendanceToday = false,
   onStartSession,
+  onMarkAttendance,
 }) {
   const calendarYmd =
     effectiveOperationalSessionDateYmd(row) || normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
@@ -46,6 +50,7 @@ export default function CompactSessionRow({
   const typeLabel = sessionTypeLabel(row.sessionType ?? row.session_type)
   const hasActual = Boolean(row.actualStartTime || row.actualEndTime)
   const attendanceBlocked = row.attendanceEnabled === false || row.attendance_enabled === false
+  const markAllowed = canMarkSessionAttendance(row)
   const oneOffRow = isOperationalOneOff(row)
   const recurringRow = isOperationalRecurring(row)
 
@@ -99,6 +104,20 @@ export default function CompactSessionRow({
           </div>
         </div>
         <div className="onrep-session-row__actions">
+          {canMarkAttendanceToday &&
+          markAllowed &&
+          !attendanceBlocked &&
+          typeof onMarkAttendance === 'function' ? (
+            <CButton
+              type="button"
+              size="sm"
+              color="primary"
+              className="px-3"
+              onClick={() => onMarkAttendance(row)}
+            >
+              Mark attendance
+            </CButton>
+          ) : null}
           {canStartToday && !attendanceBlocked && typeof onStartSession === 'function' ? (
             <CButton
               type="button"

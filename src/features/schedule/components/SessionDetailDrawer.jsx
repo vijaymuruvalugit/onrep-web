@@ -24,6 +24,10 @@ import {
   normalizeSessionDateYmd,
 } from '../../classes/utils/sessionDisplay'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
+import {
+  canMarkSessionAttendance,
+  sessionAttendanceIneligibleMessage,
+} from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 
 function toDatetimeLocalValue(iso) {
   if (!iso) return ''
@@ -249,6 +253,8 @@ export default function SessionDetailDrawer({
   const attendancePath = sessionId && `/coach/attendance/class/${encodeURIComponent(sessionId)}`
 
   const sessionStarted = Boolean(row?.actualStartTime ?? row?.actual_start_time)
+  const attendanceAllowed = row ? canMarkSessionAttendance(row) : false
+  const attendanceBlockedMessage = row ? sessionAttendanceIneligibleMessage(row) : ''
 
   /** Backend enforces cutoff, present marks, and started session. */
   const canCancel =
@@ -487,7 +493,7 @@ export default function SessionDetailDrawer({
             </section>
 
             <section className="mt-auto pt-2 border-top border-light-subtle">
-              {attendancePath && row.attendanceEnabled !== false ? (
+              {attendancePath && attendanceAllowed ? (
                 <CButton color="primary" className="w-100 mb-2" as={Link} to={attendancePath}>
                   Open attendance
                 </CButton>
@@ -496,6 +502,9 @@ export default function SessionDetailDrawer({
                 <div className="small text-body-secondary mb-2">
                   Attendance tracking is off for this session.
                 </div>
+              ) : null}
+              {row.attendanceEnabled !== false && !attendanceAllowed && attendanceBlockedMessage ? (
+                <div className="small text-body-secondary mb-2">{attendanceBlockedMessage}</div>
               ) : null}
               <div className="small text-body-secondary">
                 Scheduled window:{' '}

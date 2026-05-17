@@ -32,6 +32,7 @@ import {
 } from '../../classes/utils/sessionRow'
 import batchesApi from '../../batches/api/batchesApi'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
+import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
@@ -296,6 +297,10 @@ const SchedulePage = () => {
     async (row) => {
       const sid = row.sessionId || row.id
       if (!sid) return
+      if (canMarkSessionAttendance(row)) {
+        navigate(`/coach/attendance/class/${encodeURIComponent(sid)}`)
+        return
+      }
       if (
         !window.confirm(
           'Start this session now? We will record the start time and open attendance.',
@@ -304,9 +309,7 @@ const SchedulePage = () => {
         return
       }
       try {
-        await batchesApi.patchSession(String(sid), {
-          actualStartTime: new Date().toISOString(),
-        })
+        await operationalSessionsApi.startSession(String(sid))
         refreshAll()
         navigate(`/coach/attendance/class/${encodeURIComponent(sid)}`)
       } catch (e) {
@@ -587,9 +590,11 @@ const SchedulePage = () => {
                 const sid = row.sessionId || row.id
                 const ymd = normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
                 const isTodayRow = Boolean(todayIso && ymd === todayIso)
-                const hasActualStart = Boolean(row.actualStartTime ?? row.actual_start_time)
+                const markAllowed = canMarkSessionAttendance(row)
+                const canMarkAttendanceToday =
+                  isTodayRow && !row.attendanceMarked && !row.isCancelled && markAllowed
                 const canStartToday =
-                  isTodayRow && !row.attendanceMarked && !row.isCancelled && !hasActualStart
+                  isTodayRow && !row.attendanceMarked && !row.isCancelled && !markAllowed
                 return (
                   <CompactSessionRow
                     key={sid}
@@ -597,7 +602,9 @@ const SchedulePage = () => {
                     todayIso={todayIso}
                     placeFallback={primaryPlaceFallback}
                     canStartToday={canStartToday}
+                    canMarkAttendanceToday={canMarkAttendanceToday}
                     onStartSession={handleStartSession}
+                    onMarkAttendance={handleStartSession}
                     onViewSession={(id, r) => {
                       setDrawerSessionId(id)
                       setDrawerSeedRow(r)

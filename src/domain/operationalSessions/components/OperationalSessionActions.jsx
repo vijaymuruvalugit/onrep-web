@@ -2,6 +2,7 @@ import React from 'react'
 import { CButton, CDropdown, CDropdownItem, CDropdownMenu, CDropdownToggle } from '@coreui/react'
 import { Link } from 'react-router-dom'
 import { primaryActionForSession, primaryActionLabel } from '../helpers/sessionActions'
+import { canMarkSessionAttendance } from '../helpers/attendanceEligibility'
 
 /**
  * @param {{
@@ -37,9 +38,11 @@ export default function OperationalSessionActions({
           More
         </CDropdownToggle>
         <CDropdownMenu>
-          <CDropdownItem as={Link} to={attendanceHref}>
-            Attendance
-          </CDropdownItem>
+          {canMarkSessionAttendance(session) ? (
+            <CDropdownItem as={Link} to={attendanceHref}>
+              Attendance
+            </CDropdownItem>
+          ) : null}
           {scheduleEditHref ? (
             <CDropdownItem as={Link} to={scheduleEditHref}>
               Edit on schedule

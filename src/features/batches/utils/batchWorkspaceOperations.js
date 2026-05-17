@@ -9,6 +9,7 @@ import {
   sessionStartsAt,
 } from '../../classes/utils/sessionDisplay'
 import { apiDaysToUiLabels, UI_DAY_LABELS_ORDERED } from '../../schedule/utils/daysOfWeek'
+import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 
 export function todayIsoLocal() {
   const n = new Date()
@@ -123,7 +124,7 @@ export function computeOperationalFocus({
       kind: 'attendance_pending',
       message: 'Attendance is open for today’s session.',
       primarySession: s,
-      primaryLabel: 'Start session',
+      primaryLabel: canMarkSessionAttendance(s) ? 'Mark attendance' : 'Start session',
     }
   }
 

@@ -45,6 +45,7 @@ import {
   normalizeSessionDateYmd,
 } from '../../classes/utils/sessionDisplay'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
+import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
@@ -362,6 +363,10 @@ const BatchWorkspacePage = () => {
       const sessionId = String(row?.sessionId || row?.id || '').trim()
       if (!sessionId) return
       setStartSessionError(null)
+      if (canMarkSessionAttendance(row)) {
+        navigate(`/coach/attendance/class/${encodeURIComponent(sessionId)}`)
+        return
+      }
       const { inside } = analyzeSessionStartWindow(row)
       if (!inside && !force) {
         setStartOutsideModal({ sessionId, row })
@@ -607,7 +612,11 @@ const BatchWorkspacePage = () => {
                   const sid = row.sessionId || row.id
                   const rowDate = effectiveOperationalSessionDateYmd(row) || normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
                   const isToday = rowDate === todayIso
-                  const canStartToday = isToday && !row.attendanceMarked && !row.isCancelled
+                  const markAllowed = canMarkSessionAttendance(row)
+                  const canMarkAttendanceToday =
+                    isToday && !row.attendanceMarked && !row.isCancelled && markAllowed
+                  const canStartToday =
+                    isToday && !row.attendanceMarked && !row.isCancelled && !markAllowed
                   return (
                     <CompactSessionRow
                       key={sid ? `${sid}-${row.scheduledStartAt || ''}` : rowDate}
@@ -615,7 +624,9 @@ const BatchWorkspacePage = () => {
                       todayIso={todayIso}
                       placeFallback={primaryPlaceSingle || ''}
                       canStartToday={canStartToday}
+                      canMarkAttendanceToday={canMarkAttendanceToday}
                       onStartSession={(r) => void handleStartAttendanceForRow(r)}
+                      onMarkAttendance={(r) => void handleStartAttendanceForRow(r)}
                       onViewSession={(id, r) => {
                         setDrawerSessionId(id)
                         setDrawerSeedRow(r)
