@@ -21,7 +21,11 @@ import ScheduleBatchSwitcher from '../components/ScheduleBatchSwitcher'
 import CreateOneTimeSessionDrawer from '../components/CreateOneTimeSessionDrawer'
 import SessionDetailDrawer from '../components/SessionDetailDrawer'
 import CompactSessionRow from '../components/CompactSessionRow'
-import { normalizeSessionDateYmd } from '../../classes/utils/sessionDisplay'
+import {
+  compareOperationalSessionsChronological,
+  isOperationalSessionStillUpcoming,
+  normalizeSessionDateYmd,
+} from '../../classes/utils/sessionDisplay'
 import {
   isOperationalOneOff,
   isOperationalRecurring,
@@ -189,7 +193,10 @@ const SchedulePage = () => {
         setOperationalTodayYmd(String(operationalToday).slice(0, 10))
       }
       const rows = Array.isArray(sessions)
-        ? sessions.map((s) => operationalSessionToScheduleCompactRow(s)).filter(Boolean)
+        ? sessions
+            .map((s) => operationalSessionToScheduleCompactRow(s))
+            .filter(Boolean)
+            .sort(compareOperationalSessionsChronological)
         : []
       setSessionRows(rows)
     } catch (e) {
@@ -205,16 +212,29 @@ const SchedulePage = () => {
     loadSessions()
   }, [loadSessions])
 
-  const mergedTimelineRaw = useMemo(() => sessionRows || [], [sessionRows])
+  const sortedSessionRows = useMemo(
+    () => [...(sessionRows || [])].sort(compareOperationalSessionsChronological),
+    [sessionRows],
+  )
+
+  const upcomingSessionRows = useMemo(() => {
+    const now = new Date()
+    return sortedSessionRows.filter(
+      (r) => !r.isCancelled && isOperationalSessionStillUpcoming(r, now),
+    )
+  }, [sortedSessionRows])
+
+  const mergedTimelineRaw = sortedSessionRows
 
   const mergedTimeline = useMemo(() => {
-    return mergedTimelineRaw.filter((r) => {
-      if (sessionKindFilter === 'cancelled') return r.isCancelled
-      if (sessionKindFilter === 'one_off') return isOperationalOneOff(r)
-      if (sessionKindFilter === 'regular') return isOperationalRecurring(r)
-      return true
-    })
-  }, [mergedTimelineRaw, sessionKindFilter])
+    if (sessionKindFilter === 'cancelled') {
+      return sortedSessionRows.filter((r) => r.isCancelled)
+    }
+    const base = upcomingSessionRows
+    if (sessionKindFilter === 'one_off') return base.filter((r) => isOperationalOneOff(r))
+    if (sessionKindFilter === 'regular') return base.filter((r) => isOperationalRecurring(r))
+    return base
+  }, [sortedSessionRows, upcomingSessionRows, sessionKindFilter])
 
   // Per-pattern "next session" map for the kebab menu (Skip next / Adjust next).
   // Uses the same merged timeline but groups by `schedule_id` so each pattern's

@@ -5,7 +5,6 @@ import CIcon from '@coreui/icons-react'
 import { cilGrid, cilList } from '@coreui/icons'
 import {
   CAlert,
-  CBadge,
   CButton,
   CButtonGroup,
   CCard,
@@ -104,34 +103,22 @@ function buildBatchRowModel(batch, todayIso) {
   }
 }
 
-function BatchStatusBadges({ m }) {
+/** Soft inline hints (replaces a dedicated Status column in list view). */
+function BatchAttentionHints({ m }) {
+  const items = []
+  if (m.isInactive) items.push({ key: 'inactive', label: 'Inactive', tone: 'muted' })
+  if (m.emptyBatch) items.push({ key: 'empty', label: 'No students yet', tone: 'warn' })
+  if (m.needSchedule) items.push({ key: 'sched', label: 'Needs schedule', tone: 'info' })
+  if (m.needCoach) items.push({ key: 'coach', label: 'Coach not assigned', tone: 'warn' })
+  if (m.needsAttention) items.push({ key: 'attn', label: 'Sessions need review', tone: 'risk' })
+  if (!items.length) return null
   return (
-    <div className="d-flex gap-2 flex-wrap justify-content-end align-items-start">
-      {m.isInactive ? (
-        <CBadge color="secondary" className="fw-normal">
-          Inactive
-        </CBadge>
-      ) : null}
-      {m.emptyBatch ? (
-        <CBadge color="warning" className="fw-normal">
-          Empty batch
-        </CBadge>
-      ) : null}
-      {m.needSchedule ? (
-        <CBadge color="info" className="fw-normal">
-          Needs schedule
-        </CBadge>
-      ) : null}
-      {m.needCoach ? (
-        <CBadge color="warning" className="fw-normal">
-          Coach missing
-        </CBadge>
-      ) : null}
-      {m.needsAttention ? (
-        <CBadge color="danger" className="fw-normal">
-          Needs attention
-        </CBadge>
-      ) : null}
+    <div className="onrep-batch-hints" role="status" aria-label="Batch setup notes">
+      {items.map((it) => (
+        <span key={it.key} className={`onrep-batch-hint onrep-batch-hint--${it.tone}`}>
+          {it.label}
+        </span>
+      ))}
     </div>
   )
 }
@@ -161,8 +148,10 @@ function BatchTileCard({ m }) {
     >
       <CCardBody className="d-flex flex-column onrep-batch-tile__body">
         <div className="onrep-batch-tile__header">
-          <span className="onrep-batch-tile__title text-body">{m.batchNameOnly}</span>
-          <BatchStatusBadges m={m} />
+          <div className="onrep-batch-tile__title-block min-w-0">
+            <span className="onrep-batch-tile__title text-body">{m.batchNameOnly}</span>
+            <BatchAttentionHints m={m} />
+          </div>
         </div>
 
         <p className="onrep-batch-tile__meta">
@@ -245,9 +234,18 @@ function BatchTileCard({ m }) {
 
 function BatchListRow({ m }) {
   const d = m.nextSessionDisplay
+  const attention =
+    m.isInactive || m.emptyBatch || m.needSchedule || m.needCoach || m.needsAttention
 
   return (
-    <div className="onrep-batch-list-row border-bottom">
+    <div
+      className={[
+        'onrep-batch-list-row border-bottom',
+        attention ? 'onrep-batch-list-row--attention' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <div className="onrep-batch-list-row__batch">
         <Link
           to={`${m.base}?tab=schedule`}
@@ -255,13 +253,7 @@ function BatchListRow({ m }) {
         >
           {m.batchNameOnly}
         </Link>
-        <div className="onrep-batch-list-row__badges d-lg-none mt-2">
-          <BatchStatusBadges m={m} />
-        </div>
-      </div>
-
-      <div className="onrep-batch-list-row__badges d-none d-lg-flex justify-content-center">
-        <BatchStatusBadges m={m} />
+        <BatchAttentionHints m={m} />
       </div>
 
       <div className="onrep-batch-list-row__detail">
@@ -297,7 +289,14 @@ function BatchListRow({ m }) {
         )}
       </div>
 
-      <div className="onrep-batch-list-row__next">
+      <div
+        className={[
+          'onrep-batch-list-row__next',
+          d.variant === 'today' ? 'onrep-batch-list-row__next--today' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <span className="onrep-batch-list-row__mobile-label d-lg-none">Next</span>
         {d.variant === 'today' || d.variant === 'next' ? (
           <div>
@@ -594,7 +593,6 @@ const BatchesListPage = () => {
             <div className="onrep-batch-list-table border rounded-3 overflow-hidden bg-body">
               <div className="onrep-batch-list-head d-none d-lg-grid text-body-secondary small fw-semibold text-uppercase">
                 <span>Batch</span>
-                <span className="text-center justify-self-center">Status</span>
                 <span>Details</span>
                 <span>Weekly pattern</span>
                 <span>Next session</span>

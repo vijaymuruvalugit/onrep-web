@@ -20,6 +20,15 @@
 
 CoreUI is meant to be the UX game changer. Pure & transparent code is devoid of redundant components, so the app is light enough to offer ultimate user experience. This means mobile devices also, where the navigation is just as easy and intuitive as on a desktop or laptop. The CoreUI Layout API lets you customize your project for almost any device – be it Mobile, Web or WebApp – CoreUI covers them all!
 
+## OnRep (this fork)
+
+Coach/owner web app for **Ezyplay** — batches, schedule, attendance, skating ops. API: **ezyplay-backend** (`/api/v1`).
+
+| Doc | Purpose |
+|-----|---------|
+| [CONTEXT/README.md](CONTEXT/README.md) | **AI / onboarding context pack** (start here in new chats) |
+| [docs/platform-primitives.md](docs/platform-primitives.md) | Shared operational vocabulary and UI policy |
+
 ## Table of Contents
 
 * [Versions](#versions)

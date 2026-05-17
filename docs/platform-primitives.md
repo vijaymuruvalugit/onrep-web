@@ -2,6 +2,8 @@
 
 Shared vocabulary for coach/instructor operational surfaces (Batch Operations, attendance lists, timelines). Activity-specific terms (skating, music, yoga) stay in **activity modules** or localized copy — not in generic API or shared component names.
 
+**AI / onboarding context pack:** [../CONTEXT/README.md](../CONTEXT/README.md) (batches, schedule, start-session flow). **Backend API:** `ezyplay-backend/CONTEXT/12-operational-sessions-and-batches.md`.
+
 ## Core primitives
 
 | Primitive | Meaning |
@@ -26,6 +28,17 @@ Avoid on shared surfaces: **event**, **recurrence exception**, **generate sessio
 ## Batch Workspace utilities (governance)
 
 The collapsed **Schedule setup** area may contain **only** rare operational maintenance (weekly schedule quick-add, fill dates, extra session, skip, adjust times). It must **not** become a configuration ecosystem; ongoing setup belongs in **Settings** or dedicated routes.
+
+## Batches list (2026-05)
+
+- **No dedicated Status column** in list view. Setup gaps appear as **small hints under the batch name** (empty batch, needs schedule, coach not assigned, etc.), not a parallel badge column.
+- **Tiles** remain the default layout; list view is for dense scanning with the same data columns minus status.
+
+## Start session timing (Batch Workspace)
+
+- **Start session** must call **`POST /operational-sessions/:id/start`** before opening attendance so **actual start** is recorded on the server.
+- If the coach starts **more than ~10 minutes** before the scheduled start or **after** the scheduled end (with grace), show a **confirm** dialog; continuing still uses the real **now** as start time.
+- **End** is recorded on operational end and/or when **attendance is finalized** (bulk save), not from the scheduled slot alone.
 
 ## Interaction validation checklist (ship / iterate)
 
