@@ -204,12 +204,55 @@ export function compareOperationalSessionsChronological(a, b) {
 export const UPCOMING_SESSIONS_DISPLAY_CAP = 3
 
 /**
- * @param {object[]} rows
+ * Upcoming list for schedule / batch timelines: show the next `cap` sessions, except when
+ * a day in that window has more than `cap` sessions — then include every session on that day.
+ *
+ * @param {object[]} rows chronologically sorted upcoming rows
  * @param {number} [cap]
  */
 export function sliceUpcomingSessionsForDisplay(rows, cap = UPCOMING_SESSIONS_DISPLAY_CAP) {
-  if (!Array.isArray(rows) || rows.length <= cap) return rows || []
-  return rows.slice(0, cap)
+  if (!Array.isArray(rows) || rows.length === 0) return []
+  if (rows.length <= cap) return rows
+
+  const head = rows.slice(0, cap)
+  /** @type {Map<string, number>} */
+  const countByDay = new Map()
+  for (const r of rows) {
+    const d = effectiveOperationalSessionDateYmd(r)
+    if (!d) continue
+    countByDay.set(d, (countByDay.get(d) || 0) + 1)
+  }
+
+  /** @type {Set<string>} */
+  const expandDays = new Set()
+  for (const r of head) {
+    const d = effectiveOperationalSessionDateYmd(r)
+    if (d && (countByDay.get(d) || 0) > cap) expandDays.add(d)
+  }
+
+  if (expandDays.size === 0) return head
+
+  const seen = new Set()
+  const out = []
+  const push = (r) => {
+    const id = String(r?.sessionId ?? r?.id ?? '')
+    const key = id || `${effectiveOperationalSessionDateYmd(r)}-${r?.startTime ?? ''}`
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push(r)
+  }
+
+  for (const r of rows) {
+    const d = effectiveOperationalSessionDateYmd(r)
+    if (d && expandDays.has(d)) push(r)
+  }
+  for (const r of head) {
+    const d = effectiveOperationalSessionDateYmd(r)
+    if (d && expandDays.has(d)) continue
+    push(r)
+  }
+
+  return out.sort(compareOperationalSessionsChronological)
 }
 
 function sessionStartInstant(row) {

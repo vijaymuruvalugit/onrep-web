@@ -27,6 +27,7 @@ import {
   normalizeSessionDateYmd,
   parseSessionLocalDate,
   sliceUpcomingSessionsForDisplay,
+  UPCOMING_SESSIONS_DISPLAY_CAP,
 } from '../../classes/utils/sessionDisplay'
 import {
   isOperationalOneOff,
@@ -60,9 +61,6 @@ function materializationEmptyHint(skipped) {
   }
   return null
 }
-
-/** Schedule page shows more than the compact batch timeline cap. */
-const SCHEDULE_UPCOMING_LIST_CAP = 12
 
 function addDaysYmd(fromYmd, days) {
   const d = parseSessionLocalDate(fromYmd)
@@ -320,11 +318,11 @@ const SchedulePage = () => {
   const activePatterns = useMemo(() => items.filter((p) => p.isActive !== false), [items])
 
   const displayedUpcoming = useMemo(
-    () => sliceUpcomingSessionsForDisplay(mergedTimeline, SCHEDULE_UPCOMING_LIST_CAP),
+    () => sliceUpcomingSessionsForDisplay(mergedTimeline, UPCOMING_SESSIONS_DISPLAY_CAP),
     [mergedTimeline],
   )
 
-  const hasMoreUpcoming = mergedTimeline.length > SCHEDULE_UPCOMING_LIST_CAP
+  const hasMoreUpcoming = displayedUpcoming.length < mergedTimeline.length
 
   const primaryPlaceFallback = useMemo(() => {
     const fromSchedule = items.find((s) => s.placeName)?.placeName
