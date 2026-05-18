@@ -219,13 +219,19 @@ export function useCoachingDraftQueue({
     setSyncState('pending')
   }, [])
 
-  const addMarker = useCallback((key) => {
-    setDraft((prev) => ({
-      ...prev,
-      markers: [...(prev.markers || []), key],
-    }))
-    setSyncState('pending')
-  }, [])
+  const addMarker = useCallback(
+    (key) => {
+      const next = {
+        ...draftRef.current,
+        markers: [...(draftRef.current.markers || []), key],
+      }
+      draftRef.current = next
+      setDraft(next)
+      setSyncState('syncing')
+      void flushDraft(studentIdRef.current, next)
+    },
+    [flushDraft],
+  )
 
   const setNotes = useCallback((notes) => {
     setDraft((prev) => ({ ...prev, notes }))

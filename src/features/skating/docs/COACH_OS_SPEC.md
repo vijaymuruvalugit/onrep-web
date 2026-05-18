@@ -221,3 +221,32 @@ Periodic review: count surfaces (routes/modals), KPI rows, and toast patterns �
 ## Assessment storage strategy (v1)
 
 **Chosen path**: `student_assessments` rows with typed JSON payloads (`skating_rapid_observation`). Dedicated `skating_assessment_events` + `activity_id` migration is deferred until multi-tenant assessment reporting requires it.
+
+---
+
+## Live coaching UX (v2 — athlete-centered)
+
+When `coachLive` is true (`SkatingOpsPage`), the layout is a **vertical mobile-first stack**:
+
+1. [`SessionLiveHeader`](../components/SessionLiveHeader.jsx) — compact session context + Start/End/Race  
+2. [`PhaseModeStrip`](../components/PhaseModeStrip.jsx) — horizontal phase mode-switch (`Warmup • 2`)  
+3. [`AthleteCardStrip`](../components/AthleteCardStrip.jsx) — sticky athlete cards (tap → select)  
+4. [`ActiveAthleteWorkspace`](../components/ActiveAthleteWorkspace.jsx) — capture + [`AthleteIntelligenceTabs`](../components/AthleteIntelligenceTabs.jsx)
+
+Orchestration: [`CoachLiveSessionView`](../components/CoachLiveSessionView.jsx).
+
+### Live copy rules
+
+- **Never** render `KPI` / `KPIs` in live components (enforced by `coachLiveUiForbidden.test.js`).  
+- UI labels: **Score**, **Progress**, **Skills**, **Track**, **Note** — internal keys unchanged.  
+- `LIVE_WORDS_MAX = 2` in [`coachLiveLabels.js`](../constants/coachLiveLabels.js).  
+- Mode surfaces via `getLiveUiProfile(sessionMode, isRaceMode, blockType)` — same APIs, different layout emphasis.
+
+### QA checklist (live)
+
+- [ ] Phase tap → athlete tap → score tap without drawer or side column  
+- [ ] Athlete strip visible while scrolling workspace  
+- [ ] Today | Skills | Progress | History reachable in one tap (no “More” bucket)  
+- [ ] No Setup link on live athlete workspace  
+- [ ] Race phase: timing-first; coaching stack collapsible  
+- [ ] Assessment `session_mode`: nine-dimension **Score** grid expanded

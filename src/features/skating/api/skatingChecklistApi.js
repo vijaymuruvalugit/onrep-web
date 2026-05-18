@@ -42,6 +42,14 @@ export const skatingChecklistApi = {
     const { data } = await http.post('/skating/progress', body)
     return data?.progress
   },
+
+  async postAthleteNote({ studentId, note }) {
+    const { data } = await http.post('/skating/notes', {
+      studentId,
+      note: String(note || '').trim().slice(0, 600),
+    })
+    return data?.note ?? data
+  },
 }
 
 export default skatingChecklistApi

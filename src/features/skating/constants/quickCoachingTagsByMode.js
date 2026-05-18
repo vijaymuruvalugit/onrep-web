@@ -32,7 +32,7 @@ export function tagsForSessionMode(mode) {
 }
 
 export const MARKER_OPTIONS = [
-  { key: 'positive', label: 'Positive', short: '+' },
-  { key: 'concern', label: 'Concern', short: '!' },
-  { key: 'highlight', label: 'Highlight', short: '★' },
+  { key: 'positive', label: 'Good', short: '+' },
+  { key: 'concern', label: 'Watch', short: '!' },
+  { key: 'highlight', label: 'Best', short: '★' },
 ]

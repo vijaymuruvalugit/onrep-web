@@ -13,9 +13,10 @@ import {
   CBadge,
 } from '@coreui/react'
 import { Link } from 'react-router-dom'
-import http from '../../../api/http'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
+import { skatingChecklistApi } from '../api/skatingChecklistApi'
 import { skatingIntelligenceApi } from '../api/skatingIntelligenceApi'
+import { groupSkillsByCategory } from '../hooks/athleteIntelligenceData'
 
 const NOTE_TEMPLATES = [
   'Excellent improvement today',
@@ -28,7 +29,7 @@ const NOTE_TEMPLATES = [
 const TABS = [
   { key: 'today', label: 'Today' },
   { key: 'skills', label: 'Skills' },
-  { key: 'kpis', label: 'KPIs' },
+  { key: 'kpis', label: 'Progress' },
   { key: 'notes', label: 'Notes' },
   { key: 'history', label: 'History' },
 ]
@@ -114,7 +115,7 @@ export default function AthleteCaptureDrawer({
       const keys = advancedKpiOpen ? Object.keys(latest).sort() : primaryCodes.filter((c) => latest[c])
       setKpiData({ latest, keys, codes: keys.map((k) => latest[k]).filter(Boolean) })
     } catch (e) {
-      setKpiErr(e?.response?.data?.error || e?.message || 'Failed KPIs')
+      setKpiErr(e?.response?.data?.error || e?.message || 'Failed to load')
     } finally {
       setKpiLoading(false)
     }
@@ -140,22 +141,11 @@ export default function AthleteCaptureDrawer({
     if (tab === 'history') void loadHistory()
   }, [visible, studentId, tab, loadSkills, loadKpis, loadHistory])
 
-  const skillsGrouped = useMemo(() => {
-    const list = (skillsData?.skills || skillsData?.platform || []).length
-      ? skillsData.skills || [...(skillsData.platform || []), ...(skillsData.custom || [])]
-      : []
-    const byCat = new Map()
-    for (const s of list) {
-      const c = s.category || 'Other'
-      if (!byCat.has(c)) byCat.set(c, [])
-      byCat.get(c).push(s)
-    }
-    return Array.from(byCat.entries())
-  }, [skillsData])
+  const skillsGrouped = useMemo(() => groupSkillsByCategory(skillsData), [skillsData])
 
   const postNote = async (text) => {
     if (!studentId || !text?.trim()) return
-    await http.post('/skating/notes', { studentId, note: text.trim().slice(0, 600) })
+    await skatingChecklistApi.postAthleteNote({ studentId, note: text.trim() })
   }
 
   async function tapSkillLevel(skillId, level) {
@@ -177,7 +167,7 @@ export default function AthleteCaptureDrawer({
         <COffcanvasTitle>{SESSION_OPS_COPY.captureDrawerTitle}</COffcanvasTitle>
         <div className="d-flex gap-2 align-items-center flex-wrap">
           <Link className="btn btn-outline-secondary btn-sm" to="/coach/skating/intelligence">
-            Intelligence settings
+            Setup
           </Link>
           <CButton type="button" color="light" size="sm" onClick={onClose}>
             Close
@@ -298,13 +288,13 @@ export default function AthleteCaptureDrawer({
                   setTimeout(() => void loadKpis(), 0)
                 }}
               >
-                {advancedKpiOpen ? 'Default KPIs only' : 'Advanced KPIs'}
+                {advancedKpiOpen ? 'Less' : 'More'}
               </CButton>
               <CButton size="sm" color="light" type="button" onClick={() => void loadKpis()}>
                 Refresh
               </CButton>
             </div>
-            {kpiLoading ? <div className="small text-muted">Loading KPIs…</div> : null}
+            {kpiLoading ? <div className="small text-muted">Loading…</div> : null}
             {(kpiData?.keys || []).length ? (
               <div className="d-flex flex-column gap-2">
                 {kpiData.keys.map((code) => {
@@ -319,7 +309,9 @@ export default function AthleteCaptureDrawer({
                   }
                   return (
                     <div key={code} className="border rounded px-2 py-2 d-flex justify-content-between">
-                      <span className="small fw-semibold text-capitalize">{label}</span>
+                      <span className="small fw-semibold text-capitalize">
+                        {code.replace(/_/g, ' ').toLowerCase().slice(0, 24)}
+                      </span>
                       <span className="small font-monospace">{disp == null ? '—' : String(disp)}</span>
                     </div>
                   )

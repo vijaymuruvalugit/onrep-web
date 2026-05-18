@@ -57,6 +57,17 @@ vi.mock('../../places/api/placesApi', () => ({
   },
 }))
 
+vi.mock('../api/skatingIntelligenceApi', () => ({
+  skatingIntelligenceApi: {
+    getSkillCatalog: vi.fn().mockResolvedValue({
+      skills: [{ id: 's1', category: 'Speed', displayName: 'Sprint', canonicalName: 'Sprint' }],
+    }),
+    getStudentKpiSnapshots: vi.fn().mockResolvedValue({ kpis: [] }),
+    getTimeline: vi.fn().mockResolvedValue({ timeline: [] }),
+    patchStudentSkill: vi.fn(),
+  },
+}))
+
 describe('SkatingOpsPage (operational command center)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -150,7 +161,15 @@ describe('SkatingOpsPage (operational command center)', () => {
 
     const { skatingOpsApi } = await import('../api/skatingOpsApi')
     skatingOpsApi.getSessionBundle.mockResolvedValue({
-      session: { id: '22222222-2222-2222-2222-222222222222', state: 'active' },
+      session: {
+        id: '22222222-2222-2222-2222-222222222222',
+        state: 'active',
+        opsState: 'active',
+        sessionSkaterIds: ['aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'],
+      },
+      resolvedAthletes: [
+        { student_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', full_name: 'Aditi Test' },
+      ],
     })
 
     renderWithProviders(
@@ -167,10 +186,54 @@ describe('SkatingOpsPage (operational command center)', () => {
       expect(screen.getByTestId('active-session-workspace-shell')).toBeInTheDocument()
     })
     await waitFor(() => {
-      expect(screen.getAllByTestId('session-block-list').length).toBeGreaterThan(0)
+      expect(screen.getByTestId('coach-live-session-view')).toBeInTheDocument()
     })
+    expect(screen.getByTestId('phase-mode-strip')).toBeInTheDocument()
+    expect(screen.getByTestId('athlete-card-strip')).toBeInTheDocument()
+    expect(screen.queryByText('Laps stay in main panel.')).not.toBeInTheDocument()
     expect(sessionBlocksApi.listBlocks).toHaveBeenCalledWith(
       '22222222-2222-2222-2222-222222222222',
     )
+  })
+
+  it('shows unified live layout before session is started (upcoming)', async () => {
+    const { default: operationalSessionsApi } = await import(
+      '../../../domain/operationalSessions/operationalSessionsApi'
+    )
+    const { skatingOpsApi } = await import('../api/skatingOpsApi')
+
+    operationalSessionsApi.getDayBoard.mockResolvedValue({
+      date: '2026-05-18',
+      sessions: [
+        {
+          id: '33333333-3333-3333-3333-333333333333',
+          state: 'scheduled',
+          sessionMode: 'practice',
+          title: 'Upcoming',
+          sessionDate: '2026-05-18',
+        },
+      ],
+    })
+
+    skatingOpsApi.getSessionBundle.mockResolvedValue({
+      session: {
+        id: '33333333-3333-3333-3333-333333333333',
+        opsState: 'upcoming',
+        sessionSkaterIds: [],
+      },
+      resolvedAthletes: [],
+    })
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/coach/skating" element={<SkatingOpsPage />} />
+      </Routes>,
+      { initialEntries: ['/coach/skating?session=33333333-3333-3333-3333-333333333333'] },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('coach-live-session-view')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Laps stay in main panel.')).not.toBeInTheDocument()
   })
 })

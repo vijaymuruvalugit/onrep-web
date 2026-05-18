@@ -3,22 +3,16 @@ import { useSelector } from 'react-redux'
 import { useSearchParams } from 'react-router-dom'
 import {
   CAlert,
-  CBadge,
   CButton,
-  CButtonGroup,
   CCard,
   CCardBody,
   CCardHeader,
-  CCol,
   CFormCheck,
   CFormInput,
-  CFormLabel,
-  CFormSelect,
   CModal,
   CModalBody,
   CModalFooter,
   CModalHeader,
-  CRow,
   CSpinner,
   CTable,
   CTableBody,
@@ -35,11 +29,11 @@ import { skatingChecklistApi } from '../api/skatingChecklistApi'
 import { DEFAULT_RAPID_KPIS } from '../constants/rapidObservationKpis'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
 import AthleteCaptureDrawer from '../components/AthleteCaptureDrawer'
-import AthletesInSessionPanel from '../components/AthletesInSessionPanel'
-import FastCoachingPanel from '../components/FastCoachingPanel'
+import CoachLiveSessionView from '../components/CoachLiveSessionView'
+import { livePhaseLabel } from '../constants/coachLiveLabels'
+import CoachLiveTimingSection from '../components/CoachLiveTimingSection'
 import RaceTimingWorkspace, { isRacePhaseBlock } from '../components/RaceTimingWorkspace'
 import { useCoachingDraftQueue } from '../hooks/useCoachingDraftQueue'
-import SessionCommandHeader from '../components/SessionCommandHeader'
 import StartSessionModal from '../components/StartSessionModal'
 import { deriveSessionLifecycle, formatElapsedLiveLabel } from '../utils/sessionLifecycle'
 import { bumpSkatingOpsMetric } from '../utils/skatingOpsInternalMetrics'
@@ -52,9 +46,7 @@ import { sortDayBoardSessions } from '../../../domain/operationalSessions/helper
 import SkatingOpsDayBoard from '../../../domain/operationalSessions/components/SkatingOpsDayBoard'
 import SkatingOpsWorkspaceChrome from '../components/SkatingOpsWorkspaceChrome'
 import ActiveSessionWorkspaceShell from '../components/ActiveSessionWorkspaceShell'
-import SessionBlockList from '../components/SessionBlockList'
 import SessionBlockAddModal from '../components/SessionBlockAddModal'
-import AthletesInPhasePanel from '../components/AthletesInPhasePanel'
 import { sessionBlocksApi } from '../../../domain/sessionBlocks/sessionBlocksApi'
 import { phaseAthletesApi } from '../../../domain/phaseAthletes/phaseAthletesApi'
 import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
@@ -884,13 +876,14 @@ const SkatingOpsPage = () => {
   }, [])
 
   const saveAthleteFocus = useCallback(async () => {
-    if (!selectedSessionId || !captureDrawerStudentId) return
+    const focusTargetId = captureDrawerStudentId || lapStudentId
+    if (!selectedSessionId || !focusTargetId) return
     setAthleteFocusSaving(true)
     setAthleteFocusSaveMsg('')
     try {
       await skatingOpsApi.patchSession(selectedSessionId, {
         sessionAthleteFocusJson: {
-          [captureDrawerStudentId]: {
+          [focusTargetId]: {
             text: athleteFocusDraft.trim(),
             updated_at: new Date().toISOString(),
           },
@@ -903,7 +896,7 @@ const SkatingOpsPage = () => {
     } finally {
       setAthleteFocusSaving(false)
     }
-  }, [selectedSessionId, captureDrawerStudentId, athleteFocusDraft, loadBundle])
+  }, [selectedSessionId, captureDrawerStudentId, lapStudentId, athleteFocusDraft, loadBundle])
 
   const ensureDefaultRace = async () => {
     if (!selectedSessionId || !bundle) return
@@ -1113,11 +1106,22 @@ const SkatingOpsPage = () => {
   const opsState = sessionCancelled
     ? 'ended'
     : bundle?.session?.opsState || legacyOpsFromCanonical || 'upcoming'
-  const coachLive =
-    Boolean(selectedSessionId) &&
-    !sessionCancelled &&
+  /** Session workspace uses unified vertical live coaching (not legacy 3-column). */
+  const unifiedLiveCoaching = Boolean(selectedSessionId) && !sessionCancelled
+  const coachSessionActive =
+    unifiedLiveCoaching &&
     (bundle?.session?.opsState === 'active' ||
       ['active', 'paused'].includes(String(selSession?.state || '').toLowerCase()))
+  const coachLive = unifiedLiveCoaching
+
+  useEffect(() => {
+    if (!coachLive || !lapStudentId || !bundle?.session) return
+    const map = bundle.session.sessionAthleteFocusJson || {}
+    const cell = map[lapStudentId]
+    const t = cell && typeof cell === 'object' && cell.text != null ? String(cell.text) : ''
+    setAthleteFocusDraft(t)
+    setAthleteFocusSaveMsg('')
+  }, [coachLive, lapStudentId, bundle?.session, selectedSessionId])
 
   const lifecycle = useMemo(
     () =>
@@ -1213,9 +1217,9 @@ const SkatingOpsPage = () => {
   }, [selectedSessionId, bundle, rosterForSession.length, opsState])
 
   const bundlePeripheralFresh = useMemo(() => {
-    if (!coachLive || bundleFetchedAt == null || bundleLoading) return false
+    if (!coachSessionActive || bundleFetchedAt == null || bundleLoading) return false
     return Date.now() - bundleFetchedAt < 12_000
-  }, [coachLive, bundleFetchedAt, bundleLoading, bundleAgeTick])
+  }, [coachSessionActive, bundleFetchedAt, bundleLoading, bundleAgeTick])
 
   useEffect(() => {
     if (coachLive) setTimingPanelOpen(false)
@@ -1320,14 +1324,17 @@ const SkatingOpsPage = () => {
     sessionMode: sessionModeForCoach,
     blockId: activeBlockId,
     disabled: coachingDisabled,
-    onFlushSuccess: async () => {
+    onFlushSuccess: async (payload) => {
       if (!selectedSessionId || !lapStudentId) return
       const sidKey = String(lapStudentId)
       const sk = rosterForSession.find((r) => String(r.id) === sidKey)
       bumpSkatingOpsMetric('observationSaveSuccess')
       setObsSyncedAt(Date.now())
       await loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
-      runPostCaptureSuccess(sidKey, sk)
+      const scoreCount = Object.keys(payload?.scores || {}).length
+      if (scoreCount > 0) {
+        runPostCaptureSuccess(sidKey, sk)
+      }
     },
     onFlushError: (e) => {
       setObsError(e?.message || 'Could not sync coaching capture')
@@ -1535,6 +1542,43 @@ const SkatingOpsPage = () => {
     }
     return hints
   }, [studentPhasePlacementMap, activeBlockId])
+
+  const participationByStudentId = useMemo(() => {
+    const m = {}
+    for (const list of Object.values(phaseAthletesByPhaseId)) {
+      for (const a of list || []) {
+        m[String(a.studentId)] = {
+          status: a.participationStatus || 'active',
+          lane: a.lane,
+          heatNumber: a.heatNumber,
+        }
+      }
+    }
+    return m
+  }, [phaseAthletesByPhaseId])
+
+  const activePhaseAthleteForLap = useMemo(() => {
+    if (!lapStudentId) return null
+    return (
+      activePhaseAthletes.find((a) => String(a.studentId) === String(lapStudentId)) || null
+    )
+  }, [activePhaseAthletes, lapStudentId])
+
+  const phaseContextForWorkspace = useMemo(() => {
+    if (activePhaseAthleteForLap?.lane != null) return `Lane ${activePhaseAthleteForLap.lane}`
+    return ''
+  }, [activePhaseAthleteForLap])
+
+  const athletePhaseLabelByStudentId = useMemo(() => {
+    const m = {}
+    for (const phase of sortedSessionBlocks) {
+      const lbl = livePhaseLabel(phase.blockType, phase.title)
+      for (const a of phaseAthletesByPhaseId[String(phase.id)] || []) {
+        m[String(a.studentId)] = lbl
+      }
+    }
+    return m
+  }, [sortedSessionBlocks, phaseAthletesByPhaseId])
 
   const handleMovePhaseAthlete = useCallback(
     async (studentId, toPhaseId) => {
@@ -1920,36 +1964,8 @@ const SkatingOpsPage = () => {
           <SkatingOpsWorkspaceChrome session={selSession ?? null} onBack={exitWorkspace} />
           <ActiveSessionWorkspaceShell>
         <CCard className={`mb-3${opsState === 'active' ? ' coach-session-live' : ''}`}>
-          <CCardHeader className="d-flex flex-wrap justify-content-end align-items-center gap-2">
-            {!coachLive ? (
-              <CButton size="sm" color={focusMode ? 'danger' : 'secondary'} onClick={toggleFocus}>
-                {focusMode ? 'Exit focus' : 'Focus mode'}
-              </CButton>
-            ) : null}
-          </CCardHeader>
           <CCardBody>
             {bundleError ? <CAlert color="danger">{bundleError}</CAlert> : null}
-            <SessionCommandHeader
-              placeName={bundle?.session?.placeName || selSession?.placeName || ''}
-              lifecycle={{ badgeColor: lifecycle.badgeColor, label: lifecycle.label }}
-              elapsedLabel={elapsedLabel || undefined}
-              todaySummaryParts={todaySummaryParts}
-              guidanceLine={guidanceLine}
-              guidanceActions={guidanceActions}
-              onPauseToggle={() => setUiPaused((p) => !p)}
-              pauseLabel={uiPaused ? 'Resume' : 'Pause'}
-              onEnd={() => void endSession()}
-              onStart={() => void startSession()}
-              onSwitchSession={() => exitWorkspace()}
-              canStart={!sessionCancelled && opsState === 'upcoming'}
-              canPause={!sessionCancelled && opsState === 'active'}
-              canEnd={!sessionCancelled && (opsState === 'active' || opsState === 'upcoming')}
-            />
-            {!coachLive && bundle && bundleFreshnessLabel && !bundleLoading ? (
-              <div className="small text-body-secondary mb-2">
-                Bundle updated {bundleFreshnessLabel}
-              </div>
-            ) : null}
             {reEntryWarmth ? (
               <div className="small text-body-secondary skating-reentry-hint mb-2 px-1 py-1 rounded">
                 {reEntryWarmth}
@@ -1957,696 +1973,199 @@ const SkatingOpsPage = () => {
             ) : null}
             {bundleLoading ? (
               <CSpinner />
-            ) : bundle ? (
-              <CRow className={`g-3${coachLive ? ' coach-live-layout' : ''}`}>
-                <CCol xs={12}>
-                  <div className="session-anchor-strip session-anchor-strip--quiet mb-3 px-1 py-1 text-body-secondary d-flex flex-wrap align-items-center gap-2">
-                    <span className="flex-grow-1" style={{ minWidth: '12rem' }}>
-                      {bundle.session?.placeName || '—'}
-                      {bundle.session?.rinkOrRoad ? ` · ${bundle.session.rinkOrRoad}` : ''}
-                      {activeSkaterShort ? (
-                        <>
-                          <span className="mx-1 opacity-50">·</span>
-                          <span
-                            className="text-body skating-attention-anchor skating-anchor-active"
-                            title="Your attention is here"
-                          >
-                            {activeSkaterShort}
-                          </span>
-                        </>
-                      ) : null}
-                      <span className="mx-1 opacity-50">·</span>
-                      <span className="text-body-secondary" title="Active effort tag for laps">
-                        {activeEffortName ? activeEffortName.slice(0, 48) : 'Effort —'}
-                      </span>
-                    </span>
-                    {coachLive ? (
-                      <span
-                        className={`skating-peripheral-dot${bundlePeripheralFresh ? ' skating-peripheral-dot--live' : ''}`}
-                        title={
-                          bundlePeripheralFresh
-                            ? 'Session data feels current'
-                            : 'Updating after your last change'
-                        }
-                        aria-hidden
-                      />
-                    ) : null}
-                  </div>
-                  {effortModerateBlurb ? (
-                    <div className="small text-body-secondary mb-2 px-1" aria-live="polite">
-                      {effortModerateBlurb}
-                    </div>
-                  ) : null}
-                  {effortTopBand === 'low' ? (
-                    <div className="small text-body-secondary mb-2 px-1">
-                      Close match between efforts — confirm the tag below.
-                    </div>
-                  ) : null}
-                  {bundle.session?.sessionFocus ||
-                  (Array.isArray(bundle.session?.objectivesJson) &&
-                    bundle.session.objectivesJson.length) ? (
-                    <div className="small mb-3 px-2 py-2 border rounded bg-body-tertiary">
-                      {bundle.session?.sessionFocus ? (
-                        <div className="mb-1">
-                          <span className="text-body-secondary">Session focus · </span>
-                          <span>{bundle.session.sessionFocus}</span>
-                        </div>
-                      ) : null}
-                      {Array.isArray(bundle.session?.objectivesJson) &&
-                      bundle.session.objectivesJson.length ? (
-                        <ul className="mb-0 mt-1 ps-3">
-                          {bundle.session.objectivesJson.slice(0, 8).map((o, i) => (
-                            <li key={i} className="small">
-                              {typeof o === 'string' ? o : o?.text || JSON.stringify(o)}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </CCol>
-                <CCol xs={12} className="session-blocks-shell session-blocks-shell--strip">
-                  {blocksLoading ? (
-                    <CSpinner size="sm" className="mb-2" />
-                  ) : (
-                    <div className="session-blocks-strip">
-                      <SessionBlockList {...blockListProps} />
-                    </div>
-                  )}
-                </CCol>
-                <CCol lg={3} className="session-blocks-shell session-blocks-shell--column">
-                  {blocksLoading ? <CSpinner size="sm" /> : <SessionBlockList {...blockListProps} />}
-                </CCol>
-                <CCol lg={3}>
-                  <AthletesInPhasePanel
-                    phaseTitle={activeBlockTitle}
-                    phaseId={activeBlockId}
-                    blockType={activeBlockMeta?.blockType || ''}
-                    athletes={activePhaseAthletes}
-                    allPhases={sortedSessionBlocks}
-                    loading={phaseAthletesLoading}
-                    busy={phaseAthletesBusy}
-                    onMoveAthlete={handleMovePhaseAthlete}
-                    onSetLane={handleSetPhaseLane}
-                    onSetHeat={handleSetPhaseHeat}
-                    onSetStatus={handleSetPhaseStatus}
-                  />
-                  <AthletesInSessionPanel
-                    coachLive={coachLive}
-                    rosterFiltered={rosterFiltered}
+            ) : bundle && unifiedLiveCoaching ? (
+              <CoachLiveSessionView
+                bundle={bundle}
+                bundleLoading={bundleLoading}
+                selSession={selSession}
+                sortedSessionBlocks={sortedSessionBlocks}
+                activeBlockId={activeBlockId}
+                activeBlockMeta={activeBlockMeta}
+                activeBlockTitle={activeBlockTitle}
+                athleteCountByPhaseId={athleteCountByPhaseId}
+                blocksBusy={blocksBusy}
+                blocksLoading={blocksLoading}
+                onSelectBlock={handleSelectBlock}
+                rosterForSession={rosterForSession}
+                lapStudentId={lapStudentId}
+                observedStudentIds={observedStudentIds}
+                participationByStudentId={participationByStudentId}
+                athletePhaseLabelByStudentId={athletePhaseLabelByStudentId}
+                onPickSkater={(id) => {
+                  clearPendingObsAdvance()
+                  setLapStudentId(id)
+                }}
+                onAddAthletesRequest={() => {
+                  setAddAthletesPick(new Set())
+                  setShowAddAthletesModal(true)
+                }}
+                lifecycle={{ badgeColor: lifecycle.badgeColor, label: lifecycle.label }}
+                elapsedLabel={elapsedLabel || undefined}
+                sessionMode={sessionMode}
+                isRaceMode={isRaceMode}
+                coachingCollapsed={coachingCollapsed}
+                onCoachingCollapsedChange={setCoachingCollapsed}
+                uiPaused={uiPaused}
+                opsState={opsState}
+                raceSectionProps={{
+                  athletes: activePhaseAthletes.length ? activePhaseAthletes : rosterForSession,
+                  busy: raceBusy,
+                  heatNumber: activePhaseAthletes[0]?.heatNumber,
+                  onFinishOrder: handleRaceFinishOrder,
+                  onManualTime: handleRaceManualTime,
+                }}
+                sessionHeaderProps={{
+                  onPauseToggle: () => setUiPaused((p) => !p),
+                  pauseLabel: uiPaused ? 'Resume' : 'Pause',
+                  onEnd: () => void endSession(),
+                  onStart: () => void startSession(),
+                  onSwitchSession: () => exitWorkspace(),
+                  canStart: !sessionCancelled && opsState === 'upcoming',
+                  canPause: !sessionCancelled && opsState === 'active',
+                  canEnd:
+                    !sessionCancelled && (opsState === 'active' || opsState === 'upcoming'),
+                }}
+                timingSection={
+                  <CoachLiveTimingSection
+                    bundle={bundle}
                     lapStudentId={lapStudentId}
-                    observedStudentIds={observedStudentIds}
-                    onPickSkater={(id) => {
-                      clearPendingObsAdvance()
-                      setLapStudentId(id)
-                      if (!coachLive) focusLapInput()
-                    }}
-                    onOpenSideCapture={openCaptureDrawer}
-                    rosterFilter={rosterFilter}
-                    onRosterFilterChange={setRosterFilter}
-                    onAddAthletesRequest={() => {
-                      setAddAthletesPick(new Set())
-                      setShowAddAthletesModal(true)
-                    }}
-                    listRef={athletePanelRef}
-                    phaseHintByStudentId={phaseHintByStudentId}
+                    rosterForSession={rosterForSession}
+                    lapRaceId={lapRaceId}
+                    setLapRaceId={setLapRaceId}
+                    lapSeconds={lapSeconds}
+                    setLapSeconds={setLapSeconds}
+                    lapSecondsRef={lapSecondsRef}
+                    lapSubmitting={lapSubmitting}
+                    lapError={lapError}
+                    duplicateWarn={duplicateWarn}
+                    uiPaused={uiPaused}
+                    opsState={opsState}
+                    activeEffortSkillId={activeEffortSkillId}
+                    setActiveEffortSkillId={setActiveEffortSkillId}
+                    setActiveEffortName={setActiveEffortName}
+                    skillsCatalog={skillsCatalog}
+                    selectedSessionId={selectedSessionId}
+                    writeActiveEffort={writeActiveEffort}
+                    focusLapInput={focusLapInput}
+                    submitLap={submitLap}
+                    submitDuplicateAnyway={submitDuplicateAnyway}
+                    retryAfterLapFailure={retryAfterLapFailure}
+                    onFormKeyDown={onFormKeyDown}
+                    addTimingLane={addTimingLane}
+                    undoOffer={undoOffer}
+                    undoSecondsLeft={undoSecondsLeft}
+                    undoBusy={undoBusy}
+                    undoLastLap={undoLastLap}
+                    lastEffortPhrase={lastEffortPhrase}
                   />
-                  {inlineAthleteFocus ? (
-                    <div className="small mt-2 px-1 py-2 border rounded bg-body-tertiary d-flex flex-wrap align-items-center justify-content-between gap-2">
-                      <span className="text-body-secondary" style={{ minWidth: 0 }}>
-                        <span className="text-uppercase text-muted" style={{ fontSize: '0.65rem' }}>
-                          {SESSION_OPS_COPY.todayFocusInline}
-                        </span>
-                        <br />
-                        <span className="text-body">
-                          {inlineAthleteFocus.text || '— Not set — tap side panel to add.'}
-                        </span>
-                      </span>
-                      <CButton
-                        type="button"
-                        size="sm"
-                        color="secondary"
-                        variant="outline"
-                        onClick={() => openCaptureDrawer(lapStudentId)}
-                      >
-                        {SESSION_OPS_COPY.editFocusInPanel}
-                      </CButton>
-                    </div>
-                  ) : null}
-                </CCol>
-                <CCol lg={6} className={coachLive ? 'operational-sticky-stack' : undefined}>
-                  <div
-                    className="session-blocks-coaching-context"
-                    data-active-block-id={activeBlockId || undefined}
-                    data-active-block-title={activeBlockTitle || undefined}
-                  >
-                  <section
-                    className={`skating-obs-primary-panel border rounded p-3 mb-3 bg-body-tertiary${obsPulse ? ' skating-obs-block--pulse' : ''}`}
-                  >
-                    <div className="mb-3">
-                      <h2 className="h5 fw-semibold mb-1 text-body">
-                        {SESSION_OPS_COPY.quickObservationsTitle}
-                      </h2>
-                      <p className="small text-body-secondary mb-0">
-                        {SESSION_OPS_COPY.quickObservationsSubtitle}
-                      </p>
-                    </div>
-                    {!lapStudentId ? (
-                      coachLive ? (
-                        <CAlert color="light" className="py-3 small mb-3">
-                          {SESSION_OPS_COPY.selectAthletePrompt}
-                        </CAlert>
-                      ) : (
-                        <p className="small text-body-secondary mb-3">
-                          {SESSION_OPS_COPY.selectAthletePrompt}
-                        </p>
-                      )
-                    ) : (
-                      <div className="small text-body-secondary mb-3 pb-2 border-bottom border-secondary-subtle">
-                        <span className="text-uppercase text-muted" style={{ fontSize: '0.65rem' }}>
-                          {SESSION_OPS_COPY.recordingFor}
-                        </span>
-                        <div className="fw-semibold fs-6 text-body">
-                          {rosterForSession.find((r) => String(r.id) === String(lapStudentId))
-                            ?.full_name || 'Athlete'}
-                        </div>
-                        {observedStudentIds.has(String(lapStudentId)) ? (
-                          <span className="text-success small mt-1 d-inline-block">
-                            {SESSION_OPS_COPY.observationSavedThisSession}
-                          </span>
-                        ) : null}
-                      </div>
-                    )}
-                    <div className="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-2">
-                      <span className="small fw-medium text-body-secondary">
-                        {SESSION_OPS_COPY.quickNoticeTitle}
-                      </span>
-                      <span className="small text-body-secondary opacity-75" aria-live="polite">
-                        {coachingQueue.syncState === 'syncing' || obsSaving ? (
-                          <span className="skating-sync-pending">Syncing…</span>
-                        ) : coachingQueue.syncState === 'saved' || obsSyncedAt ? (
-                          <span className="skating-sync-ok">
-                            Settled
-                            {obsSyncedAt ? ` · ${formatClockShort(obsSyncedAt)}` : ''}
-                          </span>
-                        ) : (
-                          <span>
-                            {coachLive
-                              ? 'Tap when something stands out — syncs in a moment.'
-                              : 'Tap when something stands out — syncs automatically.'}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    {obsAdvancePending ? (
-                      <div className="small mb-2 skating-advance-pause skating-advance-pause--peripheral py-1">
-                        {(() => {
-                          const dur =
-                            obsAdvancePending.durationMs ??
-                            Math.max(1, obsAdvancePending.until - (obsAdvancePending.startAt ?? 0))
-                          const start = obsAdvancePending.startAt ?? obsAdvancePending.until - dur
-                          const pct = Math.min(100, ((Date.now() - start) / dur) * 100)
-                          return (
-                            <div
-                              className="skating-advance-pause__track mb-1"
-                              aria-hidden
-                              style={{ '--skating-advance-pct': `${pct}%` }}
-                            />
-                          )
-                        })()}
-                        <span className="text-body-secondary skating-advance-pause__line">
-                          <span className="d-none">{advanceTick}</span>→{' '}
-                          {obsAdvancePending.targetName}
-                          <span className="opacity-50 ms-1">
-                            ({Math.max(0, Math.ceil((obsAdvancePending.until - Date.now()) / 1000))}
-                            s)
-                          </span>
-                        </span>
-                        <div className="mt-1 d-flex flex-wrap gap-2 align-items-center skating-advance-pause__actions">
+                }
+                workspaceProps={{
+                  lapStudentId,
+                  athleteName:
+                    rosterForSession.find((r) => String(r.id) === String(lapStudentId))
+                      ?.full_name || '',
+                  activeBlockMeta,
+                  phaseContext: phaseContextForWorkspace,
+                  observedStudentIds,
+                  coachingQueue,
+                  coachingDisabled,
+                  obsScores,
+                  obsFlashKeys,
+                  obsError,
+                  onRetryObservation: retryObservation,
+                  onFormalTap: applyObsTap,
+                  formalDisabled:
+                    obsSaving || uiPaused || opsState === 'ended' || !lapStudentId,
+                  formalSaving: obsSaving,
+                  onQuickScore: (key, n) => {
+                    setFocusedQuickCategory(key)
+                    coachingQueue.setQuickScore(key, n)
+                  },
+                  obsAdvancePending,
+                  advanceTick,
+                  onCancelAdvance: cancelAdvanceAndStay,
+                  onGoAdvanceNow: goObsAdvanceNow,
+                  obsReturnSkater,
+                  onReturnSkater: () => {
+                    setLapStudentId(obsReturnSkater.id)
+                    setObsReturnSkater(null)
+                    obsChainAdvanceRef.current = false
+                    obsAutoSaveSuppressedRef.current = true
+                  },
+                  lastObsLabel,
+                  sessionId: selectedSessionId,
+                  focusText: athleteFocusDraft,
+                  onChangeFocus: setAthleteFocusDraft,
+                  onSaveFocus: () => void saveAthleteFocus(),
+                  focusSaving: athleteFocusSaving,
+                  focusSaveMessage: athleteFocusSaveMsg,
+                  phaseAthlete: activePhaseAthleteForLap,
+                  isRacePhase: isRaceMode,
+                  otherPhases: sortedSessionBlocks
+                    .filter((b) => String(b.id) !== String(activeBlockId))
+                    .map((b) => ({ id: b.id, title: b.title || 'Phase' })),
+                  phaseBusy: phaseAthletesBusy,
+                  onMoveAthlete: handleMovePhaseAthlete,
+                  onSetLane: handleSetPhaseLane,
+                  onSetHeat: handleSetPhaseHeat,
+                  onSetStatus: handleSetPhaseStatus,
+                }}
+                recentLapsSection={
+                  bundle?.recentLaps?.length ? (
+                    <div className="coach-live-recent-laps mt-3">
+                      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                        <span className="fw-semibold">{SESSION_OPS_COPY.recentLapsTitle}</span>
+                        {bundle.recentLaps.length > 6 ? (
                           <CButton
-                            type="button"
-                            color="link"
-                            size="sm"
-                            className="p-0 text-body-secondary"
-                            onClick={cancelAdvanceAndStay}
-                          >
-                            Stay with {obsAdvancePending.fromName}
-                          </CButton>
-                          <span className="text-body-secondary opacity-50">·</span>
-                          <CButton
-                            type="button"
                             color="link"
                             size="sm"
                             className="p-0"
-                            onClick={goObsAdvanceNow}
+                            onClick={() => setRecentLapsExpanded((v) => !v)}
                           >
-                            Go now
+                            {recentLapsExpanded ? 'Show fewer' : `Show all (${bundle.recentLapCount})`}
                           </CButton>
-                        </div>
+                        ) : null}
                       </div>
-                    ) : null}
-                    {obsReturnSkater && Date.now() < obsReturnSkater.until ? (
-                      <div className="small mb-2">
-                        <CButton
-                          type="button"
-                          color="link"
-                          size="sm"
-                          className="p-0"
-                          onClick={() => {
-                            setLapStudentId(obsReturnSkater.id)
-                            setObsReturnSkater(null)
-                            obsChainAdvanceRef.current = false
-                            obsAutoSaveSuppressedRef.current = true
-                          }}
-                        >
-                          Return to {obsReturnSkater.name}
-                        </CButton>
+                      <div className="table-responsive">
+                        <CTable small responsive hover className="mb-0 coach-live-laps-table">
+                          <CTableHead color="light">
+                            <CTableRow>
+                              <CTableHeaderCell>Time</CTableHeaderCell>
+                              <CTableHeaderCell>Skater</CTableHeaderCell>
+                              {showTimingLaneColumnInLapsTable ? (
+                                <CTableHeaderCell>{SESSION_OPS_COPY.timingLaneColumn}</CTableHeaderCell>
+                              ) : null}
+                              <CTableHeaderCell className="text-end">Lap</CTableHeaderCell>
+                            </CTableRow>
+                          </CTableHead>
+                          <CTableBody>
+                            {(recentLapsExpanded ? bundle.recentLaps : bundle.recentLaps.slice(0, 6)).map(
+                              (row) => (
+                                <CTableRow key={row.id}>
+                                  <CTableDataCell className="text-nowrap">
+                                    {formatTime(row.recordedAt ?? row.recorded_at)}
+                                  </CTableDataCell>
+                                  <CTableDataCell>
+                                    {row.studentName ?? row.student_full_name ?? row.student_id}
+                                  </CTableDataCell>
+                                  {showTimingLaneColumnInLapsTable ? (
+                                    <CTableDataCell className="small">
+                                      {raceLabelForLap(row, bundle.races)}
+                                    </CTableDataCell>
+                                  ) : null}
+                                  <CTableDataCell className="text-end font-monospace">
+                                    {lapSecondsFromRow(row)}
+                                  </CTableDataCell>
+                                </CTableRow>
+                              ),
+                            )}
+                          </CTableBody>
+                        </CTable>
                       </div>
-                    ) : null}
-                    {lastObsLabel ? (
-                      <div className="small text-body-secondary mb-2 fst-italic opacity-90">
-                        Last: {lastObsLabel}
-                      </div>
-                    ) : null}
-                    {obsError ? (
-                      <div className="small text-danger mb-2 d-flex flex-wrap align-items-center gap-2">
-                        <span>{obsError}</span>
-                        <CButton
-                          type="button"
-                          size="sm"
-                          color="link"
-                          className="p-0"
-                          onClick={retryObservation}
-                        >
-                          Try again
-                        </CButton>
-                      </div>
-                    ) : null}
-                    {isRaceMode ? (
-                      <RaceTimingWorkspace
-                        athletes={activePhaseAthletes.length ? activePhaseAthletes : rosterForSession}
-                        leaderboard={bundle?.leaderboard}
-                        disabled={uiPaused || opsState === 'ended'}
-                        busy={raceBusy}
-                        heatNumber={activePhaseAthletes[0]?.heatNumber}
-                        onFinishOrder={handleRaceFinishOrder}
-                        onManualTime={handleRaceManualTime}
-                      />
-                    ) : null}
-                    {!isRaceMode || !coachingCollapsed ? (
-                      <FastCoachingPanel
-                        sessionMode={sessionMode}
-                        draft={coachingQueue.draft}
-                        syncState={coachingQueue.syncState}
-                        syncError={coachingQueue.syncError || obsError}
-                        disabled={coachingDisabled}
-                        comfortable={coachLive}
-                        onQuickScore={(key, n) => {
-                          setFocusedQuickCategory(key)
-                          coachingQueue.setQuickScore(key, n)
-                        }}
-                        onToggleTag={coachingQueue.toggleTag}
-                        onMarker={coachingQueue.addMarker}
-                        onNotesChange={coachingQueue.setNotes}
-                        onManualSync={() => void coachingQueue.flushNow()}
-                        obsScores={obsScores}
-                        obsFlashKeys={obsFlashKeys}
-                        onFormalTap={applyObsTap}
-                        formalDisabled={obsSaving || uiPaused || opsState === 'ended' || !lapStudentId}
-                        formalSaving={obsSaving}
-                      />
-                    ) : (
-                      <CButton
-                        type="button"
-                        color="link"
-                        size="sm"
-                        className="p-0 mb-2"
-                        onClick={() => setCoachingCollapsed(false)}
-                      >
-                        Show quick coaching
-                      </CButton>
-                    )}
-                    {isRaceMode && !coachingCollapsed ? (
-                      <CButton
-                        type="button"
-                        color="link"
-                        size="sm"
-                        className="p-0 mt-1"
-                        onClick={() => setCoachingCollapsed(true)}
-                      >
-                        Hide coaching (timing focus)
-                      </CButton>
-                    ) : null}
-                    <details className="small mt-2" open={obsNotesOpen} onToggle={(e) => setObsNotesOpen(e.target.open)}>
-                      <summary className="text-body-secondary user-select-none" style={{ cursor: 'pointer' }}>
-                        Assessment note (formal grid)
-                      </summary>
-                      <CFormInput
-                        className="mt-2 mb-1"
-                        placeholder="Included with formal assessment save"
-                        value={obsNotes}
-                        disabled={obsSaving || uiPaused || opsState === 'ended'}
-                        onChange={(e) => {
-                          obsAutoSaveSuppressedRef.current = false
-                          setObsNotes(e.target.value)
-                        }}
-                      />
-                    </details>
-                    {!coachLive && hasObsScores ? (
-                      <div className="mt-2">
-                        <CButton
-                          type="button"
-                          color="link"
-                          size="sm"
-                          className="p-0"
-                          disabled={obsSaving || uiPaused || opsState === 'ended' || !lapStudentId}
-                          onClick={() => void submitObservation({ manual: true })}
-                        >
-                          Sync formal assessment
-                        </CButton>
-                      </div>
-                    ) : null}
-                  </section>
-
-                  <details
-                    className={`skating-timing-advanced border rounded mb-3${coachLive && !isRaceMode ? ' coach-recede coach-recede-latent' : ''}`}
-                    open={timingPanelOpen}
-                    onToggle={(e) => setTimingPanelOpen(e.target.open)}
-                  >
-                    <summary className="px-3 py-3 skating-timing-summary user-select-none">
-                      <span className="fw-semibold text-body d-block">
-                        {SESSION_OPS_COPY.timingSectionTitle}
-                      </span>
-                      <span className="small text-body-secondary d-block mt-1">
-                        {SESSION_OPS_COPY.timingSectionHint}
-                      </span>
-                    </summary>
-                    <div className="px-3 pb-3 pt-2 border-top">
-                      {(bundle.races || []).length > 1 ? (
-                        <div
-                          className={`mb-3${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
-                        >
-                          <div className="small text-body-secondary mb-1">
-                            {SESSION_OPS_COPY.timingLaneColumn}
-                            {coachLive ? (
-                              <span className="opacity-50"> (multiple lanes)</span>
-                            ) : null}
-                          </div>
-                          <CButtonGroup vertical role="group" className="w-100">
-                            {(bundle.races || []).map((rc) => (
-                              <CButton
-                                key={rc.id}
-                                color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
-                                size="sm"
-                                className="text-start"
-                                disabled={lapSubmitting}
-                                onClick={() => {
-                                  setLapRaceId(rc.id)
-                                  focusLapInput()
-                                }}
-                              >
-                                {(rc.label || rc.groupName || 'Lane').slice(0, 48)}
-                              </CButton>
-                            ))}
-                          </CButtonGroup>
-                        </div>
-                      ) : (bundle.races || []).length === 1 && coachLive ? (
-                        <div className="mb-3">
-                          <CButton
-                            size="sm"
-                            color="light"
-                            variant="outline"
-                            type="button"
-                            onClick={() => void addTimingLane()}
-                          >
-                            {SESSION_OPS_COPY.addTimingLane}
-                          </CButton>
-                        </div>
-                      ) : null}
-                      <form
-                        aria-busy={lapSubmitting ? 'true' : 'false'}
-                        onSubmit={(e) => {
-                          e.preventDefault()
-                          submitLap(e)
-                        }}
-                        onKeyDown={onFormKeyDown}
-                      >
-                        <div className="fw-semibold small text-body-secondary mb-2">
-                          {SESSION_OPS_COPY.lapEntryTitle}
-                        </div>
-                        {lapSubmitting ? (
-                          <div className="small text-warning mb-1 d-flex align-items-center gap-2">
-                            <CSpinner size="sm" />
-                            Saving lap…
-                          </div>
-                        ) : null}
-                        {!coachLive ? (
-                          <div className="small text-body-secondary mb-2">
-                            Pick an athlete on the left → seconds → Enter. ⌘/Ctrl+Enter saves.
-                            Alt+↑↓ switches timing lane when multiple exist.
-                          </div>
-                        ) : null}
-                        <div className="small text-body-secondary mb-3">
-                          {lapStudentId ? (
-                            <>
-                              <span
-                                className="text-uppercase text-muted"
-                                style={{ fontSize: '0.65rem' }}
-                              >
-                                {SESSION_OPS_COPY.recordingFor}
-                              </span>{' '}
-                              <strong>
-                                {rosterForSession.find((r) => String(r.id) === String(lapStudentId))
-                                  ?.full_name || 'Athlete'}
-                              </strong>
-                            </>
-                          ) : (
-                            SESSION_OPS_COPY.selectAthletePrompt
-                          )}
-                        </div>
-                        <CFormSelect
-                          className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
-                          aria-label="Effort tag for this lap"
-                          title="Benchmark / effort — same control every session"
-                          value={activeEffortSkillId}
-                          disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                          onChange={(e) => {
-                            manualEffortOverrideRef.current = true
-                            const id = e.target.value
-                            const sk = id
-                              ? skillsCatalog.find((r) => String(r.id) === String(id))
-                              : null
-                            setActiveEffortSkillId(id)
-                            setActiveEffortName(sk?.name || '')
-                            writeActiveEffort(selectedSessionId, lapStudentId, id, sk?.name || '')
-                            focusLapInput()
-                          }}
-                        >
-                          <option value="">Effort tag (optional)</option>
-                          {skillsCatalog.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {(s.name || 'Effort').slice(0, 56)}
-                            </option>
-                          ))}
-                        </CFormSelect>
-                        <CFormInput
-                          ref={lapSecondsRef}
-                          name="lapSeconds"
-                          className={`mb-2${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
-                          type="number"
-                          inputMode="decimal"
-                          step="0.01"
-                          min="0"
-                          placeholder="Seconds"
-                          value={lapSeconds}
-                          disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                          onChange={(e) => setLapSeconds(e.target.value)}
-                          autoComplete="off"
-                        />
-                        {duplicateWarn ? (
-                          <CAlert color="warning" className="py-2">
-                            {duplicateWarn}{' '}
-                            <CButton
-                              type="button"
-                              size="sm"
-                              color="warning"
-                              onClick={submitDuplicateAnyway}
-                            >
-                              Submit anyway
-                            </CButton>
-                          </CAlert>
-                        ) : null}
-                        {lapError ? (
-                          <CAlert
-                            color="danger"
-                            className="py-2 d-flex flex-wrap align-items-center gap-2 justify-content-between"
-                          >
-                            <span>{lapError}</span>
-                            <CButton
-                              type="button"
-                              size="sm"
-                              color="danger"
-                              variant="outline"
-                              onClick={retryAfterLapFailure}
-                            >
-                              Retry
-                            </CButton>
-                          </CAlert>
-                        ) : null}
-                        <div className="d-flex gap-2 flex-wrap align-items-center">
-                          <CButton
-                            type="submit"
-                            color="primary"
-                            disabled={lapSubmitting || uiPaused || opsState === 'ended'}
-                          >
-                            {lapSubmitting ? <CSpinner size="sm" /> : SESSION_OPS_COPY.recordLapCta}
-                          </CButton>
-                          {!coachLive ? (
-                            <CButton
-                              type="button"
-                              color="light"
-                              disabled={lapSubmitting}
-                              onClick={() => {
-                                setLapSeconds('')
-                                setDuplicateWarn('')
-                                setLapError('')
-                              }}
-                            >
-                              {SESSION_OPS_COPY.clearDraft}
-                            </CButton>
-                          ) : null}
-                        </div>
-                        {undoOffer && undoSecondsLeft > 0 ? (
-                          <div className="mt-2 d-flex align-items-center gap-2 flex-wrap">
-                            <CButton
-                              type="button"
-                              size="sm"
-                              color="warning"
-                              variant="outline"
-                              disabled={undoBusy || lapSubmitting}
-                              onClick={undoLastLap}
-                            >
-                              {undoBusy ? (
-                                <CSpinner size="sm" />
-                              ) : (
-                                `Undo last lap (${undoSecondsLeft}s)`
-                              )}
-                            </CButton>
-                            <span className="small text-body-secondary">{undoOffer.label}</span>
-                          </div>
-                        ) : null}
-                        {lastEffortPhrase ? (
-                          <p className="small text-body-secondary mt-2 mb-0" aria-live="polite">
-                            {lastEffortPhrase}
-                          </p>
-                        ) : null}
-                      </form>
                     </div>
-                  </details>
-                  {lastProgression ? (
-                    <CAlert
-                      color="info"
-                      className={`mt-3 py-2 small${coachLive ? ' border-0 bg-transparent px-0' : ''}`}
-                    >
-                      {lastProgression.applied ? (
-                        <>
-                          <span className="fw-medium">Logged — </span>
-                          {lastProgression.skillName || lastProgression.skillId} →{' '}
-                          {lastProgression.status}
-                          {coachLive ? (
-                            <span className="text-body-secondary"> · looks right for now.</span>
-                          ) : null}
-                        </>
-                      ) : (
-                        <>
-                          No auto skill bump ({lastProgression.reason || 'n/a'}) — that happens; you
-                          can adjust later if needed.
-                        </>
-                      )}
-                      {!coachLive ? (
-                        <span className="d-block mt-1 text-body-secondary">
-                          Fine-tune from checklist when you&apos;re off the ice.
-                        </span>
-                      ) : null}
-                    </CAlert>
-                  ) : null}
-                  </div>
-                </CCol>
-              </CRow>
-            ) : null}
-
-            {bundle?.recentLaps?.length ? (
-              <div className="mt-3">
-                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
-                  <span className="fw-semibold">{SESSION_OPS_COPY.recentLapsTitle}</span>
-                  {coachLive && bundle.recentLaps.length > 6 ? (
-                    <CButton
-                      color="link"
-                      size="sm"
-                      className="p-0"
-                      onClick={() => setRecentLapsExpanded((v) => !v)}
-                    >
-                      {recentLapsExpanded ? 'Show fewer' : `Show all (${bundle.recentLapCount})`}
-                    </CButton>
-                  ) : (
-                    <span className="small text-body-secondary">{bundle.recentLapCount} shown</span>
-                  )}
-                </div>
-                <div className="table-responsive border rounded">
-                  <CTable small responsive hover striped className="mb-0">
-                    <CTableHead color="light">
-                      <CTableRow>
-                        <CTableHeaderCell className="text-nowrap">Time</CTableHeaderCell>
-                        <CTableHeaderCell>Skater</CTableHeaderCell>
-                        {showTimingLaneColumnInLapsTable ? (
-                          <CTableHeaderCell>{SESSION_OPS_COPY.timingLaneColumn}</CTableHeaderCell>
-                        ) : null}
-                        <CTableHeaderCell className="text-end">Lap (s)</CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {pendingLapPreview && lapSubmitting ? (
-                        <CTableRow color="warning">
-                          <CTableDataCell className="text-nowrap small fst-italic">
-                            <CSpinner size="sm" className="me-1 align-middle" />
-                            Pending…
-                          </CTableDataCell>
-                          <CTableDataCell>{pendingLapPreview.studentName}</CTableDataCell>
-                          {showTimingLaneColumnInLapsTable ? (
-                            <CTableDataCell className="small">
-                              {pendingLapPreview.raceLabel}
-                            </CTableDataCell>
-                          ) : null}
-                          <CTableDataCell className="text-end font-monospace">
-                            {(pendingLapPreview.lapMs / 1000).toFixed(2)}
-                          </CTableDataCell>
-                        </CTableRow>
-                      ) : null}
-                      {(coachLive && !recentLapsExpanded
-                        ? bundle.recentLaps.slice(0, 6)
-                        : bundle.recentLaps
-                      ).map((row) => (
-                        <CTableRow key={row.id}>
-                          <CTableDataCell className="text-nowrap">
-                            {formatTime(row.recordedAt ?? row.recorded_at)}
-                          </CTableDataCell>
-                          <CTableDataCell>
-                            {row.studentName ?? row.student_full_name ?? row.student_id}
-                          </CTableDataCell>
-                          {showTimingLaneColumnInLapsTable ? (
-                            <CTableDataCell className="small">
-                              {raceLabelForLap(row, bundle.races)}
-                            </CTableDataCell>
-                          ) : null}
-                          <CTableDataCell className="text-end font-monospace">
-                            {lapSecondsFromRow(row)}
-                          </CTableDataCell>
-                        </CTableRow>
-                      ))}
-                    </CTableBody>
-                  </CTable>
-                </div>
-              </div>
+                  ) : null
+                }
+              />
             ) : null}
           </CCardBody>
         </CCard>
@@ -2654,18 +2173,20 @@ const SkatingOpsPage = () => {
         </>
       )}
 
-      <AthleteCaptureDrawer
-        visible={Boolean(captureDrawerStudentId)}
-        studentId={captureDrawerStudentId}
-        sessionId={selectedSessionId || null}
-        studentName={captureStudentName}
-        focusText={athleteFocusDraft}
-        onChangeFocus={setAthleteFocusDraft}
-        onSaveFocus={() => void saveAthleteFocus()}
-        saving={athleteFocusSaving}
-        saveMessage={athleteFocusSaveMsg}
-        onClose={closeCaptureDrawer}
-      />
+      {!coachLive ? (
+        <AthleteCaptureDrawer
+          visible={Boolean(captureDrawerStudentId)}
+          studentId={captureDrawerStudentId}
+          sessionId={selectedSessionId || null}
+          studentName={captureStudentName}
+          focusText={athleteFocusDraft}
+          onChangeFocus={setAthleteFocusDraft}
+          onSaveFocus={() => void saveAthleteFocus()}
+          saving={athleteFocusSaving}
+          saveMessage={athleteFocusSaveMsg}
+          onClose={closeCaptureDrawer}
+        />
+      ) : null}
 
       <StartSessionModal
         visible={showStartLiveModal}
@@ -2753,7 +2274,7 @@ const SkatingOpsPage = () => {
 
   return (
     <div
-      className={`skating-ops-page px-1${isRaceMode ? ' skating-ops--race-mode' : ''}`}
+      className={`skating-ops-page px-1${coachLive ? ' skating-ops--coach-live' : ''}${isRaceMode ? ' skating-ops--race-mode' : ''}`}
       data-testid="skating-ops-page"
     >
       {inner}
