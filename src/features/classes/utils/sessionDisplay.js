@@ -200,14 +200,49 @@ export function compareOperationalSessionsChronological(a, b) {
   return operationalSessionChronologicalKey(a).localeCompare(operationalSessionChronologicalKey(b))
 }
 
-/** False once the planned end time is in the past (cancelled rows excluded by caller if desired). */
-export function isOperationalSessionStillUpcoming(row, now = new Date()) {
+/** Max upcoming sessions shown in schedule / batch timelines (product-wide). */
+export const UPCOMING_SESSIONS_DISPLAY_CAP = 3
+
+/**
+ * @param {object[]} rows
+ * @param {number} [cap]
+ */
+export function sliceUpcomingSessionsForDisplay(rows, cap = UPCOMING_SESSIONS_DISPLAY_CAP) {
+  if (!Array.isArray(rows) || rows.length <= cap) return rows || []
+  return rows.slice(0, cap)
+}
+
+function sessionEndInstant(row) {
+  const endIso = row?.scheduledEndAt ?? row?.scheduled_end_at
+  if (endIso != null && endIso !== '') {
+    const t = new Date(endIso).getTime()
+    if (!Number.isNaN(t)) return t
+  }
+  const ymd = effectiveOperationalSessionDateYmd(row)
+  const endTime = row?.endTime ?? row?.end_time
+  if (!ymd || endTime == null || endTime === '') return null
+  const d = parseSessionLocalDate(ymd)
+  if (!d) return null
+  const m = String(endTime).match(/^(\d{1,2}):(\d{2})/)
+  if (!m) return null
+  d.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0)
+  return d.getTime()
+}
+
+/**
+ * False once the planned end time is in the past (cancelled rows excluded by caller).
+ * Uses wall-clock end on the session calendar day when UTC instants are missing or wrong.
+ * @param {string} [todayYmd] Academy-local today (YYYY-MM-DD) — drops prior calendar days.
+ */
+export function isOperationalSessionStillUpcoming(row, now = new Date(), todayYmd = '') {
   if (!row) return false
-  const end = row.scheduledEndAt ?? row.scheduled_end_at
-  if (end == null || end === '') return true
-  const t = new Date(end).getTime()
-  if (Number.isNaN(t)) return true
-  return t > now.getTime()
+  const sessionYmd = effectiveOperationalSessionDateYmd(row)
+  const today = String(todayYmd || '').slice(0, 10)
+  if (today && sessionYmd && sessionYmd < today) return false
+  if (today && sessionYmd && sessionYmd > today) return true
+  const endMs = sessionEndInstant(row)
+  if (endMs != null) return endMs > now.getTime()
+  return true
 }
 
 /**

@@ -25,6 +25,9 @@ import {
   compareOperationalSessionsChronological,
   isOperationalSessionStillUpcoming,
   normalizeSessionDateYmd,
+  parseSessionLocalDate,
+  sliceUpcomingSessionsForDisplay,
+  UPCOMING_SESSIONS_DISPLAY_CAP,
 } from '../../classes/utils/sessionDisplay'
 import {
   isOperationalOneOff,
@@ -37,7 +40,6 @@ import { operationalSessionToScheduleCompactRow } from '../../../domain/operatio
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
-import { useIsScheduleWide } from '../../../hooks/useMediaQuery'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
 import scheduleApi from '../api/scheduleApi'
 import { RECURRING_PATTERN_EDIT_MODE } from '@onrep/contracts/recurring-patterns'
@@ -45,15 +47,37 @@ import './SchedulePage.scss'
 
 function materializationEmptyHint(skipped) {
   if (skipped === 'no_active_students') {
-    return 'Add at least one active student to this batch — recurring patterns only generate upcoming sessions when the batch has enrolled students.'
+    return 'Add students to this batch first. Sessions are created automatically once at least one student is enrolled.'
   }
   if (skipped === 'no_active_patterns') {
-    return 'No active recurring patterns overlap the generation window.'
+    return 'Add a weekly pattern above, or check that its start date is not still in the future.'
   }
   if (skipped === 'overlap_or_conflict') {
-    return 'Could not generate sessions because of a schedule time conflict. Edit the pattern or remove the conflicting session.'
+    return 'Two sessions overlap at the same time. Edit a pattern or remove the conflicting session, then refresh.'
   }
   return null
+}
+
+function addDaysYmd(fromYmd, days) {
+  const d = parseSessionLocalDate(fromYmd)
+  if (!d) return fromYmd
+  d.setDate(d.getDate() + days)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Materialize window (backend max 60 days). */
+function materializeRangeYmd() {
+  const fromYmd = todayIsoLocal()
+  return { fromYmd, toYmd: addDaysYmd(fromYmd, 60) }
+}
+
+/** Board query window for upcoming list. */
+function boardRangeYmd() {
+  const fromYmd = todayIsoLocal()
+  return { fromYmd, toYmd: addDaysYmd(fromYmd, 90) }
 }
 
 const SchedulePage = () => {
@@ -77,13 +101,9 @@ const SchedulePage = () => {
     deactivatePattern,
     clearErrors,
   } = useSchedule()
-  const isWide = useIsScheduleWide()
-  const upcomingCap = isWide ? 4 : 3
-
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const [sessionsError, setSessionsError] = useState(null)
   const [sessionRows, setSessionRows] = useState([])
-  const [showAllUpcoming, setShowAllUpcoming] = useState(false)
   const [drawerSessionId, setDrawerSessionId] = useState(null)
   const [drawerSeedRow, setDrawerSeedRow] = useState(null)
   const [createOneTimeOpen, setCreateOneTimeOpen] = useState(false)
@@ -194,8 +214,13 @@ const SchedulePage = () => {
     setSessionsError(null)
     setSessionsEmptyHint(null)
     try {
+      const matRange = materializeRangeYmd()
+      const { fromYmd, toYmd } = boardRangeYmd()
       try {
-        const mat = await scheduleApi.materializeBatchSessions(effectiveBatchId)
+        const mat = await scheduleApi.materializeBatchSessions(effectiveBatchId, {
+          fromDate: matRange.fromYmd,
+          toDate: matRange.toYmd,
+        })
         const skipped = mat?.materialization?.skipped || mat?.skipped
         const hint = materializationEmptyHint(skipped)
         if (hint) setSessionsEmptyHint(hint)
@@ -214,13 +239,6 @@ const SchedulePage = () => {
         }
       }
 
-      const end = new Date()
-      end.setDate(end.getDate() + 90)
-      const y = end.getFullYear()
-      const m = String(end.getMonth() + 1).padStart(2, '0')
-      const d = String(end.getDate()).padStart(2, '0')
-      const toYmd = `${y}-${m}-${d}`
-      const fromYmd = todayIsoLocal()
       const { sessions, operationalToday } = await operationalSessionsApi.getBoardRange(
         fromYmd,
         toYmd,
@@ -256,10 +274,11 @@ const SchedulePage = () => {
 
   const upcomingSessionRows = useMemo(() => {
     const now = new Date()
+    const today = String(todayIso).slice(0, 10)
     return sortedSessionRows.filter(
-      (r) => !r.isCancelled && isOperationalSessionStillUpcoming(r, now),
+      (r) => !r.isCancelled && isOperationalSessionStillUpcoming(r, now, today),
     )
-  }, [sortedSessionRows])
+  }, [sortedSessionRows, todayIso])
 
   const mergedTimelineRaw = sortedSessionRows
 
@@ -299,12 +318,12 @@ const SchedulePage = () => {
 
   const activePatterns = useMemo(() => items.filter((p) => p.isActive !== false), [items])
 
-  const displayedUpcoming = useMemo(() => {
-    if (showAllUpcoming || mergedTimeline.length <= upcomingCap) return mergedTimeline
-    return mergedTimeline.slice(0, upcomingCap)
-  }, [mergedTimeline, showAllUpcoming, upcomingCap])
+  const displayedUpcoming = useMemo(
+    () => sliceUpcomingSessionsForDisplay(mergedTimeline, UPCOMING_SESSIONS_DISPLAY_CAP),
+    [mergedTimeline],
+  )
 
-  const hasMoreUpcoming = mergedTimeline.length > upcomingCap
+  const hasMoreUpcoming = mergedTimeline.length > UPCOMING_SESSIONS_DISPLAY_CAP
 
   const primaryPlaceFallback = useMemo(() => {
     const fromSchedule = items.find((s) => s.placeName)?.placeName
@@ -319,7 +338,6 @@ const SchedulePage = () => {
       n.set('batchId', batchId)
       return n
     })
-    setShowAllUpcoming(false)
     setDrawerSessionId(null)
     setDrawerSeedRow(null)
   }
@@ -618,7 +636,8 @@ const SchedulePage = () => {
               <div className="onrep-type-muted small">
                 {mergedTimelineRaw.length
                   ? 'No sessions match this filter.'
-                  : sessionsEmptyHint || 'No upcoming sessions in this window.'}
+                  : sessionsEmptyHint ||
+                    'No upcoming sessions in the next few weeks. Add a weekly pattern or a one-off session.'}
               </div>
             ) : null}
             {!sessionsLoading &&
@@ -648,14 +667,18 @@ const SchedulePage = () => {
                   />
                 )
               })}
-            {!sessionsLoading && hasMoreUpcoming ? (
+            {!sessionsLoading && hasMoreUpcoming && effectiveBatchId ? (
               <div className="mt-3 pt-2 border-top border-light-subtle">
                 <CButton
                   color="link"
                   className="px-0 text-decoration-none"
-                  onClick={() => setShowAllUpcoming((v) => !v)}
+                  onClick={() =>
+                    navigate(
+                      `/coach/batches/${encodeURIComponent(effectiveBatchId)}/workspace?tab=schedule`,
+                    )
+                  }
                 >
-                  {showAllUpcoming ? 'Show fewer sessions' : 'View all upcoming sessions'}
+                  View full schedule in batch workspace
                 </CButton>
               </div>
             ) : null}

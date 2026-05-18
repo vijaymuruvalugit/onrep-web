@@ -43,8 +43,22 @@ import {
   effectiveOperationalSessionDateYmd,
   isOperationalSessionStillUpcoming,
   normalizeSessionDateYmd,
+  parseSessionLocalDate,
+  sliceUpcomingSessionsForDisplay,
+  UPCOMING_SESSIONS_DISPLAY_CAP,
 } from '../../classes/utils/sessionDisplay'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
+import scheduleApi from '../../schedule/api/scheduleApi'
+
+function addDaysYmd(fromYmd, days) {
+  const d = parseSessionLocalDate(fromYmd)
+  if (!d) return fromYmd
+  d.setDate(d.getDate() + days)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 import { operationalSessionToScheduleCompactRow } from '../../../domain/operationalSessions/adapters/toScheduleCompactRow'
 import { isValidUuid } from '../../../core/activityWorkspace/apiActivityContext'
@@ -64,7 +78,7 @@ const BatchWorkspacePage = () => {
   const { batchId } = useParams()
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState('schedule')
-  const timelineCap = 3
+  const timelineCap = UPCOMING_SESSIONS_DISPLAY_CAP
   const settingsFormRef = useRef(null)
   const didAutoLeadCoachRef = useRef(false)
 
@@ -124,14 +138,15 @@ const BatchWorkspacePage = () => {
   const reloadOpBoard = useCallback(async () => {
     if (!batchId || batchWorkspaceMismatch) return
     const ti = todayIsoLocal()
-    const end = new Date()
-    end.setDate(end.getDate() + 90)
-    const y = end.getFullYear()
-    const m = String(end.getMonth() + 1).padStart(2, '0')
-    const d = String(end.getDate()).padStart(2, '0')
-    const toYmd = `${y}-${m}-${d}`
+    const toYmd = addDaysYmd(ti, 90)
+    const matToYmd = addDaysYmd(ti, 60)
     setOpBoardLoading(true)
     try {
+      try {
+        await scheduleApi.materializeBatchSessions(batchId, { fromDate: ti, toDate: matToYmd })
+      } catch {
+        /* board still loads; materialize is best-effort */
+      }
       const { sessions, operationalToday } = await operationalSessionsApi.getBoardRange(ti, toYmd, batchId)
       if (operationalToday && /^\d{4}-\d{2}-\d{2}$/.test(String(operationalToday))) {
         setBoardOperationalToday(String(operationalToday).slice(0, 10))
@@ -303,13 +318,14 @@ const BatchWorkspacePage = () => {
 
   const upcomingBoardRows = useMemo(() => {
     const now = new Date()
+    const today = String(todayIso).slice(0, 10)
     return (fullMergedTimeline || []).filter(
-      (r) => !r.isCancelled && isOperationalSessionStillUpcoming(r, now),
+      (r) => !r.isCancelled && isOperationalSessionStillUpcoming(r, now, today),
     )
-  }, [fullMergedTimeline])
+  }, [fullMergedTimeline, todayIso])
 
   const compactTimeline = useMemo(
-    () => upcomingBoardRows.slice(0, timelineCap),
+    () => sliceUpcomingSessionsForDisplay(upcomingBoardRows, timelineCap),
     [upcomingBoardRows, timelineCap],
   )
 
@@ -640,7 +656,7 @@ const BatchWorkspacePage = () => {
                       to={schedulePageHref}
                       className="small text-primary text-decoration-none fw-semibold"
                     >
-                      View all upcoming sessions
+                      See more on Schedule
                     </Link>
                   </div>
                 ) : null}

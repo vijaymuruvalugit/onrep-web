@@ -7,9 +7,10 @@ import http from '../../../api/http'
  */
 export const scheduleApi = {
   /** Ensure recurring patterns are materialized into training + operational sessions. */
-  async materializeBatchSessions(batchId) {
+  async materializeBatchSessions(batchId, { fromDate, toDate } = {}) {
     const { data } = await http.post(
       `/batch-schedules/${encodeURIComponent(batchId)}/materialize`,
+      { fromDate, toDate },
     )
     return data || {}
   },

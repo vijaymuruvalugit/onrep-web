@@ -161,8 +161,8 @@ export default function RecurringPatternsList({
         <div>
           <div className="onrep-type-label">Recurring session patterns</div>
           <div className="small text-body-secondary mt-1">
-            A batch can have multiple recurring patterns (morning, evening, weekend, etc.). Upcoming
-            calendar sessions are filled automatically — no manual “generate” step.
+            Set when this batch trains each week (morning, evening, weekends, and so on). Sessions
+            appear on your calendar automatically — no manual generate step.
           </div>
         </div>
         <div className="d-flex gap-2 flex-shrink-0">
@@ -197,8 +197,8 @@ export default function RecurringPatternsList({
 
       {!loading && !patterns.length && batchId ? (
         <CAlert color="info" className="mb-0 py-2 small">
-          No recurring patterns yet — add one to define when this batch trains. Sessions appear on
-          the calendar automatically.
+          No weekly pattern yet. Add one to set days and times — we will add sessions to the
+          calendar for you.
         </CAlert>
       ) : null}
       {!loading && !batchId ? (
