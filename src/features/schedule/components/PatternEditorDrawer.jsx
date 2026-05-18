@@ -171,8 +171,11 @@ export default function PatternEditorDrawer({
     await onSubmit({
       payload: basePayload,
       editMode,
-      effectiveFrom:
-        editMode === RECURRING_PATTERN_EDIT_MODE.NEW_FROM ? effectiveFromDate : tomorrowYmd(),
+      effectiveFrom: isEdit
+        ? editMode === RECURRING_PATTERN_EDIT_MODE.NEW_FROM
+          ? effectiveFromDate
+          : tomorrowYmd()
+        : undefined,
     })
   }
 

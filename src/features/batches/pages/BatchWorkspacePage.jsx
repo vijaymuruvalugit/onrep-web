@@ -109,6 +109,7 @@ const BatchWorkspacePage = () => {
 
   const [opBoardRows, setOpBoardRows] = useState([])
   const [opBoardLoading, setOpBoardLoading] = useState(false)
+  const reloadOpBoardGenerationRef = useRef(0)
   /** Academy/activity calendar "today" from board API (IANA TZ); avoids browser-TZ skew vs India ops. */
   const [boardOperationalToday, setBoardOperationalToday] = useState(null)
   const [startOutsideModal, setStartOutsideModal] = useState(null)
@@ -137,6 +138,8 @@ const BatchWorkspacePage = () => {
 
   const reloadOpBoard = useCallback(async () => {
     if (!batchId || batchWorkspaceMismatch) return
+    const generation = reloadOpBoardGenerationRef.current + 1
+    reloadOpBoardGenerationRef.current = generation
     const ti = todayIsoLocal()
     const toYmd = addDaysYmd(ti, 90)
     setOpBoardLoading(true)
@@ -154,12 +157,16 @@ const BatchWorkspacePage = () => {
         .map((s) => operationalSessionToScheduleCompactRow(s))
         .filter(Boolean)
         .sort(compareOperationalSessionsChronological)
+      if (generation !== reloadOpBoardGenerationRef.current) return
       setOpBoardRows(rows)
     } catch {
+      if (generation !== reloadOpBoardGenerationRef.current) return
       setOpBoardRows([])
       setBoardOperationalToday(null)
     } finally {
-      setOpBoardLoading(false)
+      if (generation === reloadOpBoardGenerationRef.current) {
+        setOpBoardLoading(false)
+      }
     }
   }, [batchId, batchWorkspaceMismatch])
 

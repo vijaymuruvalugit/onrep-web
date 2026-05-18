@@ -30,7 +30,10 @@ export const createSchedule = createAsyncThunk(
     try {
       const response = await scheduleApi.createSchedule(payload)
       const row = response.schedule || null
-      return row ? normalizeScheduleRowForUi(row) : null
+      return {
+        schedule: row ? normalizeScheduleRowForUi(row) : null,
+        materialization: response.materialization ?? null,
+      }
     } catch (error) {
       return thunkApi.rejectWithValue(normalizeApiError(error))
     }

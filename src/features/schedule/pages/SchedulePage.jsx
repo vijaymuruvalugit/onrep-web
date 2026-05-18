@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import {
@@ -27,7 +27,6 @@ import {
   normalizeSessionDateYmd,
   parseSessionLocalDate,
   sliceUpcomingSessionsForDisplay,
-  UPCOMING_SESSIONS_DISPLAY_CAP,
 } from '../../classes/utils/sessionDisplay'
 import {
   isOperationalOneOff,
@@ -56,8 +55,14 @@ function materializationEmptyHint(skipped) {
   if (skipped === 'overlap_or_conflict') {
     return 'Two sessions overlap at the same time. Edit a pattern or remove the conflicting session, then refresh.'
   }
+  if (skipped === 'slots_occupied') {
+    return 'Those session times are already taken on the calendar (often from an old deleted schedule). Open Cancelled or refresh again after clearing conflicts.'
+  }
   return null
 }
+
+/** Schedule page shows more than the compact batch timeline cap. */
+const SCHEDULE_UPCOMING_LIST_CAP = 12
 
 function addDaysYmd(fromYmd, days) {
   const d = parseSessionLocalDate(fromYmd)
@@ -117,6 +122,8 @@ const SchedulePage = () => {
   const [coaches, setCoaches] = useState([])
   /** Academy/activity calendar "today" from board API; null until first successful load. */
   const [operationalTodayYmd, setOperationalTodayYmd] = useState(null)
+  /** Ignore stale board responses when batch changes or a newer refresh started. */
+  const loadSessionsGenerationRef = useRef(0)
 
   const todayIso = operationalTodayYmd ?? todayIsoLocal()
 
@@ -187,6 +194,7 @@ const SchedulePage = () => {
   }, [effectiveBatchId, fetchSchedule])
 
   useEffect(() => {
+    loadSessionsGenerationRef.current += 1
     setOperationalTodayYmd(null)
   }, [effectiveBatchId, activeActivityId])
 
@@ -205,6 +213,8 @@ const SchedulePage = () => {
 
   const loadSessions = useCallback(async () => {
     if (!effectiveBatchId || batchWorkspaceMismatch) return
+    const generation = loadSessionsGenerationRef.current + 1
+    loadSessionsGenerationRef.current = generation
     setSessionsLoading(true)
     setSessionsError(null)
     setSessionsEmptyHint(null)
@@ -236,12 +246,16 @@ const SchedulePage = () => {
             .filter(Boolean)
             .sort(compareOperationalSessionsChronological)
         : []
+      if (generation !== loadSessionsGenerationRef.current) return
       setSessionRows(rows)
     } catch (e) {
+      if (generation !== loadSessionsGenerationRef.current) return
       setSessionsError(friendlyScheduleApiMessage(e))
       setSessionRows([])
     } finally {
-      setSessionsLoading(false)
+      if (generation === loadSessionsGenerationRef.current) {
+        setSessionsLoading(false)
+      }
     }
   }, [effectiveBatchId, batchWorkspaceMismatch])
 
@@ -281,15 +295,14 @@ const SchedulePage = () => {
   // excluded (they're one-offs / ad-hoc, edited via the session detail drawer).
   const nextSessionByPatternId = useMemo(() => {
     const map = {}
-    for (const r of mergedTimelineRaw) {
-      if (r.isCancelled) continue
+    for (const r of upcomingSessionRows) {
       const pid = r.scheduleId || r.schedule_id
       if (!pid) continue
       const key = String(pid)
       if (!map[key]) map[key] = r
     }
     return map
-  }, [mergedTimelineRaw])
+  }, [upcomingSessionRows])
 
   const hasUpcomingByPatternId = useMemo(() => {
     const out = {}
@@ -302,11 +315,11 @@ const SchedulePage = () => {
   const activePatterns = useMemo(() => items.filter((p) => p.isActive !== false), [items])
 
   const displayedUpcoming = useMemo(
-    () => sliceUpcomingSessionsForDisplay(mergedTimeline, UPCOMING_SESSIONS_DISPLAY_CAP),
+    () => sliceUpcomingSessionsForDisplay(mergedTimeline, SCHEDULE_UPCOMING_LIST_CAP),
     [mergedTimeline],
   )
 
-  const hasMoreUpcoming = mergedTimeline.length > UPCOMING_SESSIONS_DISPLAY_CAP
+  const hasMoreUpcoming = mergedTimeline.length > SCHEDULE_UPCOMING_LIST_CAP
 
   const primaryPlaceFallback = useMemo(() => {
     const fromSchedule = items.find((s) => s.placeName)?.placeName
@@ -325,10 +338,14 @@ const SchedulePage = () => {
     setDrawerSeedRow(null)
   }
 
-  const refreshAll = useCallback(() => {
-    if (effectiveBatchId) fetchSchedule(effectiveBatchId)
-    loadSessions()
-  }, [effectiveBatchId, fetchSchedule, loadSessions])
+  const refreshAll = useCallback(async () => {
+    const tasks = [loadSessions()]
+    if (effectiveBatchId) {
+      tasks.unshift(fetchSchedule(effectiveBatchId))
+    }
+    tasks.push(fetchBatches())
+    await Promise.all(tasks)
+  }, [effectiveBatchId, fetchSchedule, loadSessions, fetchBatches])
 
   const handleStartSession = useCallback(
     async (row) => {
@@ -381,7 +398,7 @@ const SchedulePage = () => {
       if (!effectiveBatchId) return
       try {
         if (patternDrawerMode === 'create') {
-          await createSchedule({
+          const created = await createSchedule({
             batchId: effectiveBatchId,
             daysOfWeek: payload.daysOfWeek,
             startTime: payload.startTime,
@@ -393,7 +410,24 @@ const SchedulePage = () => {
             sessionMode: payload.sessionMode || undefined,
             effectiveFrom: effectiveFrom || undefined,
           }).unwrap()
-          setPageNotice({ type: 'success', text: 'Recurring session added.' })
+          const generated = Number(created?.materialization?.created ?? 0)
+          const slotsSkipped = Number(created?.materialization?.slotsSkipped ?? 0)
+          if (generated < 1 && slotsSkipped > 0) {
+            setPageNotice({
+              type: 'warning',
+              text: 'Schedule saved, but those times are already taken on the calendar. Cancel conflicting sessions or refresh to reclaim slots from deleted schedules.',
+            })
+          } else if (generated < 1) {
+            setPageNotice({
+              type: 'warning',
+              text: 'Schedule saved. Tap Refresh to load generated sessions, or add students to this batch if none are enrolled.',
+            })
+          } else {
+            setPageNotice({
+              type: 'success',
+              text: `Recurring session added. ${generated} session${generated === 1 ? '' : 's'} added to the calendar.`,
+            })
+          }
         } else if (patternDrawerSeed?.id) {
           const response = await updatePattern({
             patternId: patternDrawerSeed.id,
@@ -413,7 +447,7 @@ const SchedulePage = () => {
           })
         }
         setPatternDrawerOpen(false)
-        refreshAll()
+        await refreshAll()
       } catch {
         // mutationError surfaces via the drawer alert
       }
@@ -651,6 +685,12 @@ const SchedulePage = () => {
                   />
                 )
               })}
+            {!sessionsLoading && mergedTimeline.length > 0 ? (
+              <div className="onrep-type-muted small mt-2">
+                Showing next {displayedUpcoming.length} of {mergedTimeline.length} upcoming session
+                {mergedTimeline.length === 1 ? '' : 's'}
+              </div>
+            ) : null}
             {!sessionsLoading && hasMoreUpcoming && effectiveBatchId ? (
               <div className="mt-3 pt-2 border-top border-light-subtle">
                 <CButton
