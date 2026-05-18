@@ -367,3 +367,54 @@
   color: var(--cui-secondary-color, #6c757d);
 }
 
+/* Phase 4 — fast coaching panel */
+.skating-ops-page .fast-coaching-chip {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.skating-ops-page .fast-coaching-panel--comfortable .fast-coaching-chip {
+  min-height: 3rem;
+  min-width: 3rem;
+  font-size: 1.05rem;
+}
+
+.skating-ops-page .fast-coaching-marker {
+  min-height: 2.5rem;
+}
+
+.skating-ops-page .fast-coaching-row__label {
+  min-width: 5.5rem;
+}
+
+/* Phase 5 — race mode workspace */
+.skating-ops-page.skating-ops--race-mode .skating-obs-primary-panel {
+  border-color: var(--cui-primary, #321fdb);
+}
+
+.skating-ops-page.skating-ops--race-mode .race-timing-workspace {
+  background: var(--cui-body-bg, #fff);
+  border: 1px solid var(--cui-border-color, #dee2e6);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.skating-ops-page .finish-order-athlete-btn {
+  min-height: 3.25rem;
+  min-width: 8rem;
+  text-align: left;
+  position: relative;
+  padding-left: 2.25rem;
+}
+
+.skating-ops-page .finish-order-athlete-btn__rank {
+  position: absolute;
+  left: 0.5rem;
+  font-weight: 700;
+}
+
+.skating-ops-page.skating-ops--race-mode .live-leaderboard {
+  font-size: 1.05rem;
+}
+

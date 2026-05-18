@@ -1,0 +1,72 @@
+import React, { useCallback, useState } from 'react'
+import { CButton } from '@coreui/react'
+
+/**
+ * Tap athletes in finish order; parent flushes on "Record heat" or idle.
+ */
+export default function FinishOrderCapture({
+  athletes = [],
+  disabled,
+  busy,
+  onSubmitOrder,
+}) {
+  const [order, setOrder] = useState([])
+
+  const toggle = useCallback(
+    (id) => {
+      if (disabled) return
+      const sid = String(id)
+      setOrder((prev) => {
+        const i = prev.indexOf(sid)
+        if (i >= 0) return prev.filter((x) => x !== sid)
+        return [...prev, sid]
+      })
+    },
+    [disabled],
+  )
+
+  const clear = () => setOrder([])
+
+  const submit = () => {
+    if (order.length < 1 || !onSubmitOrder) return
+    void onSubmitOrder(order)
+    setOrder([])
+  }
+
+  return (
+    <div className="finish-order-capture">
+      <p className="small text-body-secondary mb-2">Tap finish order (1st → last)</p>
+      <div className="finish-order-capture__grid d-flex flex-wrap gap-2 mb-2">
+        {athletes.map((a) => {
+          const sid = String(a.studentId || a.id)
+          const pos = order.indexOf(sid)
+          const selected = pos >= 0
+          return (
+            <CButton
+              key={sid}
+              type="button"
+              size="lg"
+              color={selected ? 'primary' : 'light'}
+              className="finish-order-athlete-btn"
+              disabled={disabled || busy}
+              onClick={() => toggle(sid)}
+            >
+              {selected ? (
+                <span className="finish-order-athlete-btn__rank">{pos + 1}</span>
+              ) : null}
+              <span className="text-truncate">{a.fullName || a.full_name || 'Athlete'}</span>
+            </CButton>
+          )
+        })}
+      </div>
+      <div className="d-flex flex-wrap gap-2">
+        <CButton type="button" color="primary" size="sm" disabled={order.length < 1 || busy} onClick={submit}>
+          Record heat
+        </CButton>
+        <CButton type="button" color="light" size="sm" disabled={order.length === 0 || busy} onClick={clear}>
+          Clear
+        </CButton>
+      </div>
+    </div>
+  )
+}

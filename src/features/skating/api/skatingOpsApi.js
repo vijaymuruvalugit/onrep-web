@@ -70,13 +70,54 @@ export const skatingOpsApi = {
     return data?.races ?? []
   },
 
-  /** Rapid Observation — session-linked KPI scores (student_assessments payload). */
+  /** Phase 4 — batched coaching events (not formal assessments). */
+  async postCoachingEventsBatch(sessionId, body) {
+    const { data } = await http.post(
+      `${BASE}/sessions/${encodeURIComponent(sessionId)}/coaching-events`,
+      body,
+    )
+    return data
+  },
+
+  async listCoachingEvents(sessionId, params) {
+    const { data } = await http.get(
+      `${BASE}/sessions/${encodeURIComponent(sessionId)}/coaching-events`,
+      { params },
+    )
+    return data?.events ?? []
+  },
+
+  /** Formal 9-KPI assessment → student_assessments. */
   async postRapidObservation(sessionId, body) {
     const { data } = await http.post(
       `${BASE}/sessions/${encodeURIComponent(sessionId)}/rapid-observation`,
       body,
     )
     return data
+  },
+
+  async postRaceResult(sessionId, body) {
+    const { data } = await http.post(
+      `${BASE}/sessions/${encodeURIComponent(sessionId)}/race-results`,
+      body,
+    )
+    return data
+  },
+
+  async postRaceFinishOrder(sessionId, body) {
+    const { data } = await http.post(
+      `${BASE}/sessions/${encodeURIComponent(sessionId)}/race-results/finish-order`,
+      body,
+    )
+    return data
+  },
+
+  async getLeaderboard(sessionId, params) {
+    const { data } = await http.get(
+      `${BASE}/sessions/${encodeURIComponent(sessionId)}/leaderboard`,
+      { params },
+    )
+    return data?.leaderboard ?? null
   },
 }
 

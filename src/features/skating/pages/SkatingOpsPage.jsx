@@ -36,7 +36,9 @@ import { DEFAULT_RAPID_KPIS } from '../constants/rapidObservationKpis'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
 import AthleteCaptureDrawer from '../components/AthleteCaptureDrawer'
 import AthletesInSessionPanel from '../components/AthletesInSessionPanel'
-import QualitativeObservationStrip from '../components/QualitativeObservationStrip'
+import FastCoachingPanel from '../components/FastCoachingPanel'
+import RaceTimingWorkspace, { isRacePhaseBlock } from '../components/RaceTimingWorkspace'
+import { useCoachingDraftQueue } from '../hooks/useCoachingDraftQueue'
 import SessionCommandHeader from '../components/SessionCommandHeader'
 import StartSessionModal from '../components/StartSessionModal'
 import { deriveSessionLifecycle, formatElapsedLiveLabel } from '../utils/sessionLifecycle'
@@ -342,6 +344,9 @@ const SkatingOpsPage = () => {
   const [sessionObservationCount, setSessionObservationCount] = useState(0)
   const [observedStudentIds, setObservedStudentIds] = useState(() => new Set())
   const [timingPanelOpen, setTimingPanelOpen] = useState(true)
+  const [raceBusy, setRaceBusy] = useState(false)
+  const [coachingCollapsed, setCoachingCollapsed] = useState(false)
+  const [focusedQuickCategory, setFocusedQuickCategory] = useState('effort')
 
   const [captureDrawerStudentId, setCaptureDrawerStudentId] = useState(null)
   const [athleteFocusDraft, setAthleteFocusDraft] = useState('')
@@ -441,7 +446,10 @@ const SkatingOpsPage = () => {
       setBundleError(null)
     }
     try {
-      const b = await skatingOpsApi.getSessionBundle(sessionId, { recentLapLimit: 120 })
+      const b = await skatingOpsApi.getSessionBundle(sessionId, {
+        recentLapLimit: 120,
+        blockId: opts.blockId || undefined,
+      })
       setBundle(b)
       setBundleFetchedAt(Date.now())
       setLapRaceId((prev) => prev || b?.suggestedFocusRaceId || '')
@@ -1263,6 +1271,69 @@ const SkatingOpsPage = () => {
     [focusLapInput, coachLive],
   )
 
+  const sessionModeForCoach =
+    bundle?.session?.sessionMode || selSession?.sessionMode || 'practice'
+
+  const coachingDisabled =
+    !lapStudentId || obsSaving || uiPaused || opsState === 'ended' || !selectedSessionId
+
+  const runPostCaptureSuccess = useCallback(
+    (sidKey, sk) => {
+      setSessionObservationCount((c) => c + 1)
+      setObservedStudentIds((prev) => new Set(prev).add(sidKey))
+      setLastObsLabel(`${sk?.full_name || 'Skater'} · ${formatClockShort(new Date())}`)
+      setObsPulse(true)
+      window.setTimeout(() => setObsPulse(false), 700)
+      if (rosterForSession.length >= 2) {
+        const i = rosterForSession.findIndex((r) => String(r.id) === sidKey)
+        const next = rosterForSession[(i >= 0 ? i + 1 : 0) % rosterForSession.length]
+        const fromName = sk?.full_name || 'Skater'
+        const targetId = String(next.id)
+        const targetName = next.full_name || 'Skater'
+        const pauseMs = computeAdvancePauseMs(advancePauseRhythmRef.current)
+        advancePauseRhythmRef.current += 1
+        const startAt = Date.now()
+        const until = startAt + pauseMs
+        setObsAdvancePending({
+          fromId: sidKey,
+          fromName,
+          targetId,
+          targetName,
+          startAt,
+          durationMs: pauseMs,
+          until,
+        })
+        advanceTimerRef.current = window.setTimeout(() => {
+          advanceTimerRef.current = null
+          executeObsAdvance(sidKey, fromName, targetId)
+        }, pauseMs)
+      } else if (!coachLive) {
+        focusLapInput()
+      }
+    },
+    [rosterForSession, executeObsAdvance, focusLapInput, coachLive],
+  )
+
+  const coachingQueue = useCoachingDraftQueue({
+    sessionId: selectedSessionId,
+    studentId: lapStudentId,
+    sessionMode: sessionModeForCoach,
+    blockId: activeBlockId,
+    disabled: coachingDisabled,
+    onFlushSuccess: async () => {
+      if (!selectedSessionId || !lapStudentId) return
+      const sidKey = String(lapStudentId)
+      const sk = rosterForSession.find((r) => String(r.id) === sidKey)
+      bumpSkatingOpsMetric('observationSaveSuccess')
+      setObsSyncedAt(Date.now())
+      await loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
+      runPostCaptureSuccess(sidKey, sk)
+    },
+    onFlushError: (e) => {
+      setObsError(e?.message || 'Could not sync coaching capture')
+    },
+  })
+
   const submitObservation = useCallback(
     async ({ manual = false } = {}) => {
       if (!selectedSessionId || !lapStudentId || uiPaused || opsState === 'ended') return
@@ -1288,42 +1359,12 @@ const SkatingOpsPage = () => {
         obsLastSentByStudentRef.current[sidKey] = dedupeSig
         writeObsTemplate(selectedSessionId, scores)
         setObsSyncedAt(Date.now())
-        setSessionObservationCount((c) => c + 1)
-        setObservedStudentIds((prev) => new Set(prev).add(sidKey))
-        setLastObsLabel(`${sk?.full_name || 'Skater'} · ${formatClockShort(new Date())}`)
-        setObsPulse(true)
-        window.setTimeout(() => setObsPulse(false), 700)
         setObsFlashKeys(new Set(Object.keys(scores)))
         window.setTimeout(() => setObsFlashKeys(new Set()), 450)
         obsAutoSaveSuppressedRef.current = true
         setObsScores({ ...scores })
-        await loadBundle(selectedSessionId)
-        if (rosterForSession.length >= 2) {
-          const i = rosterForSession.findIndex((r) => String(r.id) === sidKey)
-          const next = rosterForSession[(i >= 0 ? i + 1 : 0) % rosterForSession.length]
-          const fromName = sk?.full_name || 'Skater'
-          const targetId = String(next.id)
-          const targetName = next.full_name || 'Skater'
-          const pauseMs = computeAdvancePauseMs(advancePauseRhythmRef.current)
-          advancePauseRhythmRef.current += 1
-          const startAt = Date.now()
-          const until = startAt + pauseMs
-          setObsAdvancePending({
-            fromId: sidKey,
-            fromName,
-            targetId,
-            targetName,
-            startAt,
-            durationMs: pauseMs,
-            until,
-          })
-          advanceTimerRef.current = window.setTimeout(() => {
-            advanceTimerRef.current = null
-            executeObsAdvance(sidKey, fromName, targetId)
-          }, pauseMs)
-        } else {
-          if (!coachLive) focusLapInput()
-        }
+        await loadBundle(selectedSessionId, { blockId: activeBlockId })
+        runPostCaptureSuccess(sidKey, sk)
       } catch (e) {
         setObsError(
           e?.message ||
@@ -1350,6 +1391,8 @@ const SkatingOpsPage = () => {
       clearPendingObsAdvance,
       executeObsAdvance,
       coachLive,
+      activeBlockId,
+      runPostCaptureSuccess,
     ],
   )
 
@@ -1447,6 +1490,9 @@ const SkatingOpsPage = () => {
     () => sortedSessionBlocks.find((x) => String(x.id) === String(activeBlockId)),
     [sortedSessionBlocks, activeBlockId],
   )
+
+  const sessionMode = bundle?.session?.sessionMode || selSession?.sessionMode || 'practice'
+  const isRaceMode = isRacePhaseBlock(activeBlockMeta)
 
   const activePhaseAthletes = useMemo(() => {
     if (!activeBlockId) return []
@@ -1571,10 +1617,11 @@ const SkatingOpsPage = () => {
 
   const handleSelectBlock = useCallback(
     (blockId) => {
+      void coachingQueue.flushNow()
       setActiveBlockId(blockId)
       if (selectedSessionId) writeActiveBlockId(selectedSessionId, blockId)
     },
-    [selectedSessionId],
+    [selectedSessionId, coachingQueue],
   )
 
   const handleReorderBlocks = useCallback(
@@ -1675,6 +1722,86 @@ const SkatingOpsPage = () => {
     },
     [selectedSessionId, handleSelectBlock],
   )
+
+  const handleRaceFinishOrder = useCallback(
+    async (studentIds) => {
+      if (!selectedSessionId) return
+      setRaceBusy(true)
+      try {
+        await skatingOpsApi.postRaceFinishOrder(selectedSessionId, {
+          studentIds,
+          blockId: activeBlockId || undefined,
+          heatNumber: activePhaseAthletes[0]?.heatNumber ?? undefined,
+        })
+        await loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
+      } finally {
+        setRaceBusy(false)
+      }
+    },
+    [selectedSessionId, activeBlockId, activePhaseAthletes, loadBundle],
+  )
+
+  const handleRaceManualTime = useCallback(
+    async (studentId, seconds) => {
+      if (!selectedSessionId) return
+      setRaceBusy(true)
+      try {
+        await skatingOpsApi.postRaceResult(selectedSessionId, {
+          studentId,
+          seconds,
+          blockId: activeBlockId || undefined,
+          heatNumber: activePhaseAthletes[0]?.heatNumber ?? undefined,
+        })
+        await loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
+      } finally {
+        setRaceBusy(false)
+      }
+    },
+    [selectedSessionId, activeBlockId, activePhaseAthletes, loadBundle],
+  )
+
+  useEffect(() => {
+    if (!selectedSessionId || !activeBlockId) return
+    void loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
+  }, [activeBlockId, selectedSessionId, loadBundle])
+
+  useEffect(() => {
+    if (!bundle?.recentCoachingEvents?.length) return
+    setObservedStudentIds((prev) => {
+      const next = new Set(prev)
+      for (const ev of bundle.recentCoachingEvents) {
+        if (ev.studentId) next.add(String(ev.studentId))
+      }
+      return next
+    })
+  }, [bundle?.recentCoachingEvents])
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target?.matches?.('input, textarea, select')) return
+      if (!lapStudentId || !rosterForSession.length) return
+      const idx = rosterForSession.findIndex((r) => String(r.id) === String(lapStudentId))
+      if (e.key === 'ArrowDown' && idx >= 0) {
+        e.preventDefault()
+        const next = rosterForSession[(idx + 1) % rosterForSession.length]
+        setLapStudentId(String(next.id))
+      } else if (e.key === 'ArrowUp' && idx >= 0) {
+        e.preventDefault()
+        const next = rosterForSession[(idx - 1 + rosterForSession.length) % rosterForSession.length]
+        setLapStudentId(String(next.id))
+      } else if (e.key >= '1' && e.key <= '5') {
+        coachingQueue.setQuickScore(focusedQuickCategory, Number(e.key))
+      } else if (e.key === 'p') {
+        coachingQueue.addMarker('positive')
+      } else if (e.key === 'c') {
+        coachingQueue.addMarker('concern')
+      } else if (e.key === 'h') {
+        coachingQueue.addMarker('highlight')
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lapStudentId, rosterForSession, focusedQuickCategory, coachingQueue])
 
   const blockListProps = {
     blocks: sortedSessionBlocks,
@@ -2015,17 +2142,18 @@ const SkatingOpsPage = () => {
                         {SESSION_OPS_COPY.quickNoticeTitle}
                       </span>
                       <span className="small text-body-secondary opacity-75" aria-live="polite">
-                        {obsSaving ? (
+                        {coachingQueue.syncState === 'syncing' || obsSaving ? (
                           <span className="skating-sync-pending">Syncing…</span>
-                        ) : obsSyncedAt ? (
+                        ) : coachingQueue.syncState === 'saved' || obsSyncedAt ? (
                           <span className="skating-sync-ok">
-                            Settled · {formatClockShort(obsSyncedAt)}
+                            Settled
+                            {obsSyncedAt ? ` · ${formatClockShort(obsSyncedAt)}` : ''}
                           </span>
                         ) : (
                           <span>
                             {coachLive
-                              ? 'Tap when something stands out — you’re in charge of who’s next.'
-                              : 'Tap a number when something stands out — it saves on its own.'}
+                              ? 'Tap when something stands out — syncs in a moment.'
+                              : 'Tap when something stands out — syncs automatically.'}
                           </span>
                         )}
                       </span>
@@ -2114,35 +2242,73 @@ const SkatingOpsPage = () => {
                         </CButton>
                       </div>
                     ) : null}
-                    <QualitativeObservationStrip
-                      obsScores={obsScores}
-                      obsFlashKeys={obsFlashKeys}
-                      disabled={obsSaving || uiPaused || opsState === 'ended' || !lapStudentId}
-                      onTap={applyObsTap}
-                      comfortable={coachLive}
-                    />
-                    <details
-                      className="small mt-2"
-                      open={obsNotesOpen}
-                      onToggle={(e) => setObsNotesOpen(e.target.open)}
-                    >
-                      <summary
-                        className="text-body-secondary user-select-none"
-                        style={{ cursor: 'pointer' }}
+                    {isRaceMode ? (
+                      <RaceTimingWorkspace
+                        athletes={activePhaseAthletes.length ? activePhaseAthletes : rosterForSession}
+                        leaderboard={bundle?.leaderboard}
+                        disabled={uiPaused || opsState === 'ended'}
+                        busy={raceBusy}
+                        heatNumber={activePhaseAthletes[0]?.heatNumber}
+                        onFinishOrder={handleRaceFinishOrder}
+                        onManualTime={handleRaceManualTime}
+                      />
+                    ) : null}
+                    {!isRaceMode || !coachingCollapsed ? (
+                      <FastCoachingPanel
+                        sessionMode={sessionMode}
+                        draft={coachingQueue.draft}
+                        syncState={coachingQueue.syncState}
+                        syncError={coachingQueue.syncError || obsError}
+                        disabled={coachingDisabled}
+                        comfortable={coachLive}
+                        onQuickScore={(key, n) => {
+                          setFocusedQuickCategory(key)
+                          coachingQueue.setQuickScore(key, n)
+                        }}
+                        onToggleTag={coachingQueue.toggleTag}
+                        onMarker={coachingQueue.addMarker}
+                        onNotesChange={coachingQueue.setNotes}
+                        onManualSync={() => void coachingQueue.flushNow()}
+                        obsScores={obsScores}
+                        obsFlashKeys={obsFlashKeys}
+                        onFormalTap={applyObsTap}
+                        formalDisabled={obsSaving || uiPaused || opsState === 'ended' || !lapStudentId}
+                        formalSaving={obsSaving}
+                      />
+                    ) : (
+                      <CButton
+                        type="button"
+                        color="link"
+                        size="sm"
+                        className="p-0 mb-2"
+                        onClick={() => setCoachingCollapsed(false)}
                       >
-                        Add a short note (optional)
+                        Show quick coaching
+                      </CButton>
+                    )}
+                    {isRaceMode && !coachingCollapsed ? (
+                      <CButton
+                        type="button"
+                        color="link"
+                        size="sm"
+                        className="p-0 mt-1"
+                        onClick={() => setCoachingCollapsed(true)}
+                      >
+                        Hide coaching (timing focus)
+                      </CButton>
+                    ) : null}
+                    <details className="small mt-2" open={obsNotesOpen} onToggle={(e) => setObsNotesOpen(e.target.open)}>
+                      <summary className="text-body-secondary user-select-none" style={{ cursor: 'pointer' }}>
+                        Assessment note (formal grid)
                       </summary>
                       <CFormInput
                         className="mt-2 mb-1"
-                        placeholder="Only if it helps you remember"
+                        placeholder="Included with formal assessment save"
                         value={obsNotes}
                         disabled={obsSaving || uiPaused || opsState === 'ended'}
                         onChange={(e) => {
                           obsAutoSaveSuppressedRef.current = false
                           setObsNotes(e.target.value)
-                        }}
-                        onFocus={() => {
-                          obsAutoSaveSuppressedRef.current = false
                         }}
                       />
                     </details>
@@ -2156,14 +2322,14 @@ const SkatingOpsPage = () => {
                           disabled={obsSaving || uiPaused || opsState === 'ended' || !lapStudentId}
                           onClick={() => void submitObservation({ manual: true })}
                         >
-                          Sync now
+                          Sync formal assessment
                         </CButton>
                       </div>
                     ) : null}
                   </section>
 
                   <details
-                    className={`skating-timing-advanced border rounded mb-3${coachLive ? ' coach-recede coach-recede-latent' : ''}`}
+                    className={`skating-timing-advanced border rounded mb-3${coachLive && !isRaceMode ? ' coach-recede coach-recede-latent' : ''}`}
                     open={timingPanelOpen}
                     onToggle={(e) => setTimingPanelOpen(e.target.open)}
                   >
@@ -2586,7 +2752,10 @@ const SkatingOpsPage = () => {
   }
 
   return (
-    <div className="skating-ops-page px-1" data-testid="skating-ops-page">
+    <div
+      className={`skating-ops-page px-1${isRaceMode ? ' skating-ops--race-mode' : ''}`}
+      data-testid="skating-ops-page"
+    >
       {inner}
     </div>
   )

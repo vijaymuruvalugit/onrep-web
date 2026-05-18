@@ -9,10 +9,11 @@ export default function QualitativeObservationStrip({
   disabled,
   onTap,
   comfortable = false,
+  kpis = DEFAULT_RAPID_KPIS,
 }) {
   return (
     <div className={comfortable ? 'rapid-kpi-strip--comfortable' : undefined}>
-      {DEFAULT_RAPID_KPIS.map(({ key, label }) => (
+      {kpis.map(({ key, label }) => (
         <div
           key={key}
           className={`rapid-kpi-row mb-2 d-flex align-items-center flex-wrap gap-2${
