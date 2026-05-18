@@ -6,6 +6,14 @@ import http from '../../../api/http'
  * `/recurring-patterns/*` and `/batches/:batchId/recurring-patterns`.
  */
 export const scheduleApi = {
+  /** Ensure recurring patterns are materialized into training + operational sessions. */
+  async materializeBatchSessions(batchId) {
+    const { data } = await http.post(
+      `/batch-schedules/${encodeURIComponent(batchId)}/materialize`,
+    )
+    return data || {}
+  },
+
   async listBatchSchedules(batchId, opts = {}) {
     const params = new URLSearchParams()
     if (opts.includeHistory) params.set('include_history', 'true')

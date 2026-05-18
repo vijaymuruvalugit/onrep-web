@@ -39,8 +39,22 @@ import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 import { useIsScheduleWide } from '../../../hooks/useMediaQuery'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
+import scheduleApi from '../api/scheduleApi'
 import { RECURRING_PATTERN_EDIT_MODE } from '@onrep/contracts/recurring-patterns'
 import './SchedulePage.scss'
+
+function materializationEmptyHint(skipped) {
+  if (skipped === 'no_active_students') {
+    return 'Add at least one active student to this batch — recurring patterns only generate upcoming sessions when the batch has enrolled students.'
+  }
+  if (skipped === 'no_active_patterns') {
+    return 'No active recurring patterns overlap the generation window.'
+  }
+  if (skipped === 'overlap_or_conflict') {
+    return 'Could not generate sessions because of a schedule time conflict. Edit the pattern or remove the conflicting session.'
+  }
+  return null
+}
 
 const SchedulePage = () => {
   const navigate = useNavigate()
@@ -84,6 +98,7 @@ const SchedulePage = () => {
   const [adjustNextError, setAdjustNextError] = useState(null)
   const [adjustNextBusy, setAdjustNextBusy] = useState(false)
   const [pageNotice, setPageNotice] = useState(null)
+  const [sessionsEmptyHint, setSessionsEmptyHint] = useState(null)
   const [coaches, setCoaches] = useState([])
   /** Academy/activity calendar "today" from board API; null until first successful load. */
   const [operationalTodayYmd, setOperationalTodayYmd] = useState(null)
@@ -177,7 +192,28 @@ const SchedulePage = () => {
     if (!effectiveBatchId || batchWorkspaceMismatch) return
     setSessionsLoading(true)
     setSessionsError(null)
+    setSessionsEmptyHint(null)
     try {
+      try {
+        const mat = await scheduleApi.materializeBatchSessions(effectiveBatchId)
+        const skipped = mat?.materialization?.skipped || mat?.skipped
+        const hint = materializationEmptyHint(skipped)
+        if (hint) setSessionsEmptyHint(hint)
+      } catch (matErr) {
+        const body = matErr?.response?.data
+        const skipped = body?.materialization?.skipped || body?.skipped
+        const hint = materializationEmptyHint(skipped)
+        if (hint) {
+          setSessionsEmptyHint(hint)
+        } else {
+          setSessionsError(
+            body?.error ||
+              matErr?.message ||
+              'Could not refresh sessions from recurring patterns.',
+          )
+        }
+      }
+
       const end = new Date()
       end.setDate(end.getDate() + 90)
       const y = end.getFullYear()
@@ -521,7 +557,7 @@ const SchedulePage = () => {
           onSkipNext={handleSkipNextForPattern}
           onAdjustNext={openAdjustNext}
           onDeactivate={handleDeactivatePattern}
-          onRefresh={() => fetchSchedule(effectiveBatchId)}
+          onRefresh={refreshAll}
         />
       </section>
 
@@ -582,7 +618,7 @@ const SchedulePage = () => {
               <div className="onrep-type-muted small">
                 {mergedTimelineRaw.length
                   ? 'No sessions match this filter.'
-                  : 'No upcoming sessions in this window.'}
+                  : sessionsEmptyHint || 'No upcoming sessions in this window.'}
               </div>
             ) : null}
             {!sessionsLoading &&
