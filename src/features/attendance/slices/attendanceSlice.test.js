@@ -7,6 +7,7 @@ import attendanceApi from '../api/attendanceApi'
 vi.mock('../api/attendanceApi', () => ({
   default: {
     markBulkAttendance: vi.fn(),
+    getClassRoster: vi.fn(),
   },
 }))
 
@@ -17,6 +18,10 @@ describe('attendanceSlice saveAttendance', () => {
 
   it('fulfilled clears saving and sets success', async () => {
     attendanceApi.markBulkAttendance.mockResolvedValue({ ok: true })
+    attendanceApi.getClassRoster.mockResolvedValue({
+      students: [{ id: 's1', attendanceStatus: 'present' }],
+      attendanceEligible: true,
+    })
     const store = configureStore({ reducer: { attendance: attendanceReducer } })
     await store.dispatch(
       saveAttendance({

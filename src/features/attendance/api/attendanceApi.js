@@ -1,4 +1,5 @@
 import http from '../../../api/http'
+import { draftMarksToApiPayload } from '../utils/attendanceMarks'
 
 function mergeRosterAttendance(data) {
   const students = Array.isArray(data?.students) ? data.students : []
@@ -22,12 +23,20 @@ export const attendanceApi = {
     return {
       ...payload,
       students: mergeRosterAttendance(payload),
+      session: payload.session ?? null,
+      attendanceEligible: payload.attendanceEligible !== false,
+      attendanceEligibilityError: payload.attendanceEligibilityError ?? null,
     }
   },
 
   async markBulkAttendance(classId, marks) {
+    const apiMarks = Array.isArray(marks) && marks[0]?.status !== undefined
+      ? draftMarksToApiPayload(
+          Object.fromEntries(marks.map((m) => [m.studentId, m])),
+        )
+      : marks
     const { data } = await http.post(`/sessions/${encodeURIComponent(classId)}/attendance/bulk`, {
-      marks,
+      marks: apiMarks,
     })
     return data || {}
   },

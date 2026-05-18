@@ -25,6 +25,7 @@ export function useAttendance() {
       setMark,
       save,
       reset,
+      canMark: state.attendanceEligible,
     }),
     [state, fetchRoster, setMark, save, reset],
   )
