@@ -43,7 +43,6 @@ import { deriveSessionLifecycle, formatElapsedLiveLabel } from '../utils/session
 import { bumpSkatingOpsMetric } from '../utils/skatingOpsInternalMetrics'
 import { computeSessionSummary } from '../utils/sessionTodaySummary'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
-import { selectPrimaryFocusSessionId } from '../../../domain/operationalSessions/selectors/selectPrimaryFocusSession'
 import { operationalStateToLegacyOpsState } from '../../../domain/operationalSessions/helpers/stateLabels'
 import { isOperationalSessionCancelled } from '../../../domain/operationalSessions/helpers/sessionActions'
 import { devLogEmptyDayBoard } from '../../../domain/operationalSessions/helpers/devDayBoardLog'
@@ -317,7 +316,6 @@ const SkatingOpsPage = () => {
 
   const lapSecondsRef = useRef(null)
   const forceDuplicateRef = useRef(false)
-  const restoredRef = useRef(false)
   const manualEffortOverrideRef = useRef(false)
   const lastModerateBlurbKeyRef = useRef('')
   /** Skip auto-save when scores were hydrated from template / post-advance (not a new “notice”). */
@@ -411,10 +409,6 @@ const SkatingOpsPage = () => {
       if (!silent) setBundleLoading(false)
     }
   }, [])
-
-  useEffect(() => {
-    restoredRef.current = false
-  }, [dateYmd])
 
   useEffect(() => {
     loadDayBoard()
@@ -560,29 +554,6 @@ const SkatingOpsPage = () => {
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [selectedSessionId, loadBundle, loadDayBoard])
-
-  /** Prefer live session on the day board; else last stored; URL param wins if already set. */
-  useEffect(() => {
-    if (!dayBoard || sessionParam || restoredRef.current) return
-    const list = sortDayBoardSessions(dayBoard.sessions || [])
-    const ids = new Set(list.map((s) => String(s.id)))
-    let pick = selectPrimaryFocusSessionId(list)
-    if (pick && !ids.has(String(pick))) pick = null
-    if (!pick) {
-      try {
-        const st = sessionStorage.getItem(SK_ACTIVE_SESSION)
-        if (st && ids.has(st)) pick = st
-      } catch {
-        /* ignore */
-      }
-    }
-    if (pick) {
-      restoredRef.current = true
-      const next = new URLSearchParams(searchParams)
-      next.set('session', pick)
-      setSearchParams(next)
-    }
-  }, [dayBoard, sessionParam, searchParams, setSearchParams])
 
   useEffect(() => {
     try {
