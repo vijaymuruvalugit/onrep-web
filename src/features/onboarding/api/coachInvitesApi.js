@@ -18,6 +18,13 @@ export const coachInvitesApi = {
     const { data } = await http.delete(`/onboarding/coach-invites/${encodeURIComponent(userId)}`)
     return data || {}
   },
+
+  async resendCoachInvite(userId) {
+    const { data } = await http.post(
+      `/onboarding/coach-invites/${encodeURIComponent(userId)}/resend`,
+    )
+    return data || {}
+  },
 }
 
 export default coachInvitesApi

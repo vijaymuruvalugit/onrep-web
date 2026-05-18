@@ -9,6 +9,7 @@ const initialState = {
   resendLoadingId: null,
   revokeLoadingId: null,
   actionError: null,
+  resendSuccess: false,
 }
 
 export const fetchCoachParentsOverview = createAsyncThunk(
@@ -53,6 +54,7 @@ const coachParentsSlice = createSlice({
   reducers: {
     clearCoachParentsActionError(state) {
       state.actionError = null
+      state.resendSuccess = false
     },
   },
   extraReducers: (builder) => {
@@ -72,9 +74,11 @@ const coachParentsSlice = createSlice({
       .addCase(resendCoachParentInvite.pending, (state, action) => {
         state.resendLoadingId = action.meta.arg.inviteId
         state.actionError = null
+        state.resendSuccess = false
       })
       .addCase(resendCoachParentInvite.fulfilled, (state) => {
         state.resendLoadingId = null
+        state.resendSuccess = true
       })
       .addCase(resendCoachParentInvite.rejected, (state, action) => {
         state.resendLoadingId = null

@@ -12,6 +12,9 @@ const initialState = {
   lastInviteResponse: null,
   revokeLoadingId: null,
   revokeError: null,
+  resendLoadingId: null,
+  resendError: null,
+  resendSuccess: false,
 }
 
 export const fetchCoachInvites = createAsyncThunk('coachInvites/fetchList', async (_, thunkApi) => {
@@ -47,6 +50,18 @@ export const revokeCoachInviteThunk = createAsyncThunk(
   },
 )
 
+export const resendCoachInviteThunk = createAsyncThunk(
+  'coachInvites/resend',
+  async (userId, thunkApi) => {
+    try {
+      const data = await coachInvitesApi.resendCoachInvite(userId)
+      return { userId, ...data }
+    } catch (error) {
+      return thunkApi.rejectWithValue(normalizeApiError(error))
+    }
+  },
+)
+
 const coachInvitesSlice = createSlice({
   name: 'coachInvites',
   initialState,
@@ -58,6 +73,10 @@ const coachInvitesSlice = createSlice({
     },
     clearCoachInviteRevokeError(state) {
       state.revokeError = null
+    },
+    clearCoachInviteResendState(state) {
+      state.resendError = null
+      state.resendSuccess = false
     },
   },
   extraReducers: (builder) => {
@@ -100,9 +119,22 @@ const coachInvitesSlice = createSlice({
         state.revokeLoadingId = null
         state.revokeError = action.payload || { message: 'Unable to revoke invite.' }
       })
+      .addCase(resendCoachInviteThunk.pending, (state, action) => {
+        state.resendLoadingId = action.meta.arg
+        state.resendError = null
+        state.resendSuccess = false
+      })
+      .addCase(resendCoachInviteThunk.fulfilled, (state) => {
+        state.resendLoadingId = null
+        state.resendSuccess = true
+      })
+      .addCase(resendCoachInviteThunk.rejected, (state, action) => {
+        state.resendLoadingId = null
+        state.resendError = action.payload || { message: 'Unable to resend invite.' }
+      })
   },
 })
 
-export const { clearCoachInviteSubmitState, clearCoachInviteRevokeError } =
+export const { clearCoachInviteSubmitState, clearCoachInviteRevokeError, clearCoachInviteResendState } =
   coachInvitesSlice.actions
 export default coachInvitesSlice.reducer

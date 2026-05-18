@@ -33,6 +33,7 @@ const ParentsOverviewPage = () => {
     actionError,
     resendLoadingId,
     revokeLoadingId,
+    resendSuccess,
     loadParentsOverview,
     resendInvite,
     revokeInvite,
@@ -75,6 +76,12 @@ const ParentsOverviewPage = () => {
       {actionError ? (
         <CAlert color="warning" dismissible onClose={clearActionError}>
           {actionError.message || 'Action failed.'}
+        </CAlert>
+      ) : null}
+
+      {resendSuccess ? (
+        <CAlert color="success" dismissible onClose={clearActionError}>
+          Parent invite resent — a new link was emailed.
         </CAlert>
       ) : null}
 

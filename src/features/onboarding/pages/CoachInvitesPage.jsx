@@ -59,11 +59,16 @@ const CoachInvitesPage = () => {
     lastInviteResponse,
     revokeLoadingId,
     revokeError,
+    resendLoadingId,
+    resendError,
+    resendSuccess,
     loadCoachInvites,
     sendCoachInvite,
     revokeCoachInvite,
+    resendCoachInvite,
     clearSubmitState,
     clearRevokeError,
+    clearResendState,
   } = useCoachInvites()
 
   const [email, setEmail] = useState('')
@@ -79,6 +84,12 @@ const CoachInvitesPage = () => {
       void loadCoachInvites()
     }
   }, [submitSuccess, loadCoachInvites])
+
+  useEffect(() => {
+    if (resendSuccess) {
+      void loadCoachInvites()
+    }
+  }, [resendSuccess, loadCoachInvites])
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -96,6 +107,14 @@ const CoachInvitesPage = () => {
   const onRevoke = async (userId) => {
     clearRevokeError()
     const result = await revokeCoachInvite(userId)
+    if (result.meta.requestStatus === 'fulfilled') {
+      void loadCoachInvites()
+    }
+  }
+
+  const onResend = async (row) => {
+    clearResendState()
+    const result = await resendCoachInvite(row.userId)
     if (result.meta.requestStatus === 'fulfilled') {
       void loadCoachInvites()
     }
@@ -155,6 +174,18 @@ const CoachInvitesPage = () => {
       {revokeError ? (
         <CAlert color="danger" dismissible onClose={clearRevokeError}>
           {revokeError.message || 'Revoke failed.'}
+        </CAlert>
+      ) : null}
+
+      {resendError ? (
+        <CAlert color="danger" dismissible onClose={clearResendState}>
+          {resendError.message || 'Resend failed.'}
+        </CAlert>
+      ) : null}
+
+      {resendSuccess ? (
+        <CAlert color="success" dismissible onClose={clearResendState}>
+          Invite resent — a fresh sign-up link was emailed with a new 48-hour expiry.
         </CAlert>
       ) : null}
 
@@ -255,7 +286,10 @@ const CoachInvitesPage = () => {
               </CTableHead>
               <CTableBody>
                 {invites.map((row) => {
-                  const canRevoke = row.status === 'pending' || row.status === 'expired'
+                  const canResend = row.status === 'pending' || row.status === 'expired'
+                  const canRevoke = canResend
+                  const rowBusy =
+                    revokeLoadingId === row.userId || resendLoadingId === row.userId
                   return (
                     <CTableRow key={row.userId}>
                       <CTableDataCell>{row.name || '—'}</CTableDataCell>
@@ -268,16 +302,35 @@ const CoachInvitesPage = () => {
                       </CTableDataCell>
                       <CTableDataCell className="small">{formatTs(row.createdAt)}</CTableDataCell>
                       <CTableDataCell>
-                        {canRevoke ? (
-                          <CButton
-                            color="danger"
-                            variant="outline"
-                            size="sm"
-                            disabled={revokeLoadingId === row.userId}
-                            onClick={() => onRevoke(row.userId)}
-                          >
-                            Revoke
-                          </CButton>
+                        {canResend || canRevoke ? (
+                          <div className="d-flex flex-wrap gap-1">
+                            {canResend ? (
+                              <CButton
+                                color="primary"
+                                variant="outline"
+                                size="sm"
+                                disabled={rowBusy}
+                                onClick={() => void onResend(row)}
+                              >
+                                {resendLoadingId === row.userId ? (
+                                  <CSpinner size="sm" />
+                                ) : (
+                                  'Resend'
+                                )}
+                              </CButton>
+                            ) : null}
+                            {canRevoke ? (
+                              <CButton
+                                color="danger"
+                                variant="outline"
+                                size="sm"
+                                disabled={rowBusy}
+                                onClick={() => onRevoke(row.userId)}
+                              >
+                                Revoke
+                              </CButton>
+                            ) : null}
+                          </div>
                         ) : (
                           <span className="text-body-secondary small">—</span>
                         )}

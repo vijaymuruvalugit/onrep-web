@@ -222,7 +222,7 @@ const StudentParentsCard = ({ studentId, studentName }) => {
           color="primary"
           variant="outline"
           size="sm"
-          disabled={busy}
+          disabled={busy || (row.status !== 'invited' && row.status !== 'invite_expired')}
           onClick={() => handleResend(row.inviteId)}
         >
           {busy ? <CSpinner size="sm" /> : 'Resend'}
