@@ -6,7 +6,11 @@ import { useDispatch, useSelector } from 'react-redux'
 import { CAlert, CButton, CForm, CFormLabel, CFormInput, CSpinner } from '@coreui/react'
 import { authApi } from '../api/authApi'
 import { completeParentInvite } from '../slices/authSlice'
-import { parentInviteAcceptSchema } from '../validations/parentInviteAcceptSchema'
+import {
+  parentInviteAcceptSchema,
+  parentInvitePasswordAndNameSchema,
+  parentInvitePasswordOnlySchema,
+} from '../validations/parentInviteAcceptSchema'
 import { getRoleRedirectPath } from '../utils/roleRedirect'
 import AuthShell from '../components/AuthShell'
 
@@ -16,12 +20,157 @@ function parentInviteErrorMessage(payload) {
   if (code === 'INVITE_ALREADY_USED') return 'This invite was already used. Sign in with your account.'
   if (code === 'INVITE_REVOKED') return 'This invite is no longer valid.'
   if (code === 'EMAIL_ALREADY_EXISTS') return 'That email is already registered with a different role.'
+  if (code === 'EMAIL_MISMATCH') return 'This invite is tied to a different email address.'
   return payload?.message || 'Unable to accept this invite'
 }
 
-const AcceptParentInvitePage = () => {
+export function resolveInviteProfile(preview) {
+  const inviteeEmail =
+    preview?.inviteeEmail || preview?.parentEmail || preview?.inviteEmail || null
+  const inviteeName = preview?.inviteeName || null
+  return {
+    inviteeEmail: inviteeEmail ? String(inviteeEmail).trim().toLowerCase() : '',
+    inviteeName: inviteeName ? String(inviteeName).trim() : '',
+  }
+}
+
+function ParentInviteAcceptForm({ code, inviteeEmail, inviteeName, onError }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const lockedEmail = Boolean(inviteeEmail)
+  const lockedName = Boolean(inviteeName)
+
+  const formSchema = useMemo(() => {
+    if (lockedEmail && lockedName) return parentInvitePasswordOnlySchema
+    if (lockedEmail) return parentInvitePasswordAndNameSchema
+    return parentInviteAcceptSchema
+  }, [lockedEmail, lockedName])
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: yupResolver(formSchema),
+    defaultValues: {
+      name: inviteeName,
+      email: inviteeEmail,
+      password: '',
+      confirmPassword: '',
+    },
+  })
+
+  const onSubmit = async (values) => {
+    onError('')
+    const result = await dispatch(
+      completeParentInvite({
+        code,
+        name: (inviteeName || values.name || '').trim(),
+        email: (inviteeEmail || values.email || '').trim().toLowerCase(),
+        password: values.password,
+      }),
+    )
+    if (result?.meta?.requestStatus === 'fulfilled') {
+      navigate(getRoleRedirectPath(result.payload?.user), { replace: true })
+      return
+    }
+    onError(parentInviteErrorMessage(result?.payload))
+  }
+
+  return (
+    <CForm onSubmit={handleSubmit(onSubmit)} noValidate className="onrep-auth-form">
+      {lockedEmail || lockedName ? (
+        <ParentInviteProfileSummary
+          inviteeName={inviteeName}
+          inviteeEmail={inviteeEmail}
+          lockedName={lockedName}
+          lockedEmail={lockedEmail}
+        />
+      ) : null}
+      {!lockedName ? (
+        <div className="mb-3">
+          <CFormLabel htmlFor="parent-invite-name">Your name</CFormLabel>
+          <CFormInput
+            id="parent-invite-name"
+            placeholder="Full name"
+            invalid={Boolean(errors.name)}
+            {...register('name')}
+          />
+          {errors.name ? (
+            <small className="text-danger d-block mt-1">{errors.name.message}</small>
+          ) : null}
+        </div>
+      ) : null}
+      {!lockedEmail ? (
+        <div className="mb-3">
+          <CFormLabel htmlFor="parent-invite-email">Email</CFormLabel>
+          <CFormInput
+            id="parent-invite-email"
+            type="email"
+            placeholder="name@email.com"
+            autoComplete="email"
+            invalid={Boolean(errors.email)}
+            {...register('email')}
+          />
+          {errors.email ? (
+            <small className="text-danger d-block mt-1">{errors.email.message}</small>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="mb-3">
+        <CFormLabel htmlFor="parent-invite-password">Password</CFormLabel>
+        <CFormInput
+          id="parent-invite-password"
+          type="password"
+          placeholder="Choose a password (min 8 characters)"
+          invalid={Boolean(errors.password)}
+          {...register('password')}
+        />
+        {errors.password ? (
+          <small className="text-danger d-block mt-1">{errors.password.message}</small>
+        ) : null}
+      </div>
+      <div className="mb-3">
+        <CFormLabel htmlFor="parent-invite-confirm">Confirm password</CFormLabel>
+        <CFormInput
+          id="parent-invite-confirm"
+          type="password"
+          placeholder="Confirm your password"
+          invalid={Boolean(errors.confirmPassword)}
+          {...register('confirmPassword')}
+        />
+        {errors.confirmPassword ? (
+          <small className="text-danger d-block mt-1">{errors.confirmPassword.message}</small>
+        ) : null}
+      </div>
+      <CButton type="submit" color="primary" disabled={isSubmitting} className="w-100 onrep-auth-cta">
+        {isSubmitting ? <CSpinner size="sm" className="me-2" /> : null}
+        Create account &amp; sign in
+      </CButton>
+    </CForm>
+  )
+}
+
+function ParentInviteProfileSummary({ inviteeName, inviteeEmail, lockedName, lockedEmail }) {
+  return (
+    <div className="mb-3 rounded border bg-light px-3 py-2 small">
+      {lockedName ? (
+        <div>
+          <span className="text-body-secondary">Name</span>
+          <div className="fw-semibold">{inviteeName}</div>
+        </div>
+      ) : null}
+      {lockedEmail ? (
+        <div className={lockedName ? 'mt-2' : ''}>
+          <span className="text-body-secondary">Email</span>
+          <div className="fw-semibold">{inviteeEmail}</div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+const AcceptParentInvitePage = () => {
   const [params] = useSearchParams()
   const [preview, setPreview] = useState(null)
   const [previewState, setPreviewState] = useState('loading')
@@ -30,15 +179,7 @@ const AcceptParentInvitePage = () => {
   const user = useSelector((s) => s.auth.user)
 
   const code = useMemo(() => String(params.get('code') || '').trim().toUpperCase(), [params])
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm({
-    resolver: yupResolver(parentInviteAcceptSchema),
-    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
-  })
+  const profile = useMemo(() => resolveInviteProfile(preview), [preview])
 
   useEffect(() => {
     if (!code) {
@@ -65,23 +206,6 @@ const AcceptParentInvitePage = () => {
     }
   }, [code])
 
-  const onSubmit = async (values) => {
-    setError('')
-    const result = await dispatch(
-      completeParentInvite({
-        code,
-        name: values.name.trim(),
-        email: values.email.trim().toLowerCase(),
-        password: values.password,
-      }),
-    )
-    if (result?.meta?.requestStatus === 'fulfilled') {
-      navigate(getRoleRedirectPath(result.payload?.user), { replace: true })
-      return
-    }
-    setError(parentInviteErrorMessage(result?.payload))
-  }
-
   if (isAuthenticated) {
     return <Navigate to={getRoleRedirectPath(user)} replace />
   }
@@ -90,6 +214,8 @@ const AcceptParentInvitePage = () => {
     preview?.studentName && preview?.academyName
       ? `Create your parent account to follow ${preview.studentName} at ${preview.academyName}.`
       : 'Create your parent account to view schedules, attendance, and progress.'
+
+  const formKey = `${profile.inviteeEmail}|${profile.inviteeName}`
 
   return (
     <AuthShell title="Parent invite" subtitle={subtitle} badge="PARENT INVITE">
@@ -102,70 +228,16 @@ const AcceptParentInvitePage = () => {
       ) : previewState === 'failed' && !preview ? (
         <CAlert color="danger">{error || 'This invite link is invalid or expired.'}</CAlert>
       ) : (
-        <CForm onSubmit={handleSubmit(onSubmit)} noValidate className="onrep-auth-form">
-          {error ? <CAlert color="danger">{error}</CAlert> : null}
-          <div className="mb-3">
-            <CFormLabel htmlFor="parent-invite-name">Your name</CFormLabel>
-            <CFormInput
-              id="parent-invite-name"
-              placeholder="Full name"
-              invalid={Boolean(errors.name)}
-              {...register('name')}
-            />
-            {errors.name ? (
-              <small className="text-danger d-block mt-1">{errors.name.message}</small>
-            ) : null}
-          </div>
-          <div className="mb-3">
-            <CFormLabel htmlFor="parent-invite-email">Email</CFormLabel>
-            <CFormInput
-              id="parent-invite-email"
-              type="email"
-              placeholder="name@email.com"
-              autoComplete="email"
-              invalid={Boolean(errors.email)}
-              {...register('email')}
-            />
-            {errors.email ? (
-              <small className="text-danger d-block mt-1">{errors.email.message}</small>
-            ) : null}
-          </div>
-          <div className="mb-3">
-            <CFormLabel htmlFor="parent-invite-password">Password</CFormLabel>
-            <CFormInput
-              id="parent-invite-password"
-              type="password"
-              placeholder="Choose a password (min 8 characters)"
-              invalid={Boolean(errors.password)}
-              {...register('password')}
-            />
-            {errors.password ? (
-              <small className="text-danger d-block mt-1">{errors.password.message}</small>
-            ) : null}
-          </div>
-          <div className="mb-3">
-            <CFormLabel htmlFor="parent-invite-confirm">Confirm password</CFormLabel>
-            <CFormInput
-              id="parent-invite-confirm"
-              type="password"
-              placeholder="Confirm your password"
-              invalid={Boolean(errors.confirmPassword)}
-              {...register('confirmPassword')}
-            />
-            {errors.confirmPassword ? (
-              <small className="text-danger d-block mt-1">{errors.confirmPassword.message}</small>
-            ) : null}
-          </div>
-          <CButton
-            type="submit"
-            color="primary"
-            disabled={isSubmitting || previewState !== 'ready'}
-            className="w-100 onrep-auth-cta"
-          >
-            {isSubmitting ? <CSpinner size="sm" className="me-2" /> : null}
-            Create account &amp; sign in
-          </CButton>
-        </CForm>
+        <>
+          {error ? <CAlert color="danger" className="mb-3">{error}</CAlert> : null}
+          <ParentInviteAcceptForm
+            key={formKey}
+            code={code}
+            inviteeEmail={profile.inviteeEmail}
+            inviteeName={profile.inviteeName}
+            onError={setError}
+          />
+        </>
       )}
       <Link to="/auth/login" className="btn btn-link px-0 mt-3">
         Already have an account? Sign in
