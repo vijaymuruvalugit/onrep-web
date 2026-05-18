@@ -9,6 +9,7 @@ const initialState = {
   saving: false,
   error: null,
   mutationError: null,
+  latestScheduleRequestId: null,
 }
 
 export const fetchSchedule = createAsyncThunk(
@@ -81,24 +82,33 @@ const scheduleSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchSchedule.pending, (state) => {
+      .addCase(fetchSchedule.pending, (state, action) => {
         state.loading = true
         state.error = null
+        state.latestScheduleRequestId = action.meta.requestId
       })
       .addCase(fetchSchedule.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.latestScheduleRequestId) return
         state.loading = false
         state.items = action.payload
       })
       .addCase(fetchSchedule.rejected, (state, action) => {
+        if (action.meta.requestId !== state.latestScheduleRequestId) return
         state.loading = false
         state.error = action.payload || { message: 'Unable to load schedule.' }
+      })
+      .addCase(createSchedule.fulfilled, (state, action) => {
+        state.saving = false
+        const row = action.payload?.schedule
+        if (row?.id) {
+          const id = String(row.id)
+          const without = state.items.filter((p) => String(p.id) !== id)
+          state.items = [row, ...without]
+        }
       })
       .addCase(createSchedule.pending, (state) => {
         state.saving = true
         state.mutationError = null
-      })
-      .addCase(createSchedule.fulfilled, (state) => {
-        state.saving = false
       })
       .addCase(createSchedule.rejected, (state, action) => {
         state.saving = false

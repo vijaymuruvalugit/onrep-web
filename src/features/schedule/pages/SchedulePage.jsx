@@ -344,13 +344,15 @@ const SchedulePage = () => {
   }
 
   const refreshAll = useCallback(async () => {
+    clearErrors()
+    setSessionsEmptyHint(null)
     const tasks = [loadSessions()]
     if (effectiveBatchId) {
       tasks.unshift(fetchSchedule(effectiveBatchId))
     }
     tasks.push(fetchBatches(), ensurePlacesLoaded())
     await Promise.all(tasks)
-  }, [effectiveBatchId, fetchSchedule, loadSessions, fetchBatches, ensurePlacesLoaded])
+  }, [effectiveBatchId, fetchSchedule, loadSessions, fetchBatches, ensurePlacesLoaded, clearErrors])
 
   const handleStartSession = useCallback(
     async (row) => {
@@ -453,7 +455,21 @@ const SchedulePage = () => {
         }
         setPatternDrawerOpen(false)
         await refreshAll()
-      } catch {
+      } catch (err) {
+        const saved =
+          err?.raw?.schedule && typeof err.raw.schedule === 'object' ? err.raw.schedule : null
+        if (patternDrawerMode === 'create' && saved?.id) {
+          setPatternDrawerOpen(false)
+          await refreshAll()
+          setPageNotice({
+            type: 'warning',
+            text:
+              typeof err?.message === 'string' && err.message
+                ? `${err.message} The schedule was saved — tap Refresh if sessions are still missing.`
+                : 'Schedule saved with conflicts on some dates. Tap Refresh to regenerate sessions.',
+          })
+          return
+        }
         // mutationError surfaces via the drawer alert
       }
     },
