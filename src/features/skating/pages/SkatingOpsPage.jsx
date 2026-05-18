@@ -45,6 +45,7 @@ import { computeSessionSummary } from '../utils/sessionTodaySummary'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
 import { selectPrimaryFocusSessionId } from '../../../domain/operationalSessions/selectors/selectPrimaryFocusSession'
 import { operationalStateToLegacyOpsState } from '../../../domain/operationalSessions/helpers/stateLabels'
+import { isOperationalSessionCancelled } from '../../../domain/operationalSessions/helpers/sessionActions'
 import { devLogEmptyDayBoard } from '../../../domain/operationalSessions/helpers/devDayBoardLog'
 import { sortDayBoardSessions } from '../../../domain/operationalSessions/helpers/sortDayBoardSessions'
 import SkatingOpsDayBoard from '../../../domain/operationalSessions/components/SkatingOpsDayBoard'
@@ -962,7 +963,7 @@ const SkatingOpsPage = () => {
   }
 
   const endSession = async () => {
-    if (!selectedSessionId) return
+    if (!selectedSessionId || isOperationalSessionCancelled(selSession)) return
     clearPendingObsAdvance()
     advancePauseRhythmRef.current = 0
     setObsReturnSkater(null)
@@ -973,7 +974,7 @@ const SkatingOpsPage = () => {
   }
 
   const startSession = async () => {
-    if (!selectedSessionId) return
+    if (!selectedSessionId || isOperationalSessionCancelled(selSession)) return
     await operationalSessionsApi.startSession(selectedSessionId)
     bumpSkatingOpsMetric('sessionStartedOnIce')
     await loadBundle(selectedSessionId)
@@ -996,12 +997,16 @@ const SkatingOpsPage = () => {
     [dayBoard?.sessions],
   )
   const selSession = sessions.find((s) => String(s.id) === String(selectedSessionId))
+  const sessionCancelled = isOperationalSessionCancelled(selSession)
   const legacyOpsFromCanonical = selSession?.state
     ? operationalStateToLegacyOpsState(selSession.state)
     : null
-  const opsState = bundle?.session?.opsState || legacyOpsFromCanonical || 'upcoming'
+  const opsState = sessionCancelled
+    ? 'ended'
+    : bundle?.session?.opsState || legacyOpsFromCanonical || 'upcoming'
   const coachLive =
     Boolean(selectedSessionId) &&
+    !sessionCancelled &&
     (bundle?.session?.opsState === 'active' ||
       ['active', 'paused'].includes(String(selSession?.state || '').toLowerCase()))
 
@@ -1361,6 +1366,10 @@ const SkatingOpsPage = () => {
       return
     }
     if (action === 'start' || action === 'resume') {
+      if (isOperationalSessionCancelled(session)) {
+        setSnapError('This session has been cancelled.')
+        return
+      }
       setCardActionBusyId(id)
       try {
         await operationalSessionsApi.startSession(id)
@@ -1445,9 +1454,9 @@ const SkatingOpsPage = () => {
               onEnd={() => void endSession()}
               onStart={() => void startSession()}
               onSwitchSession={() => exitWorkspace()}
-              canStart={opsState === 'upcoming'}
-              canPause={opsState === 'active'}
-              canEnd={opsState === 'active' || opsState === 'upcoming'}
+              canStart={!sessionCancelled && opsState === 'upcoming'}
+              canPause={!sessionCancelled && opsState === 'active'}
+              canEnd={!sessionCancelled && (opsState === 'active' || opsState === 'upcoming')}
             />
             {!coachLive && bundle && bundleFreshnessLabel && !bundleLoading ? (
               <div className="small text-body-secondary mb-2">
