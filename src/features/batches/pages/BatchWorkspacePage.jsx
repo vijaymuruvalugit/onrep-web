@@ -139,11 +139,10 @@ const BatchWorkspacePage = () => {
     if (!batchId || batchWorkspaceMismatch) return
     const ti = todayIsoLocal()
     const toYmd = addDaysYmd(ti, 90)
-    const matToYmd = addDaysYmd(ti, 60)
     setOpBoardLoading(true)
     try {
       try {
-        await scheduleApi.materializeBatchSessions(batchId, { fromDate: ti, toDate: matToYmd })
+        await scheduleApi.materializeBatchSessions(batchId)
       } catch {
         /* board still loads; materialize is best-effort */
       }

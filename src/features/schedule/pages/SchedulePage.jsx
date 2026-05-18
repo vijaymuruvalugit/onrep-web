@@ -42,6 +42,7 @@ import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
 import scheduleApi from '../api/scheduleApi'
+import { friendlyScheduleApiMessage } from '../utils/scheduleUserMessages'
 import { RECURRING_PATTERN_EDIT_MODE } from '@onrep/contracts/recurring-patterns'
 import './SchedulePage.scss'
 
@@ -66,12 +67,6 @@ function addDaysYmd(fromYmd, days) {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
-}
-
-/** Materialize window (backend max 60 days). */
-function materializeRangeYmd() {
-  const fromYmd = todayIsoLocal()
-  return { fromYmd, toYmd: addDaysYmd(fromYmd, 60) }
 }
 
 /** Board query window for upcoming list. */
@@ -214,29 +209,17 @@ const SchedulePage = () => {
     setSessionsError(null)
     setSessionsEmptyHint(null)
     try {
-      const matRange = materializeRangeYmd()
       const { fromYmd, toYmd } = boardRangeYmd()
       try {
-        const mat = await scheduleApi.materializeBatchSessions(effectiveBatchId, {
-          fromDate: matRange.fromYmd,
-          toDate: matRange.toYmd,
-        })
+        const mat = await scheduleApi.materializeBatchSessions(effectiveBatchId)
         const skipped = mat?.materialization?.skipped || mat?.skipped
         const hint = materializationEmptyHint(skipped)
         if (hint) setSessionsEmptyHint(hint)
       } catch (matErr) {
         const body = matErr?.response?.data
         const skipped = body?.materialization?.skipped || body?.skipped
-        const hint = materializationEmptyHint(skipped)
-        if (hint) {
-          setSessionsEmptyHint(hint)
-        } else {
-          setSessionsError(
-            body?.error ||
-              matErr?.message ||
-              'Could not refresh sessions from recurring patterns.',
-          )
-        }
+        const hint = materializationEmptyHint(skipped) || friendlyScheduleApiMessage(matErr)
+        setSessionsEmptyHint(hint)
       }
 
       const { sessions, operationalToday } = await operationalSessionsApi.getBoardRange(
@@ -255,7 +238,7 @@ const SchedulePage = () => {
         : []
       setSessionRows(rows)
     } catch (e) {
-      setSessionsError(e?.response?.data?.error || e?.message || 'Unable to load sessions.')
+      setSessionsError(friendlyScheduleApiMessage(e))
       setSessionRows([])
     } finally {
       setSessionsLoading(false)
@@ -626,18 +609,26 @@ const SchedulePage = () => {
                 program in the header to view this batch&apos;s sessions.
               </CAlert>
             ) : null}
-            {sessionsError ? <CAlert color="danger">{sessionsError}</CAlert> : null}
+            {sessionsError ? (
+              <CAlert color="warning" className="py-2">
+                {sessionsError}
+              </CAlert>
+            ) : null}
+            {sessionsEmptyHint && !sessionsError ? (
+              <CAlert color="info" className="py-2">
+                {sessionsEmptyHint}
+              </CAlert>
+            ) : null}
             {sessionsLoading ? (
               <div className="text-center py-3">
                 <CSpinner size="sm" />
               </div>
             ) : null}
-            {!sessionsLoading && !mergedTimeline.length ? (
+            {!sessionsLoading && !mergedTimeline.length && !sessionsEmptyHint && !sessionsError ? (
               <div className="onrep-type-muted small">
                 {mergedTimelineRaw.length
                   ? 'No sessions match this filter.'
-                  : sessionsEmptyHint ||
-                    'No upcoming sessions in the next few weeks. Add a weekly pattern or a one-off session.'}
+                  : 'No upcoming sessions in the next few weeks. Add a weekly pattern or a one-off session.'}
               </div>
             ) : null}
             {!sessionsLoading &&

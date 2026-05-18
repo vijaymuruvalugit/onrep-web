@@ -212,21 +212,43 @@ export function sliceUpcomingSessionsForDisplay(rows, cap = UPCOMING_SESSIONS_DI
   return rows.slice(0, cap)
 }
 
+function sessionStartInstant(row) {
+  const startIso = row?.scheduledStartAt ?? row?.scheduled_start_at
+  if (startIso != null && startIso !== '') {
+    const t = new Date(startIso).getTime()
+    if (!Number.isNaN(t)) return t
+  }
+  const ymd = effectiveOperationalSessionDateYmd(row)
+  const startTime = row?.startTime ?? row?.start_time
+  if (!ymd || startTime == null || startTime === '') return null
+  const d = parseSessionLocalDate(ymd)
+  if (!d) return null
+  const m = String(startTime).match(/^(\d{1,2}):(\d{2})/)
+  if (!m) return null
+  d.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0)
+  return d.getTime()
+}
+
 function sessionEndInstant(row) {
+  const ymd = effectiveOperationalSessionDateYmd(row)
+  const endTime = row?.endTime ?? row?.end_time
+  // Prefer wall-clock on the session calendar day — UTC instants often hide “today” classes.
+  if (ymd && endTime != null && endTime !== '') {
+    const d = parseSessionLocalDate(ymd)
+    if (d) {
+      const m = String(endTime).match(/^(\d{1,2}):(\d{2})/)
+      if (m) {
+        d.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0)
+        return d.getTime()
+      }
+    }
+  }
   const endIso = row?.scheduledEndAt ?? row?.scheduled_end_at
   if (endIso != null && endIso !== '') {
     const t = new Date(endIso).getTime()
     if (!Number.isNaN(t)) return t
   }
-  const ymd = effectiveOperationalSessionDateYmd(row)
-  const endTime = row?.endTime ?? row?.end_time
-  if (!ymd || endTime == null || endTime === '') return null
-  const d = parseSessionLocalDate(ymd)
-  if (!d) return null
-  const m = String(endTime).match(/^(\d{1,2}):(\d{2})/)
-  if (!m) return null
-  d.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0)
-  return d.getTime()
+  return null
 }
 
 /**
@@ -240,6 +262,10 @@ export function isOperationalSessionStillUpcoming(row, now = new Date(), todayYm
   const today = String(todayYmd || '').slice(0, 10)
   if (today && sessionYmd && sessionYmd < today) return false
   if (today && sessionYmd && sessionYmd > today) return true
+  if (today && sessionYmd === today) {
+    const startMs = sessionStartInstant(row)
+    if (startMs != null && startMs > now.getTime()) return true
+  }
   const endMs = sessionEndInstant(row)
   if (endMs != null) return endMs > now.getTime()
   return true
