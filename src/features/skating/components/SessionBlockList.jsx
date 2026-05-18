@@ -15,6 +15,7 @@ import { BLOCK_TYPE_LABELS, BLOCK_TYPE_OPTIONS } from '../../../domain/sessionBl
  *   onMoveDown: (id: string) => void | Promise<void>,
  *   onAddRequest: () => void,
  *   busy?: boolean,
+ *   athleteCountByPhaseId?: Record<string, number>,
  * }} props
  */
 export default function SessionBlockList({
@@ -27,6 +28,7 @@ export default function SessionBlockList({
   onMoveDown,
   onAddRequest,
   busy = false,
+  athleteCountByPhaseId = {},
 }) {
   const [editingId, setEditingId] = useState('')
   const [editTitle, setEditTitle] = useState('')
@@ -128,7 +130,12 @@ export default function SessionBlockList({
                   <span className="session-blocks-list__title d-block fw-medium text-truncate">
                     {block.title || 'Phase'}
                   </span>
-                  <span className="session-blocks-list__type small text-body-secondary">{typeLabel}</span>
+                  <span className="session-blocks-list__type small text-body-secondary">
+                    {typeLabel}
+                    {athleteCountByPhaseId[id] != null ? (
+                      <span className="session-blocks-list__count ms-1">· {athleteCountByPhaseId[id]}</span>
+                    ) : null}
+                  </span>
                 </button>
               )}
               {!isEditing ? (

@@ -52,7 +52,9 @@ import SkatingOpsWorkspaceChrome from '../components/SkatingOpsWorkspaceChrome'
 import ActiveSessionWorkspaceShell from '../components/ActiveSessionWorkspaceShell'
 import SessionBlockList from '../components/SessionBlockList'
 import SessionBlockAddModal from '../components/SessionBlockAddModal'
+import AthletesInPhasePanel from '../components/AthletesInPhasePanel'
 import { sessionBlocksApi } from '../../../domain/sessionBlocks/sessionBlocksApi'
+import { phaseAthletesApi } from '../../../domain/phaseAthletes/phaseAthletesApi'
 import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
 import '../skating-ops.css'
 
@@ -352,6 +354,9 @@ const SkatingOpsPage = () => {
   /** Exactly one active coaching phase at a time (session-level concept; stored client-side for now). */
   const [activeBlockId, setActiveBlockId] = useState('')
   const [showAddBlockModal, setShowAddBlockModal] = useState(false)
+  const [phaseAthletesByPhaseId, setPhaseAthletesByPhaseId] = useState({})
+  const [phaseAthletesLoading, setPhaseAthletesLoading] = useState(false)
+  const [phaseAthletesBusy, setPhaseAthletesBusy] = useState(false)
 
   const athletePanelRef = useRef(null)
   const defaultRaceEnsureAttemptedRef = useRef(new Set())
@@ -474,6 +479,53 @@ const SkatingOpsPage = () => {
     } finally {
       if (!silent) setBlocksLoading(false)
     }
+  }, [])
+
+  const loadPhaseAthletes = useCallback(async (sessionId, opts = {}) => {
+    const silent = Boolean(opts.silent)
+    if (!sessionId) {
+      setPhaseAthletesByPhaseId({})
+      return
+    }
+    if (!silent) setPhaseAthletesLoading(true)
+    try {
+      const phases = await phaseAthletesApi.listPhaseAthletes(sessionId)
+      const map = {}
+      for (const p of phases) {
+        map[String(p.phaseId)] = Array.isArray(p.athletes) ? p.athletes : []
+      }
+      setPhaseAthletesByPhaseId(map)
+    } catch {
+      if (!silent) setPhaseAthletesByPhaseId({})
+    } finally {
+      if (!silent) setPhaseAthletesLoading(false)
+    }
+  }, [])
+
+  const applyPhaseAthleteMove = useCallback((athlete, fromPhaseId, toPhaseId) => {
+    if (!athlete) return
+    const sid = String(athlete.studentId)
+    setPhaseAthletesByPhaseId((prev) => {
+      const next = {}
+      for (const [pid, list] of Object.entries(prev)) {
+        next[pid] = (list || []).filter((a) => String(a.studentId) !== sid)
+      }
+      const dest = [...(next[String(toPhaseId)] || []), athlete]
+      next[String(toPhaseId)] = dest
+      return next
+    })
+  }, [])
+
+  const patchPhaseAthleteLocal = useCallback((phaseId, athlete) => {
+    if (!athlete) return
+    const sid = String(athlete.studentId)
+    setPhaseAthletesByPhaseId((prev) => {
+      const list = prev[String(phaseId)] || []
+      return {
+        ...prev,
+        [String(phaseId)]: list.map((a) => (String(a.studentId) === sid ? athlete : a)),
+      }
+    })
   }, [])
 
   useEffect(() => {
@@ -601,12 +653,14 @@ const SkatingOpsPage = () => {
     if (selectedSessionId) {
       void loadBundle(selectedSessionId)
       void loadBlocks(selectedSessionId)
+      void loadPhaseAthletes(selectedSessionId)
     } else {
       setBundle(null)
+      setPhaseAthletesByPhaseId({})
       setSessionBlocks([])
       setActiveBlockId('')
     }
-  }, [selectedSessionId, loadBundle, loadBlocks])
+  }, [selectedSessionId, loadBundle, loadBlocks, loadPhaseAthletes])
 
   /** Reconnect / tab return — refresh data without swapping the UI for spinners (avoids “full refresh” feel). */
   useEffect(() => {
@@ -615,6 +669,7 @@ const SkatingOpsPage = () => {
       if (selectedSessionId) {
         void loadBundle(selectedSessionId, { silent: true })
         void loadBlocks(selectedSessionId, { silent: true })
+        void loadPhaseAthletes(selectedSessionId, { silent: true })
       }
       void loadDayBoard({ silent: true })
       const snap = flowSnapRef.current
@@ -628,7 +683,7 @@ const SkatingOpsPage = () => {
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
-  }, [selectedSessionId, loadBundle, loadBlocks, loadDayBoard])
+  }, [selectedSessionId, loadBundle, loadBlocks, loadPhaseAthletes, loadDayBoard])
 
   useEffect(() => {
     try {
@@ -1388,6 +1443,132 @@ const SkatingOpsPage = () => {
     return b?.title || ''
   }, [sortedSessionBlocks, activeBlockId])
 
+  const activeBlockMeta = useMemo(
+    () => sortedSessionBlocks.find((x) => String(x.id) === String(activeBlockId)),
+    [sortedSessionBlocks, activeBlockId],
+  )
+
+  const activePhaseAthletes = useMemo(() => {
+    if (!activeBlockId) return []
+    return phaseAthletesByPhaseId[String(activeBlockId)] || []
+  }, [phaseAthletesByPhaseId, activeBlockId])
+
+  const athleteCountByPhaseId = useMemo(() => {
+    const counts = {}
+    for (const [pid, list] of Object.entries(phaseAthletesByPhaseId)) {
+      counts[pid] = list?.length ?? 0
+    }
+    return counts
+  }, [phaseAthletesByPhaseId])
+
+  const studentPhasePlacementMap = useMemo(() => {
+    const m = new Map()
+    for (const phase of sortedSessionBlocks) {
+      const pid = String(phase.id)
+      const athletes = phaseAthletesByPhaseId[pid] || []
+      for (const a of athletes) {
+        m.set(String(a.studentId), {
+          phaseId: pid,
+          phaseTitle: phase.title || 'Phase',
+          status: a.participationStatus,
+        })
+      }
+    }
+    return m
+  }, [phaseAthletesByPhaseId, sortedSessionBlocks])
+
+  const phaseHintByStudentId = useMemo(() => {
+    const hints = {}
+    const active = String(activeBlockId)
+    for (const [sid, info] of studentPhasePlacementMap) {
+      if (info.phaseId !== active) {
+        hints[sid] = info.phaseTitle
+      } else if (info.status && info.status !== 'active') {
+        hints[sid] = info.status
+      }
+    }
+    return hints
+  }, [studentPhasePlacementMap, activeBlockId])
+
+  const handleMovePhaseAthlete = useCallback(
+    async (studentId, toPhaseId) => {
+      if (!activeBlockId || !selectedSessionId) return
+      setPhaseAthletesBusy(true)
+      try {
+        const result = await phaseAthletesApi.moveToPhase(
+          activeBlockId,
+          studentId,
+          toPhaseId,
+        )
+        if (result?.athlete) {
+          applyPhaseAthleteMove(
+            result.athlete,
+            result.fromPhaseId || activeBlockId,
+            result.toPhaseId || toPhaseId,
+          )
+        } else {
+          await loadPhaseAthletes(selectedSessionId, { silent: true })
+        }
+      } catch (e) {
+        setBundleError(e?.message || 'Could not move athlete to phase.')
+        await loadPhaseAthletes(selectedSessionId, { silent: true })
+      } finally {
+        setPhaseAthletesBusy(false)
+      }
+    },
+    [activeBlockId, selectedSessionId, applyPhaseAthleteMove, loadPhaseAthletes],
+  )
+
+  const handleSetPhaseLane = useCallback(
+    async (studentId, lane) => {
+      if (!activeBlockId) return
+      setPhaseAthletesBusy(true)
+      try {
+        const athlete = await phaseAthletesApi.setLane(activeBlockId, studentId, lane)
+        if (athlete) patchPhaseAthleteLocal(activeBlockId, athlete)
+      } finally {
+        setPhaseAthletesBusy(false)
+      }
+    },
+    [activeBlockId, patchPhaseAthleteLocal],
+  )
+
+  const handleSetPhaseHeat = useCallback(
+    async (studentId, heatNumber) => {
+      if (!activeBlockId) return
+      setPhaseAthletesBusy(true)
+      try {
+        const athlete = await phaseAthletesApi.setHeatNumber(
+          activeBlockId,
+          studentId,
+          heatNumber,
+        )
+        if (athlete) patchPhaseAthleteLocal(activeBlockId, athlete)
+      } finally {
+        setPhaseAthletesBusy(false)
+      }
+    },
+    [activeBlockId, patchPhaseAthleteLocal],
+  )
+
+  const handleSetPhaseStatus = useCallback(
+    async (studentId, participationStatus) => {
+      if (!activeBlockId) return
+      setPhaseAthletesBusy(true)
+      try {
+        const athlete = await phaseAthletesApi.setParticipationStatus(
+          activeBlockId,
+          studentId,
+          participationStatus,
+        )
+        if (athlete) patchPhaseAthleteLocal(activeBlockId, athlete)
+      } finally {
+        setPhaseAthletesBusy(false)
+      }
+    },
+    [activeBlockId, patchPhaseAthleteLocal],
+  )
+
   const handleSelectBlock = useCallback(
     (blockId) => {
       setActiveBlockId(blockId)
@@ -1466,11 +1647,12 @@ const SkatingOpsPage = () => {
           setActiveBlockId(next)
           if (next) writeActiveBlockId(selectedSessionId, next)
         }
+        await loadPhaseAthletes(selectedSessionId, { silent: true })
       } finally {
         setBlocksBusy(false)
       }
     },
-    [selectedSessionId],
+    [selectedSessionId, loadPhaseAthletes],
   )
 
   const handleAddBlock = useCallback(
@@ -1504,6 +1686,7 @@ const SkatingOpsPage = () => {
     onMoveDown: (id) => handleMoveBlock(id, 'down'),
     onAddRequest: () => setShowAddBlockModal(true),
     busy: blocksBusy || blocksLoading,
+    athleteCountByPhaseId,
   }
 
   const openStartLiveModal = () => {
@@ -1728,6 +1911,19 @@ const SkatingOpsPage = () => {
                   {blocksLoading ? <CSpinner size="sm" /> : <SessionBlockList {...blockListProps} />}
                 </CCol>
                 <CCol lg={3}>
+                  <AthletesInPhasePanel
+                    phaseTitle={activeBlockTitle}
+                    phaseId={activeBlockId}
+                    blockType={activeBlockMeta?.blockType || ''}
+                    athletes={activePhaseAthletes}
+                    allPhases={sortedSessionBlocks}
+                    loading={phaseAthletesLoading}
+                    busy={phaseAthletesBusy}
+                    onMoveAthlete={handleMovePhaseAthlete}
+                    onSetLane={handleSetPhaseLane}
+                    onSetHeat={handleSetPhaseHeat}
+                    onSetStatus={handleSetPhaseStatus}
+                  />
                   <AthletesInSessionPanel
                     coachLive={coachLive}
                     rosterFiltered={rosterFiltered}
@@ -1746,6 +1942,7 @@ const SkatingOpsPage = () => {
                       setShowAddAthletesModal(true)
                     }}
                     listRef={athletePanelRef}
+                    phaseHintByStudentId={phaseHintByStudentId}
                   />
                   {inlineAthleteFocus ? (
                     <div className="small mt-2 px-1 py-2 border rounded bg-body-tertiary d-flex flex-wrap align-items-center justify-content-between gap-2">

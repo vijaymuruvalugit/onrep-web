@@ -14,6 +14,7 @@ export default function SessionAthleteGrid({
   showRosterSource,
   onOpenSideCapture,
   sidePanelLabel = 'Side panel',
+  phaseHintByStudentId = {},
 }) {
   if (!rows?.length) {
     return (
@@ -57,6 +58,9 @@ export default function SessionAthleteGrid({
                       title={SESSION_OPS_COPY.observationSavedThisSession}
                       aria-label={SESSION_OPS_COPY.observationSavedThisSession}
                     />
+                  ) : null}
+                  {phaseHintByStudentId[sid] ? (
+                    <span className="roster-phase-hint ms-2">{phaseHintByStudentId[sid]}</span>
                   ) : null}
                   {showRosterSource && r.rosterSource ? (
                     <CBadge color="secondary" className="ms-2 text-uppercase">

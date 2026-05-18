@@ -15,6 +15,7 @@ export default function AthletesInSessionPanel({
   onRosterFilterChange,
   onAddAthletesRequest,
   listRef,
+  phaseHintByStudentId,
 }) {
   const hasRows = rosterFiltered?.length > 0
 
@@ -54,6 +55,7 @@ export default function AthletesInSessionPanel({
           showRosterSource={Boolean(import.meta.env?.DEV)}
           onOpenSideCapture={onOpenSideCapture}
           sidePanelLabel={SESSION_OPS_COPY.sidePanel}
+          phaseHintByStudentId={phaseHintByStudentId}
         />
       )}
     </div>

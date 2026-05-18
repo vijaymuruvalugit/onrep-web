@@ -40,6 +40,17 @@ vi.mock('../../../domain/sessionBlocks/sessionBlocksApi', () => ({
   BLOCK_TYPE_OPTIONS: [],
 }))
 
+vi.mock('../../../domain/phaseAthletes/phaseAthletesApi', () => ({
+  phaseAthletesApi: {
+    listPhaseAthletes: vi.fn().mockResolvedValue([]),
+    moveToPhase: vi.fn(),
+    setLane: vi.fn(),
+    setHeatNumber: vi.fn(),
+    setParticipationStatus: vi.fn(),
+  },
+  PARTICIPATION_STATUS_OPTIONS: [],
+}))
+
 vi.mock('../../places/api/placesApi', () => ({
   default: {
     listPlaces: vi.fn().mockResolvedValue({ places: [], total: 0 }),

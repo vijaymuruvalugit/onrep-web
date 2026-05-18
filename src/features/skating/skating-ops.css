@@ -297,3 +297,73 @@
   }
 }
 
+/* Phase 3 — athletes in this phase */
+.skating-ops-page .phase-athlete-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.skating-ops-page .phase-athlete-chip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--cui-border-color, #dee2e6);
+  border-radius: 0.375rem;
+  background: var(--cui-body-bg, #fff);
+  font-size: 0.8125rem;
+}
+
+.skating-ops-page.coach-live .phase-athlete-chip {
+  min-height: 44px;
+  padding: 0.5rem 0.65rem;
+}
+
+.skating-ops-page .phase-athlete-chip__name {
+  max-width: 8rem;
+  font-weight: 500;
+}
+
+.skating-ops-page .phase-athlete-chip__select {
+  width: auto;
+  min-width: 4.5rem;
+  font-size: 0.75rem;
+  padding: 0.15rem 1.5rem 0.15rem 0.35rem;
+}
+
+.skating-ops-page .phase-athlete-chip__race-fields {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.skating-ops-page .phase-athlete-chip__move-btn {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.skating-ops-page .phase-athlete-chip--resting {
+  opacity: 0.85;
+  border-style: dashed;
+}
+
+.skating-ops-page .phase-athlete-chip--skipped {
+  opacity: 0.65;
+}
+
+.skating-ops-page .phase-athlete-chip--injured {
+  border-color: var(--cui-warning, #f9b115);
+}
+
+.skating-ops-page .session-blocks-list__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.skating-ops-page .roster-phase-hint {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--cui-secondary-color, #6c757d);
+}
+
