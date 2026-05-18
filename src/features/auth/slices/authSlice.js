@@ -73,6 +73,30 @@ function extractAuthPayload(responseData = {}) {
   return { token, user }
 }
 
+export const completeCoachInvite = createAsyncThunk(
+  'auth/completeCoachInvite',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const { data } = await authApi.completeCoachInvite(payload)
+      return extractAuthPayload(data)
+    } catch (error) {
+      return rejectWithValue(normalizeApiError(error))
+    }
+  },
+)
+
+export const completeParentInvite = createAsyncThunk(
+  'auth/completeParentInvite',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const { data } = await authApi.completeParentInvite(payload)
+      return extractAuthPayload(data)
+    } catch (error) {
+      return rejectWithValue(normalizeApiError(error))
+    }
+  },
+)
+
 export const login = createAsyncThunk('auth/login', async (payload, { rejectWithValue }) => {
   try {
     const { data } = await authApi.login(payload)
@@ -111,6 +135,22 @@ export const refreshSession = createAsyncThunk(
     }
   },
 )
+
+function applyAuthenticatedSession(state, action) {
+  const { token, user } = action.payload
+  state.token = token
+  state.user = user
+  state.loading = false
+  state.isAuthenticated = Boolean(token)
+  state.status = state.isAuthenticated ? 'authenticated' : 'unauthenticated'
+  state.error = null
+  state.authBlock = null
+  state.isRestored = true
+  authStorage.setToken(token)
+  authStorage.setUser(user)
+  clearAwaitingPaymentConfirmation()
+  syncLastKnownSubscription(user)
+}
 
 const initialState = {
   user: null,
@@ -173,23 +213,24 @@ const authSlice = createSlice({
         state.error = null
         state.authBlock = null
       })
-      .addCase(login.fulfilled, (state, action) => {
-        const { token, user } = action.payload
-        state.token = token
-        state.user = user
-        state.loading = false
-        state.isAuthenticated = Boolean(token)
-        state.status = state.isAuthenticated ? 'authenticated' : 'unauthenticated'
+      .addCase(login.fulfilled, applyAuthenticatedSession)
+      .addCase(completeCoachInvite.fulfilled, applyAuthenticatedSession)
+      .addCase(completeParentInvite.fulfilled, applyAuthenticatedSession)
+      .addCase(completeCoachInvite.pending, (state) => {
+        state.loading = true
         state.error = null
-        state.authBlock = null
-        state.isRestored = true
-        authStorage.setToken(token)
-        authStorage.setUser(user)
-        // Wipe any awaiting-payment flag from the previous account in this tab
-        // BEFORE persisting the new cache, so a freshly-logged-in academy
-        // never inherits the prior user's "Waiting for confirmation..." UI.
-        clearAwaitingPaymentConfirmation()
-        syncLastKnownSubscription(user)
+      })
+      .addCase(completeCoachInvite.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || { message: 'Unable to accept invite' }
+      })
+      .addCase(completeParentInvite.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(completeParentInvite.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload || { message: 'Unable to accept invite' }
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false

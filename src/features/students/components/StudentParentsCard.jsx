@@ -158,7 +158,7 @@ const StudentParentsCard = ({ studentId, studentName }) => {
   const handleCopyCode = async (rowId, code) => {
     if (!code) return
     try {
-      const link = `${window.location.origin}/accept-parent-invite?code=${encodeURIComponent(code)}`
+      const link = `${window.location.origin}/#/accept-parent-invite?code=${encodeURIComponent(code)}`
       await navigator.clipboard.writeText(link)
       setCopiedRowId(rowId)
       window.setTimeout(() => setCopiedRowId((cur) => (cur === rowId ? null : cur)), 1500)

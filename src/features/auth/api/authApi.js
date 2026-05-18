@@ -10,6 +10,9 @@ const AUTH_ENDPOINTS = {
   verifyEmail: import.meta.env.VITE_AUTH_VERIFY_EMAIL_ENDPOINT || '/auth/verify-email',
   resendVerification:
     import.meta.env.VITE_AUTH_RESEND_VERIFICATION_ENDPOINT || '/auth/resend-verification-email',
+  completeCoachInvite: '/auth/complete-coach-invite',
+  completeParentInvite: '/auth/complete-parent-invite',
+  parentInvitePreview: '/auth/parent-invite-preview',
 }
 
 export const authApi = {
@@ -38,6 +41,15 @@ export const authApi = {
   },
   resendVerification(payload) {
     return http.post(AUTH_ENDPOINTS.resendVerification, payload)
+  },
+  completeCoachInvite(payload) {
+    return http.post(AUTH_ENDPOINTS.completeCoachInvite, payload)
+  },
+  completeParentInvite(payload) {
+    return http.post(AUTH_ENDPOINTS.completeParentInvite, payload)
+  },
+  parentInvitePreview(code) {
+    return http.get(AUTH_ENDPOINTS.parentInvitePreview, { params: { code } })
   },
 }
 
