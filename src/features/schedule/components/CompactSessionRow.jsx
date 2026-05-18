@@ -7,6 +7,7 @@ import {
 } from '../../classes/utils/sessionDisplay'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { sessionTypeLabel } from '../constants/sessionTypes'
+import OperationalSessionModeBadge from '../../../domain/operationalSessions/components/OperationalSessionModeBadge'
 import { isOperationalOneOff, isOperationalRecurring } from '../../classes/utils/sessionRow'
 import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 
@@ -86,6 +87,12 @@ export default function CompactSessionRow({
                 One-off
               </CBadge>
             ) : null}
+            {recurringRow ? (
+              <CBadge color="secondary" className="rounded-pill fw-normal px-2 py-0 opacity-75">
+                Recurring
+              </CBadge>
+            ) : null}
+            <OperationalSessionModeBadge mode={row.sessionMode} className="rounded-pill fw-normal" />
             {typeLabel ? (
               <CBadge color="light" className="text-dark border rounded-pill fw-normal px-2 py-0">
                 {typeLabel}

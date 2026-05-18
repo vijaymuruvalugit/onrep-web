@@ -1,6 +1,7 @@
 import React from 'react'
 import { CButton } from '@coreui/react'
 import OperationalSessionBadge from '../../../domain/operationalSessions/components/OperationalSessionBadge'
+import OperationalSessionModeBadge from '../../../domain/operationalSessions/components/OperationalSessionModeBadge'
 import { sessionDisplayTitle, sessionTimeRangeLabel } from '../../../domain/operationalSessions/helpers/sessionDisplay'
 import { SKATING_OPS_COPY } from '../constants/skatingOpsCopy'
 
@@ -25,7 +26,12 @@ export default function SkatingOpsWorkspaceChrome({ session, onBack }) {
       <div className="flex-grow-1" style={{ minWidth: 0 }}>
         <div className="d-flex flex-wrap align-items-center gap-2">
           <h2 className="h5 fw-semibold mb-0 text-truncate">{title}</h2>
-          {session ? <OperationalSessionBadge state={session.state} /> : null}
+          {session ? (
+            <>
+              <OperationalSessionBadge state={session.state} />
+              <OperationalSessionModeBadge mode={session.sessionMode} />
+            </>
+          ) : null}
         </div>
         {time ? <p className="small text-body-secondary mb-0">{time}</p> : null}
       </div>

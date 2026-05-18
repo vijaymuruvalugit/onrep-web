@@ -37,6 +37,7 @@ export function operationalSessionToScheduleCompactRow(op) {
     actualEndTime: op.actualEndAt ?? null,
     /** Carry canonical state for badges without breaking row helpers */
     operationalState: op.state,
+    sessionMode: op.sessionMode ?? 'practice',
   }
   return normalizeTrainingSessionRow(row)
 }

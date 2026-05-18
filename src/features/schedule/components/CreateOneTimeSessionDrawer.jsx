@@ -19,6 +19,7 @@ import batchesApi from '../../batches/api/batchesApi'
 import studentsApi from '../../students/api/studentsApi'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { SESSION_TYPE_OPTIONS } from '../constants/sessionTypes'
+import { SESSION_MODE_OPTIONS } from '../../../domain/operationalSessions/constants/sessionModes'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 
 function CoachSelect({ coaches = [], value, onChange, disabled }) {
@@ -82,6 +83,7 @@ export default function CreateOneTimeSessionDrawer({
   const [placeId, setPlaceId] = useState('')
   const [comments, setComments] = useState('')
   const [sessionType, setSessionType] = useState('')
+  const [sessionMode, setSessionMode] = useState('practice')
   const [visibilityEnabled, setVisibilityEnabled] = useState(true)
   const [attendanceEnabled, setAttendanceEnabled] = useState(true)
   const [recurringPatternId, setRecurringPatternId] = useState('')
@@ -221,6 +223,7 @@ export default function CreateOneTimeSessionDrawer({
         guestStudentIds,
         sessionComments: comments.trim() || undefined,
         sessionType: sessionType || undefined,
+        sessionMode,
         visibilityEnabled,
         attendanceEnabled,
         recurringPatternId: recurringPatternId || undefined,
@@ -430,6 +433,14 @@ export default function CreateOneTimeSessionDrawer({
         </section>
 
         <section>
+          <div className="onrep-type-label mb-2">Session mode</div>
+          <CFormSelect value={sessionMode} onChange={(e) => setSessionMode(e.target.value)} className="mb-3">
+            {SESSION_MODE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </CFormSelect>
           <div className="onrep-type-label mb-2">Session type</div>
           <CFormSelect value={sessionType} onChange={(e) => setSessionType(e.target.value)}>
             {SESSION_TYPE_OPTIONS.map((o) => (

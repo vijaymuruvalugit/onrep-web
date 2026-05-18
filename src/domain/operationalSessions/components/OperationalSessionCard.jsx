@@ -1,13 +1,9 @@
 import React from 'react'
-import { CBadge, CCard, CCardBody } from '@coreui/react'
+import { CCard, CCardBody } from '@coreui/react'
 import OperationalSessionBadge from './OperationalSessionBadge'
+import OperationalSessionModeBadge from './OperationalSessionModeBadge'
 import OperationalSessionActions from './OperationalSessionActions'
-import {
-  sessionDisplayTitle,
-  sessionTimeRangeLabel,
-  sessionTypeBadgeColor,
-  sessionTypeLabel,
-} from '../helpers/sessionDisplay'
+import { sessionDisplayTitle, sessionTimeRangeLabel } from '../helpers/sessionDisplay'
 import { isLiveSession } from '../helpers/sessionActions'
 
 /**
@@ -30,7 +26,6 @@ export default function OperationalSessionCard({
   onSelect,
 }) {
   if (!s?.id) return null
-  const type = sessionTypeLabel(s)
   const title = sessionDisplayTitle(s)
   const time = sessionTimeRangeLabel(s)
   const live = isLiveSession(s)
@@ -62,9 +57,7 @@ export default function OperationalSessionCard({
         <div className="flex-grow-1" style={{ minWidth: 0 }}>
           <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
             <OperationalSessionBadge state={s.state} />
-            <CBadge color={sessionTypeBadgeColor(type)} className="text-capitalize">
-              {type}
-            </CBadge>
+            <OperationalSessionModeBadge mode={s.sessionMode} />
             {pinned ? (
               <span className="small fw-semibold text-success text-uppercase">Coaching now</span>
             ) : null}

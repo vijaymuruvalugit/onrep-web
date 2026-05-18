@@ -64,6 +64,7 @@ describe('SkatingOpsPage (operational command center)', () => {
         {
           id: '11111111-1111-1111-1111-111111111111',
           state: 'active',
+          sessionMode: 'competition',
           title: 'Evening Rink',
           sessionDate: '2026-05-18',
           startTime: '17:30',

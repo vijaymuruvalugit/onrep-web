@@ -16,6 +16,7 @@ import {
 import { apiDaysToUiLabels, uiDayLabelsToApi, UI_DAY_LABELS_ORDERED } from '../utils/daysOfWeek'
 import { RECURRING_PATTERN_EDIT_MODE } from '@onrep/contracts/recurring-patterns'
 import PlaceSelect from '../../places/components/PlaceSelect'
+import { SESSION_MODE_OPTIONS } from '../../../domain/operationalSessions/constants/sessionModes'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 
@@ -58,6 +59,7 @@ const EMPTY_PATTERN = Object.freeze({
   placeId: '',
   coachId: '',
   sessionFocus: '',
+  sessionMode: 'practice',
 })
 
 /**
@@ -94,6 +96,7 @@ export default function PatternEditorDrawer({
         placeId: pattern.placeId || '',
         coachId: pattern.coachId || '',
         sessionFocus: pattern.sessionFocus || '',
+        sessionMode: pattern.sessionMode || 'practice',
       }
     }
     return { ...EMPTY_PATTERN }
@@ -106,6 +109,7 @@ export default function PatternEditorDrawer({
   const [placeId, setPlaceId] = useState(seed.placeId || '')
   const [coachId, setCoachId] = useState(seed.coachId || '')
   const [sessionFocus, setSessionFocus] = useState(seed.sessionFocus || '')
+  const [sessionMode, setSessionMode] = useState(seed.sessionMode || 'practice')
   const [editMode, setEditMode] = useState(RECURRING_PATTERN_EDIT_MODE.UPDATE_UPCOMING)
   const [effectiveFromDate, setEffectiveFromDate] = useState(() => nextMondayYmd())
   const [localError, setLocalError] = useState(null)
@@ -120,6 +124,7 @@ export default function PatternEditorDrawer({
     setPlaceId(seed.placeId || '')
     setCoachId(seed.coachId || '')
     setSessionFocus(seed.sessionFocus || '')
+    setSessionMode(seed.sessionMode || 'practice')
     setEditMode(RECURRING_PATTERN_EDIT_MODE.UPDATE_UPCOMING)
     setEffectiveFromDate(nextMondayYmd())
     setLocalError(null)
@@ -161,6 +166,7 @@ export default function PatternEditorDrawer({
       placeId: placeId || null,
       coachId: coachId || null,
       sessionFocus: sessionFocus.trim() || null,
+      sessionMode,
     }
     await onSubmit({
       payload: basePayload,
@@ -265,6 +271,20 @@ export default function PatternEditorDrawer({
               {coaches.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name || 'Coach'}
+                </option>
+              ))}
+            </CFormSelect>
+          </div>
+          <div className="mb-3">
+            <CFormLabel className="small mb-1">Session mode</CFormLabel>
+            <CFormSelect
+              value={sessionMode}
+              onChange={(e) => setSessionMode(e.target.value)}
+              disabled={saving}
+            >
+              {SESSION_MODE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </CFormSelect>

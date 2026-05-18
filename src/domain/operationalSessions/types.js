@@ -9,6 +9,7 @@
  * @property {string} id
  * @property {string} state
  * @property {string} sessionKind
+ * @property {string} [sessionMode] practice|assessment|competition|recovery|testing
  * @property {string} sourceType
  * @property {string|null} sourceId
  * @property {string|null} title
