@@ -554,6 +554,7 @@ const SchedulePage = () => {
           batchId={effectiveBatchId}
           hasUpcomingByPatternId={hasUpcomingByPatternId}
           onAdd={openAddPattern}
+          onAddOneOff={() => setCreateOneTimeOpen(true)}
           onEdit={openEditPattern}
           onSkipNext={handleSkipNextForPattern}
           onAdjustNext={openAdjustNext}
@@ -589,15 +590,6 @@ const SchedulePage = () => {
                 </CButton>
               ))}
             </div>
-            <CButton
-              color="primary"
-              size="sm"
-              className="schedule-page__add-one-off-btn"
-              disabled={!effectiveBatchId}
-              onClick={() => setCreateOneTimeOpen(true)}
-            >
-              + One-off session
-            </CButton>
           </div>
         </div>
         <CCard className="schedule-page__upcoming-card onrep-surface-a border-0">

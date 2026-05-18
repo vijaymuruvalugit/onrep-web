@@ -150,6 +150,7 @@ export default function RecurringPatternsList({
   onAdjustNext,
   onDeactivate,
   onRefresh,
+  onAddOneOff,
 }) {
   const active = patterns.filter((p) => p.isActive)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -165,21 +166,31 @@ export default function RecurringPatternsList({
             appear on your calendar automatically — no manual generate step.
           </div>
         </div>
-        <div className="d-flex gap-2 flex-shrink-0">
+        <div className="d-flex flex-wrap gap-2 align-items-center flex-shrink-0 ms-md-auto">
+          <CButton size="sm" color="primary" disabled={!batchId} onClick={onAdd}>
+            + Add recurring session
+          </CButton>
+          <CButton
+            size="sm"
+            color="primary"
+            variant="outline"
+            disabled={!batchId}
+            onClick={onAddOneOff}
+          >
+            + One-off session
+          </CButton>
           {batchId ? (
             <CButton
               size="sm"
               color="secondary"
               variant="outline"
+              className="ms-md-auto"
               onClick={onRefresh}
               disabled={loading}
             >
               Refresh
             </CButton>
           ) : null}
-          <CButton size="sm" color="primary" disabled={!batchId} onClick={onAdd}>
-            + Add recurring session
-          </CButton>
         </div>
       </div>
 
