@@ -88,7 +88,7 @@ const SchedulePage = () => {
   const activeActivityId = useSelector((s) => s.workspace.activeActivityId)
 
   const { items: batches, fetchBatches } = useBatches()
-  const { items: places, fetchPlaces } = usePlaces()
+  const { activePlaces, fetchPlaces, listLoading: placesLoading } = usePlaces()
   const {
     items,
     loading,
@@ -131,9 +131,14 @@ const SchedulePage = () => {
     fetchBatches()
   }, [fetchBatches])
 
+  const ensurePlacesLoaded = useCallback(() => {
+    if (!bootstrapComplete || !activeActivityId) return Promise.resolve()
+    return fetchPlaces({ status: 'active', limit: 200 })
+  }, [bootstrapComplete, activeActivityId, fetchPlaces])
+
   useEffect(() => {
-    fetchPlaces({ status: 'active', limit: 200 })
-  }, [fetchPlaces])
+    ensurePlacesLoaded()
+  }, [ensurePlacesLoaded])
 
   useEffect(() => {
     let cancelled = false
@@ -343,9 +348,9 @@ const SchedulePage = () => {
     if (effectiveBatchId) {
       tasks.unshift(fetchSchedule(effectiveBatchId))
     }
-    tasks.push(fetchBatches())
+    tasks.push(fetchBatches(), ensurePlacesLoaded())
     await Promise.all(tasks)
-  }, [effectiveBatchId, fetchSchedule, loadSessions, fetchBatches])
+  }, [effectiveBatchId, fetchSchedule, loadSessions, fetchBatches, ensurePlacesLoaded])
 
   const handleStartSession = useCallback(
     async (row) => {
@@ -713,10 +718,12 @@ const SchedulePage = () => {
       <CreateOneTimeSessionDrawer
         visible={createOneTimeOpen}
         batch={selectedBatch}
-        places={places}
+        places={activePlaces}
+        placesLoading={placesLoading}
         patterns={activePatterns}
         onClose={() => setCreateOneTimeOpen(false)}
         onCreated={refreshAll}
+        onEnsurePlaces={ensurePlacesLoaded}
       />
 
       <PatternEditorDrawer
@@ -724,9 +731,11 @@ const SchedulePage = () => {
         mode={patternDrawerMode}
         pattern={patternDrawerSeed}
         batch={selectedBatch}
-        places={places}
+        places={activePlaces}
+        placesLoading={placesLoading}
         coaches={coaches}
         onClose={() => setPatternDrawerOpen(false)}
+        onEnsurePlaces={ensurePlacesLoaded}
         onSubmit={handleSavePattern}
         saving={saving}
         mutationError={mutationError}

@@ -78,9 +78,11 @@ export default function PatternEditorDrawer({
   pattern, // current row when editing
   batch,
   places = [],
+  placesLoading = false,
   coaches = [],
   onClose,
   onSubmit, // ({ payload, editMode, effectiveFrom }) => Promise<void>
+  onEnsurePlaces,
   saving,
   mutationError,
 }) {
@@ -113,6 +115,11 @@ export default function PatternEditorDrawer({
   const [editMode, setEditMode] = useState(RECURRING_PATTERN_EDIT_MODE.UPDATE_UPCOMING)
   const [effectiveFromDate, setEffectiveFromDate] = useState(() => nextMondayYmd())
   const [localError, setLocalError] = useState(null)
+
+  useEffect(() => {
+    if (!visible) return
+    onEnsurePlaces?.()
+  }, [visible, onEnsurePlaces])
 
   useEffect(() => {
     if (!visible) return
@@ -259,7 +266,13 @@ export default function PatternEditorDrawer({
             <CFormLabel className="small mb-1">
               Place <span className="fw-normal text-body-secondary">(optional)</span>
             </CFormLabel>
-            <PlaceSelect places={places} value={placeId} onChange={setPlaceId} disabled={saving} />
+            <PlaceSelect
+              places={places}
+              value={placeId}
+              onChange={setPlaceId}
+              disabled={saving}
+              loading={placesLoading}
+            />
           </div>
           <div className="mb-3">
             <CFormLabel className="small mb-1">

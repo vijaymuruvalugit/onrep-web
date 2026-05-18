@@ -48,8 +48,10 @@ export default function CreateOneTimeSessionDrawer({
   onClose,
   batch,
   places = [],
+  placesLoading = false,
   patterns = [],
   onCreated,
+  onEnsurePlaces,
 }) {
   const batchId = batch?.id || batch?._id
   const batchName = stripDemoSuffix(batch?.name || '') || 'Batch'
@@ -104,6 +106,11 @@ export default function CreateOneTimeSessionDrawer({
     setAddOpen(false)
     setAddQuery('')
   }, [visible, batchId, batch, defaultPlaceId])
+
+  useEffect(() => {
+    if (!visible) return
+    onEnsurePlaces?.()
+  }, [visible, onEnsurePlaces])
 
   useEffect(() => {
     if (!visible || !batchId) return
@@ -310,9 +317,11 @@ export default function CreateOneTimeSessionDrawer({
             <CFormSelect
               value={placeId}
               onChange={(e) => setPlaceId(e.target.value)}
-              disabled={busy}
+              disabled={busy || placesLoading}
             >
-              <option value="">Default batch place</option>
+              <option value="">
+                {placesLoading && !places.length ? 'Loading places…' : 'Default batch place'}
+              </option>
               {places.map((p) => (
                 <option key={p.id} value={String(p.id)}>
                   {stripDemoSuffix(p.name || '')}

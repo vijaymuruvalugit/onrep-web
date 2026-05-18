@@ -7,9 +7,10 @@ import { CButton, CFormSelect, CFormText } from '@coreui/react'
  * @param {(placeId: string | '') => void} props.onChange
  * @param {ReturnType<import('../utils/placeMappers').mapPlaceFromApi>[]} props.places active list
  * @param {boolean} [props.disabled]
+ * @param {boolean} [props.loading]
  * @param {string} [props.className]
  */
-export default function PlaceSelect({ value, onChange, places, disabled, className }) {
+export default function PlaceSelect({ value, onChange, places, disabled, loading, className }) {
   const activeList = useMemo(
     () => (Array.isArray(places) ? places.filter((p) => p.isActive) : []),
     [places],
@@ -71,11 +72,13 @@ export default function PlaceSelect({ value, onChange, places, disabled, classNa
       ) : null}
       <CFormSelect
         aria-label="Select place"
-        disabled={disabled}
+        disabled={disabled || loading}
         value={value || ''}
         onChange={(e) => onChange(e.target.value || '')}
       >
-        <option value="">No place selected</option>
+        <option value="">
+          {loading && !activeList.length ? 'Loading places…' : 'No place selected'}
+        </option>
         {activeList.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}

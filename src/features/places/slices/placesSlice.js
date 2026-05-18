@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import normalizeApiError from '../../../api/normalizeApiError'
+import { setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import batchesApi from '../../batches/api/batchesApi'
 import scheduleApi from '../../schedule/api/scheduleApi'
 import { createSchedule } from '../../schedule/slices/scheduleSlice'
@@ -26,6 +27,8 @@ const initialState = {
     q: '',
     status: 'active',
   },
+  /** Ignore stale list responses when workspace changes or a newer fetch started. */
+  latestPlacesRequestId: null,
 }
 
 export const fetchPlaces = createAsyncThunk('places/fetchPlaces', async (params = {}, thunkApi) => {
@@ -175,18 +178,25 @@ const placesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchPlaces.pending, (state) => {
+      .addCase(fetchPlaces.pending, (state, action) => {
         state.listLoading = true
         state.listError = null
+        state.latestPlacesRequestId = action.meta.requestId
       })
       .addCase(fetchPlaces.fulfilled, (state, action) => {
+        if (action.meta.requestId !== state.latestPlacesRequestId) return
         state.listLoading = false
         state.items = action.payload.places
         state.listTotal = action.payload.total
       })
       .addCase(fetchPlaces.rejected, (state, action) => {
+        if (action.meta.requestId !== state.latestPlacesRequestId) return
         state.listLoading = false
         state.listError = action.payload || { message: 'Unable to load places.' }
+      })
+      .addCase(setActiveWorkspace, (state) => {
+        state.items = []
+        state.latestPlacesRequestId = null
       })
       .addCase(fetchPlaceById.pending, (state) => {
         state.detailLoading = true
