@@ -14,7 +14,7 @@ import { liveLabel } from '../constants/coachLiveLabels'
  * Collapsed timing / lap entry for live coaching workspace.
  */
 export default function CoachLiveTimingSection({
-  bundle,
+  races = [],
   lapStudentId,
   rosterForSession,
   lapRaceId,
@@ -47,11 +47,11 @@ export default function CoachLiveTimingSection({
 }) {
   return (
     <div className="coach-live-timing-inner">
-      {(bundle.races || []).length > 1 ? (
+      {(races || []).length > 1 ? (
         <div className="mb-3">
           <div className="small text-body-secondary mb-1">{SESSION_OPS_COPY.timingLaneColumn}</div>
           <CButtonGroup vertical role="group" className="w-100">
-            {(bundle.races || []).map((rc) => (
+            {(races || []).map((rc) => (
               <CButton
                 key={rc.id}
                 color={String(lapRaceId) === String(rc.id) ? 'primary' : 'light'}
@@ -68,7 +68,7 @@ export default function CoachLiveTimingSection({
             ))}
           </CButtonGroup>
         </div>
-      ) : (bundle.races || []).length === 1 ? (
+      ) : (races || []).length === 1 ? (
         <div className="mb-3">
           <CButton size="sm" color="light" variant="outline" type="button" onClick={() => void addTimingLane()}>
             {SESSION_OPS_COPY.addTimingLane}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { skatingOpsApi } from '../api/skatingOpsApi'
 
 const FLUSH_IDLE_MS = 2000
+const MARKER_PULSE_MS = 1200
 const SK_PENDING_QUEUE = 'onrep.skating.coachingPendingQueue'
 
 function emptyDraft() {
@@ -34,6 +35,10 @@ function newFlushId() {
   return `flush-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+function isImmediateMarkerPayload(payload) {
+  return payload?.captureMode === 'marker' || payload?.eventType === 'marker'
+}
+
 /**
  * Optimistic coaching draft with batched flush (not per-tap POST).
  *
@@ -58,7 +63,9 @@ export function useCoachingDraftQueue({
   const [draft, setDraft] = useState(emptyDraft)
   const [syncState, setSyncState] = useState('idle')
   const [syncError, setSyncError] = useState('')
+  const [markerPulse, setMarkerPulse] = useState(null)
   const flushTimerRef = useRef(null)
+  const markerPulseTimerRef = useRef(null)
   const flushingRef = useRef(false)
   const draftRef = useRef(draft)
   const studentIdRef = useRef(studentId)
@@ -76,7 +83,7 @@ export function useCoachingDraftQueue({
   }, [])
 
   const buildPayload = useCallback(
-    (d, sid) => {
+    (d, sid, overrides = {}) => {
       const scores = {}
       for (const [k, v] of Object.entries(d.scores || {})) {
         const n = Number(v)
@@ -87,35 +94,43 @@ export function useCoachingDraftQueue({
         clientFlushId: newFlushId(),
         sessionMode,
         blockId: blockId || undefined,
-        scores,
-        tags: [...(d.tags || [])],
-        markers: [...(d.markers || [])],
-        notes: d.notes?.trim() || undefined,
-        eventType: 'batch',
-        captureMode: 'batch',
+        scores: overrides.scores ?? scores,
+        tags: overrides.tags ?? [...(d.tags || [])],
+        markers: overrides.markers ?? [...(d.markers || [])],
+        notes: overrides.notes !== undefined ? overrides.notes : d.notes?.trim() || undefined,
+        eventType: overrides.eventType ?? 'batch',
+        captureMode: overrides.captureMode ?? 'batch',
       }
     },
     [sessionMode, blockId],
   )
 
+  const markSaved = useCallback(() => {
+    setSyncState('saved')
+    window.setTimeout(() => {
+      setSyncState((s) => (s === 'saved' ? 'idle' : s))
+    }, 1500)
+  }, [])
+
   const flushDraft = useCallback(
-    async (targetStudentId, draftSnapshot) => {
+    async (targetStudentId, draftSnapshot, overrides = {}) => {
       if (!sessionId || !targetStudentId || disabled) return true
       const d = draftSnapshot || draftRef.current
-      if (!hasPending(d)) return true
+      if (!hasPending(d) && !overrides.markers?.length) return true
       if (flushingRef.current) return false
 
       flushingRef.current = true
       setSyncState('syncing')
       setSyncError('')
-      const payload = buildPayload(d, targetStudentId)
+      const payload = buildPayload(d, targetStudentId, overrides)
+      const immediateMarker = isImmediateMarkerPayload(payload)
 
       try {
         await skatingOpsApi.postCoachingEventsBatch(sessionId, payload)
-        if (String(targetStudentId) === String(studentIdRef.current)) {
+        if (String(targetStudentId) === String(studentIdRef.current) && !immediateMarker) {
           setDraft(emptyDraft())
         }
-        setSyncState('saved')
+        markSaved()
         onFlushSuccess?.(payload)
         return true
       } catch (e) {
@@ -131,7 +146,7 @@ export function useCoachingDraftQueue({
         flushingRef.current = false
       }
     },
-    [sessionId, disabled, hasPending, buildPayload, onFlushSuccess, onFlushError],
+    [sessionId, disabled, hasPending, buildPayload, markSaved, onFlushSuccess, onFlushError],
   )
 
   const scheduleFlush = useCallback(() => {
@@ -164,6 +179,7 @@ export function useCoachingDraftQueue({
     prevStudentRef.current = studentId
     setSyncState('idle')
     setSyncError('')
+    setMarkerPulse(null)
   }, [studentId, sessionId, flushDraft])
 
   useEffect(() => {
@@ -204,6 +220,13 @@ export function useCoachingDraftQueue({
     }
   }, [flushNow])
 
+  useEffect(
+    () => () => {
+      if (markerPulseTimerRef.current) window.clearTimeout(markerPulseTimerRef.current)
+    },
+    [],
+  )
+
   const setQuickScore = useCallback((key, n) => {
     setDraft((prev) => ({ ...prev, scores: { ...prev.scores, [key]: n } }))
     setSyncState('pending')
@@ -219,18 +242,26 @@ export function useCoachingDraftQueue({
     setSyncState('pending')
   }, [])
 
+  /** Good / Watch / Best — isolated POST; does not flush or clear scores/tags on screen. */
   const addMarker = useCallback(
     (key) => {
-      const next = {
-        ...draftRef.current,
-        markers: [...(draftRef.current.markers || []), key],
-      }
-      draftRef.current = next
-      setDraft(next)
-      setSyncState('syncing')
-      void flushDraft(studentIdRef.current, next)
+      if (!sessionId || !studentIdRef.current || disabled) return
+      if (markerPulseTimerRef.current) window.clearTimeout(markerPulseTimerRef.current)
+      setMarkerPulse(key)
+      markerPulseTimerRef.current = window.setTimeout(() => {
+        markerPulseTimerRef.current = null
+        setMarkerPulse(null)
+      }, MARKER_PULSE_MS)
+      void flushDraft(studentIdRef.current, draftRef.current, {
+        scores: {},
+        tags: [],
+        markers: [key],
+        notes: undefined,
+        eventType: 'marker',
+        captureMode: 'marker',
+      })
     },
-    [flushDraft],
+    [sessionId, disabled, flushDraft],
   )
 
   const setNotes = useCallback((notes) => {
@@ -242,6 +273,7 @@ export function useCoachingDraftQueue({
     draft,
     syncState,
     syncError,
+    markerPulse,
     setQuickScore,
     toggleTag,
     addMarker,

@@ -470,6 +470,35 @@
   box-shadow: 0 4px 10px -8px rgba(0, 0, 0, 0.1);
 }
 
+.skating-ops-page.skating-ops--coach-live .coach-live-sync-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin: 0.15rem 0 0.35rem 0.15rem;
+  border-radius: 50%;
+  background: var(--cui-info, #39f);
+  opacity: 0.55;
+  animation: coach-live-sync-pulse 1.4s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-sync-dot--header {
+  float: right;
+  margin: 0.1rem 0.25rem 0 0;
+}
+
+@keyframes coach-live-sync-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+}
+
 .skating-ops-page.skating-ops--coach-live .coach-live-stack__sticky-athletes {
   position: sticky;
   top: 0;

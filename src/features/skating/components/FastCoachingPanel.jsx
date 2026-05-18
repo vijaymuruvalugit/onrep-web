@@ -23,6 +23,7 @@ export default function FastCoachingPanel({
   onQuickScore,
   onToggleTag,
   onMarker,
+  markerPulse = null,
   onNotesChange,
   onManualSync,
   obsScores = {},
@@ -108,8 +109,7 @@ export default function FastCoachingPanel({
       <section className="mb-2" aria-label="Markers">
         <div className="d-flex flex-wrap gap-2">
           {MARKER_OPTIONS.map(({ key, label, short }) => {
-            const count = (draft.markers || []).filter((m) => m === key).length
-            const active = count > 0
+            const active = markerPulse === key
             return (
               <CButton
                 key={key}
@@ -122,7 +122,6 @@ export default function FastCoachingPanel({
               >
                 <span aria-hidden>{short}</span>
                 <span className="ms-1">{label}</span>
-                {count > 1 ? <span className="ms-1 opacity-75">×{count}</span> : null}
               </CButton>
             )
           })}

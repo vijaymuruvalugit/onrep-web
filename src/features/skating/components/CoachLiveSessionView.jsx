@@ -1,19 +1,20 @@
-import React from 'react'
-import { CSpinner } from '@coreui/react'
+import React, { memo } from 'react'
 import SessionLiveHeader from './SessionLiveHeader'
 import PhaseModeStrip from './PhaseModeStrip'
 import AthleteCardStrip from './AthleteCardStrip'
 import ActiveAthleteWorkspace from './ActiveAthleteWorkspace'
 import RaceTimingWorkspace from './RaceTimingWorkspace'
 import { getLiveUiProfile, livePhaseLabel } from '../constants/coachLiveLabels'
+import LiveSessionSyncDot from './LiveSessionSyncDot'
 
 /**
- * Mobile-first vertical live coaching layout.
+ * Live coaching shell — stable mount; background session sync enriches via syncDomains props.
  */
-export default function CoachLiveSessionView({
-  bundle,
-  bundleLoading,
+function CoachLiveSessionView({
+  shellSession,
   selSession,
+  syncDomains,
+  syncStatus,
   sortedSessionBlocks,
   activeBlockId,
   activeBlockMeta,
@@ -25,7 +26,7 @@ export default function CoachLiveSessionView({
   rosterForSession,
   lapStudentId,
   observedStudentIds,
-  participationByStudentId,
+  participationByStudentId = {},
   athletePhaseLabelByStudentId = {},
   onPickSkater,
   onAddAthletesRequest,
@@ -55,13 +56,13 @@ export default function CoachLiveSessionView({
 
   const athleteCount = rosterForSession?.length ?? 0
   const sessionTitle =
-    bundle?.session?.placeName || selSession?.placeName || selSession?.title || 'Session'
+    shellSession?.placeName || selSession?.placeName || selSession?.title || 'Session'
 
-  if (bundleLoading) {
-    return <CSpinner />
-  }
-
-  if (!bundle) return null
+  const placeName =
+    syncDomains?.sessionMeta?.placeName ||
+    shellSession?.placeName ||
+    selSession?.placeName ||
+    ''
 
   return (
     <div
@@ -70,45 +71,48 @@ export default function CoachLiveSessionView({
     >
       <div className="coach-live-stack__chrome">
         <div className="coach-live-stack__sticky-top">
-        <SessionLiveHeader
-          placeName={bundle?.session?.placeName || selSession?.placeName || ''}
-          sessionTitle={sessionTitle}
-          phaseLabel={phaseLabel}
-          athleteCount={athleteCount}
-          lifecycle={lifecycle}
-          elapsedLabel={elapsedLabel}
-          isRaceMode={isRaceMode}
-          onRaceFocus={
-            isRaceMode && coachingCollapsed
-              ? () => onCoachingCollapsedChange?.(false)
-              : isRaceMode
-                ? () => onCoachingCollapsedChange?.(true)
-                : undefined
-          }
-          {...sessionHeaderProps}
-        />
-        {blocksLoading ? (
-          <CSpinner size="sm" className="my-2" />
-        ) : (
-          <PhaseModeStrip
-            blocks={sortedSessionBlocks}
-            activeBlockId={activeBlockId}
-            onSelectBlock={onSelectBlock}
-            athleteCountByPhaseId={athleteCountByPhaseId}
-            busy={blocksBusy || blocksLoading}
+          <SessionLiveHeader
+            placeName={placeName}
+            sessionTitle={sessionTitle}
+            phaseLabel={phaseLabel}
+            athleteCount={athleteCount}
+            lifecycle={lifecycle}
+            elapsedLabel={elapsedLabel}
+            isRaceMode={isRaceMode}
+            onRaceFocus={
+              isRaceMode && coachingCollapsed
+                ? () => onCoachingCollapsedChange?.(false)
+                : isRaceMode
+                  ? () => onCoachingCollapsedChange?.(true)
+                  : undefined
+            }
+            {...sessionHeaderProps}
           />
-        )}
+          <LiveSessionSyncDot syncing={syncStatus?.syncing} className="coach-live-sync-dot--header" />
+          {blocksLoading ? (
+            <div className="coach-live-phases-skeleton small text-body-secondary my-2">
+              Phases…
+            </div>
+          ) : (
+            <PhaseModeStrip
+              blocks={sortedSessionBlocks}
+              activeBlockId={activeBlockId}
+              onSelectBlock={onSelectBlock}
+              athleteCountByPhaseId={athleteCountByPhaseId}
+              busy={blocksBusy || blocksLoading}
+            />
+          )}
         </div>
         <div className="coach-live-stack__sticky-athletes">
-        <AthleteCardStrip
-          rows={rosterForSession}
-          lapStudentId={lapStudentId}
-          observedStudentIds={observedStudentIds}
-          participationByStudentId={participationByStudentId}
-          athletePhaseLabelByStudentId={athletePhaseLabelByStudentId}
-          onPickSkater={onPickSkater}
-          onAddAthletesRequest={onAddAthletesRequest}
-        />
+          <AthleteCardStrip
+            rows={rosterForSession}
+            lapStudentId={lapStudentId}
+            observedStudentIds={observedStudentIds}
+            participationByStudentId={participationByStudentId}
+            athletePhaseLabelByStudentId={athletePhaseLabelByStudentId}
+            onPickSkater={onPickSkater}
+            onAddAthletesRequest={onAddAthletesRequest}
+          />
         </div>
       </div>
 
@@ -117,7 +121,7 @@ export default function CoachLiveSessionView({
           <div className="coach-live-race-zone">
             <RaceTimingWorkspace
               athletes={raceSectionProps?.athletes || rosterForSession}
-              leaderboard={bundle?.leaderboard}
+              leaderboard={syncDomains?.leaderboard}
               disabled={uiPaused || opsState === 'ended'}
               busy={raceSectionProps?.busy}
               heatNumber={raceSectionProps?.heatNumber}
@@ -165,3 +169,5 @@ export default function CoachLiveSessionView({
     </div>
   )
 }
+
+export default memo(CoachLiveSessionView)

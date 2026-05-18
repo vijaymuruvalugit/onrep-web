@@ -170,6 +170,7 @@ export default function ActiveAthleteWorkspace({
                   onQuickScore={onQuickScore}
                   onToggleTag={coachingQueue.toggleTag}
                   onMarker={coachingQueue.addMarker}
+                  markerPulse={coachingQueue.markerPulse}
                   onNotesChange={coachingQueue.setNotes}
                   onManualSync={() => void coachingQueue.flushNow()}
                   obsScores={obsScores}

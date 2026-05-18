@@ -1,16 +1,17 @@
 /**
- * Lightweight bundle-only “today” stats for the session header (operational, not analytics).
+ * Lightweight session stats from sync domains (operational, not analytics).
  * @returns {{ athleteCount: number, lapCount: number, focus: string|null, mostActive: { name: string, laps: number }|null }}
  */
-export function computeSessionSummary(bundle, rosterCount, nameByStudentId = new Map()) {
+export function computeSessionSummary(syncDomains, rosterCount, nameByStudentId = new Map()) {
   const athleteCount = Number(rosterCount) || 0
-  const lapCount = Number(bundle?.totalLapCount ?? 0) || 0
+  const lapCount = Number(syncDomains?.totalLapCount ?? 0) || 0
+  const meta = syncDomains?.sessionMeta
   const focus =
-    bundle?.session?.sessionFocus != null && String(bundle.session.sessionFocus).trim()
-      ? String(bundle.session.sessionFocus).trim()
+    meta?.sessionFocus != null && String(meta.sessionFocus).trim()
+      ? String(meta.sessionFocus).trim()
       : null
 
-  const recent = Array.isArray(bundle?.recentLaps) ? bundle.recentLaps : []
+  const recent = Array.isArray(syncDomains?.recentLaps) ? syncDomains.recentLaps : []
   const counts = new Map()
   for (const row of recent) {
     const sid = String(row.studentId ?? row.student_id ?? '').trim()

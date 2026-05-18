@@ -39,7 +39,30 @@ One **rhythm**: select athlete → enter performance signal → commit → quiet
 | Rapid Observation | `POST .../rapid-observation` | Five KPI chips + save; success message clears automatically. |
 | Progression | Server-driven from lap | Inline info alert after lap when applicable. |
 
-Shared rules: **preserve selection** where possible; **no full-page blocking** during active session; **incremental** bundle refresh after save.
+Shared rules: **preserve selection** where possible; **no full-page blocking** during active session; **background session sync** merges one domain at a time after save (never `setBundle` / full snapshot replace on the live workspace).
+
+---
+
+## Local-first live coaching (architecture)
+
+Live coaching is a **write-heavy interaction system**, not a snapshot dashboard.
+
+| Rule | Implementation |
+|------|----------------|
+| **Live coaching shell** | Session header, phase strip, athlete strip, athlete workspace — renders from day-board / operational session + blocks + roster **before** sync domains load. |
+| **Background session sync domains** | `laps`, `leaderboard`, `race results`, `coaching events` (+ narrow `sessionMeta`) via [`useLiveSessionRefresh.js`](../hooks/useLiveSessionRefresh.js). |
+| **Interaction state ownership** | Selected athlete/phase, drafts, tabs, scroll, focus — shell-owned; sync must not reset them. |
+| **No full object replacement** | Forbidden: `setBundle(next)`. Allowed: `mergeSyncDomains` per domain. |
+| **Render before sync** | [`CoachLiveSessionView`](../components/CoachLiveSessionView.jsx) mounts when `?session=` + day-board row exists — not when bundle returns. |
+| **Sync is secondary** | Good/Watch/Best markers do not trigger full refresh; coaching events domain only after tag/score batch. |
+| **Failure tolerance** | Sync errors are inline; coaching continues (fail open). |
+| **Background athlete intelligence** | Skills/history/progress lazy per athlete — never blocks shell ([`useAthleteIntelligence.js`](../hooks/useAthleteIntelligence.js)). |
+
+### Bundle removal phase (planned — do not extend)
+
+`SkatingOpsPage` still exposes a **deprecated** read-only `bundle` object derived from `syncDomains`. New code must use `syncDomains` or [`syncDomainSelectors.js`](../hooks/syncDomainSelectors.js) — never add `useEffect(..., [bundle])` or new `bundle?.` dependencies. Remove the bridge in a dedicated follow-up. Long-term, the **laps sync domain** may use `GET /training/sessions/:id/recent-laps` instead of full snapshot merge (deferred).
+
+Shell loading is owned by [`useLiveSessionShell.js`](../hooks/useLiveSessionShell.js) only (no duplicate block/phase fetches on the page). Session enter and tab visibility use [`useLiveSessionLifecycle.js`](../hooks/useLiveSessionLifecycle.js).
 
 ---
 
@@ -70,7 +93,7 @@ When a full timeline ships, it must be **signal-first**:
 |-------------|---------------------------|
 | Draft persistence | Lap draft in `sessionStorage` (`SK_LAP_DRAFT`); session id in `SK_ACTIVE_SESSION`. |
 | Optimistic / pending | Pending lap row + spinner on lap submit. |
-| Resume | `visibilitychange` refreshes bundle + snapshot **without** full-page spinners (silent refetch when tab regains focus). |
+| Resume | `visibilitychange` runs silent **background session sync** + day-board refetch — no full-page spinners after shell is visible. |
 | No panic UX | Lap failure: message + **Retry** (refetch bundle); observation failure: inline alert. |
 | Retry queue | **Out of scope v1** — explicit button retry only. |
 
@@ -140,7 +163,7 @@ Documented for QA: contrast of numeric lap field; thumb-sized roster rows and KP
 
 ## Continuous UI discipline
 
-- After saves: **patch state via `loadBundle`** — no full route reload.
+- After saves: **patch the relevant sync domain** (e.g. coaching events, laps) — no full route reload or workspace remount.
 - Avoid wiping unrelated UI flags except intentional session change (`selectSession`).
 
 ---

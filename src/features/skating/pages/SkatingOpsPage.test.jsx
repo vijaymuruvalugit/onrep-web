@@ -18,6 +18,9 @@ vi.mock('../api/skatingOpsApi', () => ({
     addRace: vi.fn(),
     listRacesAggregate: vi.fn().mockResolvedValue([]),
     postRapidObservation: vi.fn().mockResolvedValue({}),
+    postCoachingEventsBatch: vi.fn().mockResolvedValue({}),
+    listCoachingEvents: vi.fn().mockResolvedValue([]),
+    getLeaderboard: vi.fn().mockResolvedValue(null),
   },
 }))
 
@@ -25,6 +28,7 @@ vi.mock('../../../domain/operationalSessions/operationalSessionsApi', () => ({
   default: {
     getDayBoard: vi.fn().mockResolvedValue({ date: '2026-01-01', sessions: [] }),
     getBoardRange: vi.fn().mockResolvedValue({ sessions: [], operationalToday: '2026-01-15' }),
+    getSession: vi.fn().mockResolvedValue(null),
   },
 }))
 
@@ -235,5 +239,62 @@ describe('SkatingOpsPage (operational command center)', () => {
       expect(screen.getByTestId('coach-live-session-view')).toBeInTheDocument()
     })
     expect(screen.queryByText('Laps stay in main panel.')).not.toBeInTheDocument()
+  })
+
+  it('renders live shell before background session sync completes', async () => {
+    const { default: operationalSessionsApi } = await import(
+      '../../../domain/operationalSessions/operationalSessionsApi'
+    )
+    const { skatingOpsApi } = await import('../api/skatingOpsApi')
+
+    operationalSessionsApi.getDayBoard.mockResolvedValue({
+      date: '2026-05-18',
+      sessions: [
+        {
+          id: '44444444-4444-4444-4444-444444444444',
+          state: 'active',
+          sessionMode: 'practice',
+          title: 'Shell first',
+          sessionDate: '2026-05-18',
+        },
+      ],
+    })
+    operationalSessionsApi.getSession.mockResolvedValue({
+      id: '44444444-4444-4444-4444-444444444444',
+      placeName: 'Test Rink',
+    })
+
+    let resolveBundle
+    skatingOpsApi.getSessionBundle.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveBundle = () =>
+            resolve({
+              session: {
+                id: '44444444-4444-4444-4444-444444444444',
+                opsState: 'active',
+                sessionSkaterIds: [],
+              },
+              resolvedAthletes: [],
+              recentLaps: [],
+            })
+        }),
+    )
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/coach/skating" element={<SkatingOpsPage />} />
+      </Routes>,
+      { initialEntries: ['/coach/skating?session=44444444-4444-4444-4444-444444444444'] },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('coach-live-session-view')).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    resolveBundle?.()
+    await waitFor(() => {
+      expect(skatingOpsApi.getSessionBundle).toHaveBeenCalled()
+    })
   })
 })

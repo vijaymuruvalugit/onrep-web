@@ -30,6 +30,13 @@ import { DEFAULT_RAPID_KPIS } from '../constants/rapidObservationKpis'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
 import AthleteCaptureDrawer from '../components/AthleteCaptureDrawer'
 import CoachLiveSessionView from '../components/CoachLiveSessionView'
+import CoachLiveRecentLaps from '../components/CoachLiveRecentLaps'
+import { useLiveSessionRefresh } from '../hooks/useLiveSessionRefresh'
+import { useLiveSessionShell } from '../hooks/useLiveSessionShell'
+import { useLiveSessionLifecycle } from '../hooks/useLiveSessionLifecycle'
+import { useSyncDomainPrimitives } from '../hooks/syncDomainSelectors'
+import { athleteFocusFromMeta, buildRosterWithSource } from '../hooks/buildSessionRoster'
+import SkatingOpsSessionWorkspace from './SkatingOpsSessionWorkspace'
 import { livePhaseLabel } from '../constants/coachLiveLabels'
 import CoachLiveTimingSection from '../components/CoachLiveTimingSection'
 import RaceTimingWorkspace, { isRacePhaseBlock } from '../components/RaceTimingWorkspace'
@@ -280,10 +287,6 @@ const SkatingOpsPage = () => {
   const [snapError, setSnapError] = useState(null)
   const [cardActionBusyId, setCardActionBusyId] = useState(null)
 
-  const [bundle, setBundle] = useState(null)
-  const [bundleLoading, setBundleLoading] = useState(false)
-  const [bundleError, setBundleError] = useState(null)
-
   const [places, setPlaces] = useState([])
   const [skaters, setSkaters] = useState([])
 
@@ -313,8 +316,7 @@ const SkatingOpsPage = () => {
   const [rosterFilter, setRosterFilter] = useState('')
   /** While POST /laps is in flight — show pending row + block double-submit */
   const [pendingLapPreview, setPendingLapPreview] = useState(null)
-  const [bundleFetchedAt, setBundleFetchedAt] = useState(null)
-  const [bundleAgeTick, setBundleAgeTick] = useState(0)
+  const athleteFocusHydrateKeyRef = useRef('')
   const [undoOffer, setUndoOffer] = useState(null)
   const [undoBusy, setUndoBusy] = useState(false)
 
@@ -345,15 +347,7 @@ const SkatingOpsPage = () => {
   const [athleteFocusSaving, setAthleteFocusSaving] = useState(false)
   const [athleteFocusSaveMsg, setAthleteFocusSaveMsg] = useState('')
 
-  const [sessionBlocks, setSessionBlocks] = useState([])
-  const [blocksLoading, setBlocksLoading] = useState(false)
-  const [blocksBusy, setBlocksBusy] = useState(false)
-  /** Exactly one active coaching phase at a time (session-level concept; stored client-side for now). */
-  const [activeBlockId, setActiveBlockId] = useState('')
   const [showAddBlockModal, setShowAddBlockModal] = useState(false)
-  const [phaseAthletesByPhaseId, setPhaseAthletesByPhaseId] = useState({})
-  const [phaseAthletesLoading, setPhaseAthletesLoading] = useState(false)
-  const [phaseAthletesBusy, setPhaseAthletesBusy] = useState(false)
 
   const athletePanelRef = useRef(null)
   const defaultRaceEnsureAttemptedRef = useRef(new Set())
@@ -381,14 +375,95 @@ const SkatingOpsPage = () => {
 
   const selectedSessionId = sessionParam || ''
 
+  const liveRefresh = useLiveSessionRefresh(selectedSessionId)
+  const {
+    syncDomains,
+    syncError: syncDomainError,
+    setSyncError: setSyncDomainError,
+    syncing: syncDomainsSyncing,
+    lastSyncedAt: syncFetchedAt,
+    syncAgeTick,
+    refreshAllSyncDomains,
+    refreshLapsSyncDomain,
+    refreshCoachingEventsSyncDomain,
+    refreshLeaderboardSyncDomain,
+    refreshRaceResultsSyncDomain,
+    patchSessionMeta,
+    appendRecentLap,
+    removeRecentLap,
+  } = liveRefresh
+
+  const sessions = useMemo(
+    () => sortDayBoardSessions(dayBoard?.sessions || []),
+    [dayBoard?.sessions],
+  )
+  const selSession = sessions.find((s) => String(s.id) === String(selectedSessionId))
+
+  const liveShell = useLiveSessionShell({
+    sessionId: selectedSessionId,
+    selSession,
+    skaters,
+    syncDomains,
+  })
+
+  const {
+    sortedSessionBlocks,
+    activeBlockId,
+    blocksLoading,
+    blocksBusy,
+    setBlocksBusy,
+    setSessionBlocks,
+    phaseAthletesByPhaseId,
+    phaseAthletesBusy,
+    setPhaseAthletesBusy,
+    setPhaseAthletesByPhaseId,
+    loadPhaseAthletes,
+    rosterForSession,
+    applyPhaseAthleteMove,
+    patchPhaseAthleteLocal,
+    refreshShell,
+    handleSelectBlock: shellSelectBlock,
+    writeActiveBlockId: shellWriteActiveBlockId,
+    shellSession,
+    shellError,
+  } = liveShell
+
+  const syncPrimitives = useSyncDomainPrimitives(syncDomains)
+
+  /**
+   * @deprecated Temporary read-only bridge — remove in bundle-removal phase (see COACH_OS_SPEC).
+   * Prefer syncDomains / syncPrimitives; never assign wholesale.
+   */
+  const bundle = useMemo(() => {
+    if (!syncDomains?.sessionMeta) return null
+    return {
+      session: syncDomains.sessionMeta,
+      recentLaps: syncDomains.recentLaps,
+      recentLapCount: syncDomains.recentLapCount,
+      totalLapCount: syncDomains.totalLapCount,
+      races: syncDomains.races,
+      groups: syncDomains.groups,
+      resolvedAthletes: syncDomains.resolvedAthletes,
+      leaderboard: syncDomains.leaderboard,
+      recentCoachingEvents: syncDomains.coachingEvents,
+      suggestedFocusRaceId: syncDomains.suggestedFocusRaceId,
+    }
+  }, [syncDomains])
+
+  const bundleError = syncDomainError
+  const bundleLoading = false
+  const bundleFetchedAt = syncFetchedAt
+  const bundleAgeTick = syncAgeTick
+  const setBundleError = setSyncDomainError
+
   useEffect(() => {
-    if (!captureDrawerStudentId || !bundle?.session) return
-    const map = bundle.session.sessionAthleteFocusJson || {}
+    if (!captureDrawerStudentId || !syncDomains?.sessionMeta) return
+    const map = syncDomains.sessionMeta.sessionAthleteFocusJson || {}
     const cell = map[captureDrawerStudentId]
     const t = cell && typeof cell === 'object' && cell.text != null ? String(cell.text) : ''
     setAthleteFocusDraft(t)
     setAthleteFocusSaveMsg('')
-  }, [captureDrawerStudentId, bundle?.session, selectedSessionId])
+  }, [captureDrawerStudentId, selectedSessionId])
 
   const clearPendingObsAdvance = useCallback(() => {
     if (advanceTimerRef.current != null) {
@@ -426,116 +501,44 @@ const SkatingOpsPage = () => {
     [dateYmd],
   )
 
-  const loadBundle = useCallback(async (sessionId, opts = {}) => {
-    const silent = Boolean(opts.silent)
-    if (!sessionId) {
-      setBundle(null)
-      setBundleFetchedAt(null)
-      return
-    }
-    if (!silent) {
-      setBundleLoading(true)
-      setBundleError(null)
-    }
-    try {
-      const b = await skatingOpsApi.getSessionBundle(sessionId, {
+  const loadBundle = useCallback(
+    async (sessionId, opts = {}) => {
+      if (!sessionId) return null
+      const result = await refreshAllSyncDomains({
+        silent: Boolean(opts.silent),
+        blockId: opts.blockId,
         recentLapLimit: 120,
-        blockId: opts.blockId || undefined,
       })
-      setBundle(b)
-      setBundleFetchedAt(Date.now())
-      setLapRaceId((prev) => prev || b?.suggestedFocusRaceId || '')
-      if (silent) setBundleError(null)
-    } catch (e) {
-      setBundleError(e?.message || 'Could not load session bundle.')
-      if (!silent) {
-        setBundle(null)
-        setBundleFetchedAt(null)
+      if (result?.extracted?.suggestedFocusRaceId) {
+        setLapRaceId((prev) => prev || result.extracted.suggestedFocusRaceId || '')
       }
-    } finally {
-      if (!silent) setBundleLoading(false)
+      return result
+    },
+    [refreshAllSyncDomains],
+  )
+
+  const onTabVisibleReEntry = useCallback(() => {
+    const snap = flowSnapRef.current
+    if (snap.coachLive && snap.sessionId && (snap.studentName || snap.place)) {
+      const line = snap.studentName
+        ? `${snap.place ? `${snap.place} — ` : ''}You’re back. Still here with ${snap.studentName}.`
+        : `${snap.place || 'Session'} — pick up calmly when you’re ready.`
+      setReEntryWarmth(line)
+      window.setTimeout(() => setReEntryWarmth(null), 4200)
     }
   }, [])
 
-  const loadBlocks = useCallback(async (sessionId, opts = {}) => {
-    const silent = Boolean(opts.silent)
-    if (!sessionId) {
-      setSessionBlocks([])
-      setActiveBlockId('')
-      return
-    }
-    if (!silent) setBlocksLoading(true)
-    try {
-      const blocks = await sessionBlocksApi.listBlocks(sessionId)
-      setSessionBlocks(blocks)
-      const stored = readActiveBlockId(sessionId)
-      const valid = blocks.some((b) => String(b.id) === stored)
-      const firstId = blocks[0]?.id ? String(blocks[0].id) : ''
-      const nextActive = valid ? stored : firstId
-      setActiveBlockId(nextActive)
-      if (nextActive) writeActiveBlockId(sessionId, nextActive)
-    } catch {
-      if (!silent) setSessionBlocks([])
-    } finally {
-      if (!silent) setBlocksLoading(false)
-    }
-  }, [])
-
-  const loadPhaseAthletes = useCallback(async (sessionId, opts = {}) => {
-    const silent = Boolean(opts.silent)
-    if (!sessionId) {
-      setPhaseAthletesByPhaseId({})
-      return
-    }
-    if (!silent) setPhaseAthletesLoading(true)
-    try {
-      const phases = await phaseAthletesApi.listPhaseAthletes(sessionId)
-      const map = {}
-      for (const p of phases) {
-        map[String(p.phaseId)] = Array.isArray(p.athletes) ? p.athletes : []
-      }
-      setPhaseAthletesByPhaseId(map)
-    } catch {
-      if (!silent) setPhaseAthletesByPhaseId({})
-    } finally {
-      if (!silent) setPhaseAthletesLoading(false)
-    }
-  }, [])
-
-  const applyPhaseAthleteMove = useCallback((athlete, fromPhaseId, toPhaseId) => {
-    if (!athlete) return
-    const sid = String(athlete.studentId)
-    setPhaseAthletesByPhaseId((prev) => {
-      const next = {}
-      for (const [pid, list] of Object.entries(prev)) {
-        next[pid] = (list || []).filter((a) => String(a.studentId) !== sid)
-      }
-      const dest = [...(next[String(toPhaseId)] || []), athlete]
-      next[String(toPhaseId)] = dest
-      return next
-    })
-  }, [])
-
-  const patchPhaseAthleteLocal = useCallback((phaseId, athlete) => {
-    if (!athlete) return
-    const sid = String(athlete.studentId)
-    setPhaseAthletesByPhaseId((prev) => {
-      const list = prev[String(phaseId)] || []
-      return {
-        ...prev,
-        [String(phaseId)]: list.map((a) => (String(a.studentId) === sid ? athlete : a)),
-      }
-    })
-  }, [])
+  useLiveSessionLifecycle({
+    sessionId: selectedSessionId,
+    refreshAllSyncDomains,
+    refreshShell,
+    loadDayBoard,
+    onTabVisible: onTabVisibleReEntry,
+  })
 
   useEffect(() => {
     loadDayBoard()
   }, [loadDayBoard])
-
-  useEffect(() => {
-    const id = setInterval(() => setBundleAgeTick((t) => t + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
 
   useEffect(() => {
     if (!selectedSessionId) {
@@ -574,7 +577,7 @@ const SkatingOpsPage = () => {
   }, [selectedSessionId])
 
   useEffect(() => {
-    if (!selectedSessionId || !bundle) return undefined
+    if (!selectedSessionId) return undefined
     const t = window.setTimeout(async () => {
       try {
         const data = await skatingChecklistApi.getEffortSuggestions({
@@ -604,7 +607,7 @@ const SkatingOpsPage = () => {
       }
     }, 320)
     return () => window.clearTimeout(t)
-  }, [selectedSessionId, lapStudentId, lapRaceId, bundle])
+  }, [selectedSessionId, lapStudentId, lapRaceId])
 
   useEffect(() => {
     if (!undoOffer) return undefined
@@ -648,42 +651,6 @@ const SkatingOpsPage = () => {
       cancelled = true
     }
   }, [selectedSessionId])
-
-  useEffect(() => {
-    if (selectedSessionId) {
-      void loadBundle(selectedSessionId)
-      void loadBlocks(selectedSessionId)
-      void loadPhaseAthletes(selectedSessionId)
-    } else {
-      setBundle(null)
-      setPhaseAthletesByPhaseId({})
-      setSessionBlocks([])
-      setActiveBlockId('')
-    }
-  }, [selectedSessionId, loadBundle, loadBlocks, loadPhaseAthletes])
-
-  /** Reconnect / tab return — refresh data without swapping the UI for spinners (avoids “full refresh” feel). */
-  useEffect(() => {
-    const onVis = () => {
-      if (document.visibilityState !== 'visible') return
-      if (selectedSessionId) {
-        void loadBundle(selectedSessionId, { silent: true })
-        void loadBlocks(selectedSessionId, { silent: true })
-        void loadPhaseAthletes(selectedSessionId, { silent: true })
-      }
-      void loadDayBoard({ silent: true })
-      const snap = flowSnapRef.current
-      if (snap.coachLive && snap.sessionId && (snap.studentName || snap.place)) {
-        const line = snap.studentName
-          ? `${snap.place ? `${snap.place} — ` : ''}You’re back. Still here with ${snap.studentName}.`
-          : `${snap.place || 'Session'} — pick up calmly when you’re ready.`
-        setReEntryWarmth(line)
-        window.setTimeout(() => setReEntryWarmth(null), 4200)
-      }
-    }
-    document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
-  }, [selectedSessionId, loadBundle, loadBlocks, loadPhaseAthletes, loadDayBoard])
 
   useEffect(() => {
     try {
@@ -741,6 +708,7 @@ const SkatingOpsPage = () => {
     const next = new URLSearchParams(searchParams)
     if (id) next.set('session', id)
     else next.delete('session')
+    athleteFocusHydrateKeyRef.current = ''
     setSearchParams(next)
     setUiPaused(false)
     setLastProgression(null)
@@ -777,47 +745,10 @@ const SkatingOpsPage = () => {
     setSearchParams(next)
   }
 
-  const rosterForSession = useMemo(() => {
-    const byId = new Map(skaters.map((s) => [String(s.id), s]))
-    const seen = new Set()
-    const orderedIds = []
-
-    const pushId = (id) => {
-      const s = String(id || '').trim()
-      if (!s || seen.has(s)) return
-      seen.add(s)
-      orderedIds.push(s)
-    }
-
-    const resolved = bundle?.resolvedAthletes
-    if (Array.isArray(resolved)) {
-      for (const r of resolved) pushId(r.student_id)
-    }
-    const sessionIds =
-      bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []
-    for (const id of sessionIds) pushId(id)
-    for (const g of bundle?.groups || []) {
-      const gk = g.skaterIds || g.skater_ids || []
-      for (const id of gk) pushId(id)
-    }
-
-    return orderedIds.map((id) => byId.get(id)).filter(Boolean)
-  }, [bundle, skaters])
-
-  const rosterWithSource = useMemo(() => {
-    const src = new Map(
-      (bundle?.resolvedAthletes || []).map((r) => [String(r.student_id), r.source]),
-    )
-    const sessionSet = new Set(
-      (bundle?.session?.sessionSkaterIds || bundle?.session?.session_skater_ids || []).map(String),
-    )
-    return rosterForSession.map((r) => {
-      const id = String(r.id)
-      let source = src.get(id)
-      if (!source && sessionSet.has(id)) source = 'manual_session_override'
-      return { ...r, rosterSource: source || null }
-    })
-  }, [rosterForSession, bundle?.resolvedAthletes, bundle?.session])
+  const rosterWithSource = useMemo(
+    () => buildRosterWithSource(rosterForSession, syncDomains),
+    [rosterForSession, syncDomains],
+  )
 
   const rosterFiltered = useMemo(() => {
     const q = rosterFilter.trim().toLowerCase()
@@ -825,14 +756,10 @@ const SkatingOpsPage = () => {
     return rosterWithSource.filter((r) => (r.full_name || '').toLowerCase().includes(q))
   }, [rosterWithSource, rosterFilter])
 
-  const inlineAthleteFocus = useMemo(() => {
-    if (!lapStudentId || !bundle?.session) return null
-    const map = bundle.session.sessionAthleteFocusJson
-    const cell = map && typeof map === 'object' ? map[lapStudentId] : null
-    const txt =
-      cell && typeof cell === 'object' && cell.text != null ? String(cell.text).trim() : ''
-    return { text: txt }
-  }, [lapStudentId, bundle?.session])
+  const inlineAthleteFocus = useMemo(
+    () => athleteFocusFromMeta(syncPrimitives.sessionMeta, lapStudentId),
+    [syncPrimitives.sessionMeta, lapStudentId],
+  )
 
   const bundleFreshnessLabel = useMemo(() => {
     if (!bundleFetchedAt) return null
@@ -881,32 +808,42 @@ const SkatingOpsPage = () => {
     setAthleteFocusSaving(true)
     setAthleteFocusSaveMsg('')
     try {
-      await skatingOpsApi.patchSession(selectedSessionId, {
-        sessionAthleteFocusJson: {
-          [focusTargetId]: {
-            text: athleteFocusDraft.trim(),
-            updated_at: new Date().toISOString(),
-          },
+      const patch = {
+        [focusTargetId]: {
+          text: athleteFocusDraft.trim(),
+          updated_at: new Date().toISOString(),
         },
+      }
+      await skatingOpsApi.patchSession(selectedSessionId, {
+        sessionAthleteFocusJson: patch,
       })
-      await loadBundle(selectedSessionId)
+      const prevMap = syncDomains?.sessionMeta?.sessionAthleteFocusJson || {}
+      patchSessionMeta({
+        sessionAthleteFocusJson: { ...prevMap, ...patch },
+      })
+      athleteFocusHydrateKeyRef.current = `${selectedSessionId}:${focusTargetId}`
       setAthleteFocusSaveMsg(SESSION_OPS_COPY.focusSaved)
     } catch (e) {
       setAthleteFocusSaveMsg(e?.message || 'Save failed')
     } finally {
       setAthleteFocusSaving(false)
     }
-  }, [selectedSessionId, captureDrawerStudentId, lapStudentId, athleteFocusDraft, loadBundle])
+  }, [
+    selectedSessionId,
+    captureDrawerStudentId,
+    lapStudentId,
+    athleteFocusDraft,
+    syncDomains?.sessionMeta,
+    patchSessionMeta,
+  ])
 
   const ensureDefaultRace = async () => {
-    if (!selectedSessionId || !bundle) return
-    const resolvedIds = Array.isArray(bundle.resolvedAthletes)
-      ? bundle.resolvedAthletes.map((r) => r.student_id)
-      : []
+    if (!selectedSessionId || !syncPrimitives.hasSessionMeta) return
+    const resolvedIds = syncPrimitives.resolvedAthletes.map((r) => r.student_id ?? r.studentId)
     const ids =
       resolvedIds.length > 0
         ? resolvedIds
-        : bundle.session?.sessionSkaterIds || bundle.session?.session_skater_ids || []
+        : syncPrimitives.sessionSkaterIds
     await skatingOpsApi.mergeGroup(selectedSessionId, 'main', {
       name: 'Main',
       skaterIds: ids,
@@ -930,10 +867,10 @@ const SkatingOpsPage = () => {
   }
 
   useEffect(() => {
-    const races = bundle?.races
-    if (!Array.isArray(races) || races.length !== 1) return
+    const races = syncPrimitives.races
+    if (races.length !== 1) return
     setLapRaceId(String(races[0].id))
-  }, [bundle?.races])
+  }, [syncPrimitives.races])
 
   /**
    * §3 coach-first plan: silent server bootstrap only — creates default `main` group + one race
@@ -941,8 +878,8 @@ const SkatingOpsPage = () => {
    * (coach must use “Add timing lane” for an additional lane).
    */
   useEffect(() => {
-    if (!selectedSessionId || !bundle) return
-    if (Array.isArray(bundle.races) && bundle.races.length > 0) return
+    if (!selectedSessionId || !syncPrimitives.hasSessionMeta) return
+    if (syncPrimitives.racesCount > 0) return
     if (defaultRaceEnsureAttemptedRef.current.has(selectedSessionId)) return
     void (async () => {
       defaultRaceEnsureAttemptedRef.current.add(selectedSessionId)
@@ -952,7 +889,7 @@ const SkatingOpsPage = () => {
         defaultRaceEnsureAttemptedRef.current.delete(selectedSessionId)
       }
     })()
-  }, [selectedSessionId, bundle])
+  }, [selectedSessionId, syncPrimitives.hasSessionMeta, syncPrimitives.racesCount])
 
   const submitLap = async (e) => {
     e?.preventDefault?.()
@@ -960,7 +897,7 @@ const SkatingOpsPage = () => {
     const sec = Number(lapSeconds)
     if (!lapStudentId || Number.isNaN(sec) || sec <= 0) return
 
-    const recent = bundle?.recentLaps || []
+    const recent = syncPrimitives.recentLaps
     const last = recent[0]
     const similar =
       last &&
@@ -983,7 +920,7 @@ const SkatingOpsPage = () => {
     setPendingLapPreview({
       studentName: sk?.full_name || 'Skater',
       lapMs: Math.round(sec * 1000),
-      raceLabel: raceLabelForId(lapRaceId, bundle?.races),
+      raceLabel: raceLabelForId(lapRaceId, syncPrimitives.races),
     })
     try {
       const out = await skatingOpsApi.recordLap({
@@ -1016,7 +953,7 @@ const SkatingOpsPage = () => {
       } else {
         setUndoOffer(null)
       }
-      await loadBundle(selectedSessionId)
+      await refreshLapsSyncDomain({ silent: true })
       await loadDayBoard()
       setLapSeconds('')
       bumpSkatingOpsMetric('lapSaveSuccess')
@@ -1045,7 +982,7 @@ const SkatingOpsPage = () => {
       await skatingOpsApi.deleteLap(undoOffer.lapId, selectedSessionId)
       setUndoOffer(null)
       setLastProgression(null)
-      await loadBundle(selectedSessionId)
+      await refreshLapsSyncDomain({ silent: true })
       await loadDayBoard()
     } catch (err) {
       setLapError(err?.message || 'Could not undo lap.')
@@ -1094,34 +1031,30 @@ const SkatingOpsPage = () => {
     return activeActivity.label || activeActivity.name || null
   }, [activeActivity])
 
-  const sessions = useMemo(
-    () => sortDayBoardSessions(dayBoard?.sessions || []),
-    [dayBoard?.sessions],
-  )
-  const selSession = sessions.find((s) => String(s.id) === String(selectedSessionId))
   const sessionCancelled = isOperationalSessionCancelled(selSession)
   const legacyOpsFromCanonical = selSession?.state
     ? operationalStateToLegacyOpsState(selSession.state)
     : null
   const opsState = sessionCancelled
     ? 'ended'
-    : bundle?.session?.opsState || legacyOpsFromCanonical || 'upcoming'
+    : syncPrimitives.sessionOpsState || legacyOpsFromCanonical || 'upcoming'
   /** Session workspace uses unified vertical live coaching (not legacy 3-column). */
   const unifiedLiveCoaching = Boolean(selectedSessionId) && !sessionCancelled
   const coachSessionActive =
     unifiedLiveCoaching &&
-    (bundle?.session?.opsState === 'active' ||
+    (syncPrimitives.sessionOpsState === 'active' ||
       ['active', 'paused'].includes(String(selSession?.state || '').toLowerCase()))
   const coachLive = unifiedLiveCoaching
 
   useEffect(() => {
-    if (!coachLive || !lapStudentId || !bundle?.session) return
-    const map = bundle.session.sessionAthleteFocusJson || {}
-    const cell = map[lapStudentId]
-    const t = cell && typeof cell === 'object' && cell.text != null ? String(cell.text) : ''
-    setAthleteFocusDraft(t)
+    if (!coachLive || !lapStudentId) return
+    const hydrateKey = `${selectedSessionId}:${lapStudentId}`
+    if (athleteFocusHydrateKeyRef.current === hydrateKey) return
+    athleteFocusHydrateKeyRef.current = hydrateKey
+    const focus = athleteFocusFromMeta(syncDomains?.sessionMeta, lapStudentId)
+    setAthleteFocusDraft(focus?.text || '')
     setAthleteFocusSaveMsg('')
-  }, [coachLive, lapStudentId, bundle?.session, selectedSessionId])
+  }, [coachLive, lapStudentId, selectedSessionId])
 
   const lifecycle = useMemo(
     () =>
@@ -1140,15 +1073,12 @@ const SkatingOpsPage = () => {
   }, [skaters])
 
   const todaySummary = useMemo(
-    () => computeSessionSummary(bundle, rosterForSession.length, nameByStudentId),
-    [bundle, rosterForSession.length, nameByStudentId],
+    () => computeSessionSummary(syncDomains, rosterForSession.length, nameByStudentId),
+    [syncDomains, rosterForSession.length, nameByStudentId],
   )
 
   /** §3: lane column / labels only when coach has multiple timing lanes (explicit second+ lane). */
-  const showTimingLaneColumnInLapsTable = useMemo(
-    () => (bundle?.races?.length || 0) > 1,
-    [bundle?.races],
-  )
+  const showTimingLaneColumnInLapsTable = syncPrimitives.racesCount > 1
 
   const todaySummaryParts = useMemo(() => {
     const parts = []
@@ -1163,26 +1093,31 @@ const SkatingOpsPage = () => {
   }, [todaySummary, sessionObservationCount])
 
   const elapsedLabel = useMemo(() => {
-    if (!selectedSessionId || !bundle) return null
+    if (!selectedSessionId) return null
     if (lifecycle.key !== 'active' && lifecycle.key !== 'paused') return null
     const started =
       selSession?.actualStartAt ||
       selSession?.startedAt ||
       selSession?.started_at ||
-      bundle.session?.startedAt ||
-      bundle.session?.started_at
+      syncPrimitives.sessionStartedAt
     const ended =
       selSession?.actualEndAt ||
       selSession?.endedAt ||
       selSession?.ended_at ||
-      bundle.session?.endedAt ||
-      bundle.session?.ended_at
+      syncPrimitives.sessionEndedAt
     if (!started) return null
     return formatElapsedLiveLabel(started, { endedAtIso: ended })
-  }, [selectedSessionId, bundle, selSession, lifecycle.key, bundleAgeTick])
+  }, [
+    selectedSessionId,
+    selSession,
+    syncPrimitives.sessionStartedAt,
+    syncPrimitives.sessionEndedAt,
+    lifecycle.key,
+    bundleAgeTick,
+  ])
 
   const guidanceLine = useMemo(() => {
-    if (!selectedSessionId || !bundle) return ''
+    if (!selectedSessionId) return ''
     if (rosterForSession.length === 0) return SESSION_OPS_COPY.addAthletesToRecord
     if (!lapStudentId && coachLive) return SESSION_OPS_COPY.guidancePickAthlete
     if (coachLive && lapStudentId && !hasObsScores && !obsSyncedAt)
@@ -1190,7 +1125,6 @@ const SkatingOpsPage = () => {
     return ''
   }, [
     selectedSessionId,
-    bundle,
     rosterForSession.length,
     lapStudentId,
     coachLive,
@@ -1200,7 +1134,7 @@ const SkatingOpsPage = () => {
 
   const guidanceActions = useMemo(() => {
     const actions = []
-    if (!selectedSessionId || !bundle) return actions
+    if (!selectedSessionId) return actions
     if (rosterForSession.length === 0 && (opsState === 'active' || opsState === 'upcoming')) {
       actions.push({
         key: 'add-athletes',
@@ -1214,7 +1148,7 @@ const SkatingOpsPage = () => {
       })
     }
     return actions
-  }, [selectedSessionId, bundle, rosterForSession.length, opsState])
+  }, [selectedSessionId, rosterForSession.length, opsState])
 
   const bundlePeripheralFresh = useMemo(() => {
     if (!coachSessionActive || bundleFetchedAt == null || bundleLoading) return false
@@ -1276,7 +1210,7 @@ const SkatingOpsPage = () => {
   )
 
   const sessionModeForCoach =
-    bundle?.session?.sessionMode || selSession?.sessionMode || 'practice'
+    syncPrimitives.sessionMode || selSession?.sessionMode || 'practice'
 
   const coachingDisabled =
     !lapStudentId || obsSaving || uiPaused || opsState === 'ended' || !selectedSessionId
@@ -1326,12 +1260,25 @@ const SkatingOpsPage = () => {
     disabled: coachingDisabled,
     onFlushSuccess: async (payload) => {
       if (!selectedSessionId || !lapStudentId) return
-      const sidKey = String(lapStudentId)
-      const sk = rosterForSession.find((r) => String(r.id) === sidKey)
+      const scoreCount = Object.keys(payload?.scores || {}).length
+      const hasNotes = Boolean(payload?.notes && String(payload.notes).trim())
+      const isMarkerTap =
+        payload?.captureMode === 'marker' ||
+        payload?.eventType === 'marker' ||
+        (scoreCount === 0 &&
+          !hasNotes &&
+          (payload?.markers?.length || 0) > 0 &&
+          (payload?.tags?.length || 0) === 0)
+
       bumpSkatingOpsMetric('observationSaveSuccess')
       setObsSyncedAt(Date.now())
-      await loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
-      const scoreCount = Object.keys(payload?.scores || {}).length
+
+      // Good / Watch / Best must not reload session or wipe on-screen draft.
+      if (isMarkerTap) return
+
+      const sidKey = String(lapStudentId)
+      const sk = rosterForSession.find((r) => String(r.id) === sidKey)
+      await refreshCoachingEventsSyncDomain()
       if (scoreCount > 0) {
         runPostCaptureSuccess(sidKey, sk)
       }
@@ -1370,7 +1317,7 @@ const SkatingOpsPage = () => {
         window.setTimeout(() => setObsFlashKeys(new Set()), 450)
         obsAutoSaveSuppressedRef.current = true
         setObsScores({ ...scores })
-        await loadBundle(selectedSessionId, { blockId: activeBlockId })
+        await refreshCoachingEventsSyncDomain()
         runPostCaptureSuccess(sidKey, sk)
       } catch (e) {
         setObsError(
@@ -1437,7 +1384,7 @@ const SkatingOpsPage = () => {
       return
     }
     if (e.altKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-      const races = bundle?.races || []
+      const races = syncPrimitives.races
       if (races.length < 2 || lapSubmitting || uiPaused || opsState === 'ended') return
       e.preventDefault()
       const idx = races.findIndex((r) => String(r.id) === String(lapRaceId))
@@ -1455,7 +1402,7 @@ const SkatingOpsPage = () => {
     studentName: lapStudentId
       ? rosterForSession.find((r) => String(r.id) === String(lapStudentId))?.full_name || ''
       : '',
-    place: bundle?.session?.placeName || selSession?.placeName || '',
+    place: syncPrimitives.placeName || selSession?.placeName || '',
   }
 
   const activeSkaterShort = lapStudentId
@@ -1480,14 +1427,6 @@ const SkatingOpsPage = () => {
     void submitObservation({ manual: true })
   }
 
-  const sortedSessionBlocks = useMemo(
-    () =>
-      [...sessionBlocks].sort(
-        (a, b) => Number(a.sequenceNo ?? 0) - Number(b.sequenceNo ?? 0),
-      ),
-    [sessionBlocks],
-  )
-
   const activeBlockTitle = useMemo(() => {
     const b = sortedSessionBlocks.find((x) => String(x.id) === String(activeBlockId))
     return b?.title || ''
@@ -1498,7 +1437,8 @@ const SkatingOpsPage = () => {
     [sortedSessionBlocks, activeBlockId],
   )
 
-  const sessionMode = bundle?.session?.sessionMode || selSession?.sessionMode || 'practice'
+  const sessionMode =
+    syncPrimitives.sessionMode || selSession?.sessionMode || liveShell.shellSession?.sessionMode || 'practice'
   const isRaceMode = isRacePhaseBlock(activeBlockMeta)
 
   const activePhaseAthletes = useMemo(() => {
@@ -1662,10 +1602,9 @@ const SkatingOpsPage = () => {
   const handleSelectBlock = useCallback(
     (blockId) => {
       void coachingQueue.flushNow()
-      setActiveBlockId(blockId)
-      if (selectedSessionId) writeActiveBlockId(selectedSessionId, blockId)
+      shellSelectBlock(blockId)
     },
-    [selectedSessionId, coachingQueue],
+    [coachingQueue, shellSelectBlock],
   )
 
   const handleReorderBlocks = useCallback(
@@ -1723,8 +1662,7 @@ const SkatingOpsPage = () => {
         if (result.reset && result.block) {
           setSessionBlocks([result.block])
           const rid = String(result.block.id)
-          setActiveBlockId(rid)
-          writeActiveBlockId(selectedSessionId, rid)
+          shellSelectBlock(rid)
         } else {
           const blocks = await sessionBlocksApi.listBlocks(selectedSessionId)
           setSessionBlocks(blocks)
@@ -1735,15 +1673,14 @@ const SkatingOpsPage = () => {
             blocks.some((b) => String(b.id) === stored)
           const first = blocks[0]?.id ? String(blocks[0].id) : ''
           const next = valid ? stored : first
-          setActiveBlockId(next)
-          if (next) writeActiveBlockId(selectedSessionId, next)
+          if (next) shellSelectBlock(next)
         }
         await loadPhaseAthletes(selectedSessionId, { silent: true })
       } finally {
         setBlocksBusy(false)
       }
     },
-    [selectedSessionId, loadPhaseAthletes],
+    [selectedSessionId, loadPhaseAthletes, shellSelectBlock, setSessionBlocks, setBlocksBusy],
   )
 
   const handleAddBlock = useCallback(
@@ -1777,12 +1714,19 @@ const SkatingOpsPage = () => {
           blockId: activeBlockId || undefined,
           heatNumber: activePhaseAthletes[0]?.heatNumber ?? undefined,
         })
-        await loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
-      } finally {
-        setRaceBusy(false)
-      }
-    },
-    [selectedSessionId, activeBlockId, activePhaseAthletes, loadBundle],
+      await refreshLeaderboardSyncDomain()
+      await refreshRaceResultsSyncDomain()
+    } finally {
+      setRaceBusy(false)
+    }
+  },
+    [
+      selectedSessionId,
+      activeBlockId,
+      activePhaseAthletes,
+      refreshLeaderboardSyncDomain,
+      refreshRaceResultsSyncDomain,
+    ],
   )
 
   const handleRaceManualTime = useCallback(
@@ -1796,29 +1740,36 @@ const SkatingOpsPage = () => {
           blockId: activeBlockId || undefined,
           heatNumber: activePhaseAthletes[0]?.heatNumber ?? undefined,
         })
-        await loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
+        await refreshLeaderboardSyncDomain()
+        await refreshRaceResultsSyncDomain()
       } finally {
         setRaceBusy(false)
       }
     },
-    [selectedSessionId, activeBlockId, activePhaseAthletes, loadBundle],
+    [
+      selectedSessionId,
+      activeBlockId,
+      activePhaseAthletes,
+      refreshLeaderboardSyncDomain,
+      refreshRaceResultsSyncDomain,
+    ],
   )
 
   useEffect(() => {
     if (!selectedSessionId || !activeBlockId) return
-    void loadBundle(selectedSessionId, { silent: true, blockId: activeBlockId })
-  }, [activeBlockId, selectedSessionId, loadBundle])
+    void refreshAllSyncDomains({ silent: true, blockId: activeBlockId })
+  }, [activeBlockId, selectedSessionId, refreshAllSyncDomains])
 
   useEffect(() => {
-    if (!bundle?.recentCoachingEvents?.length) return
+    if (!syncDomains?.coachingEvents?.length) return
     setObservedStudentIds((prev) => {
       const next = new Set(prev)
-      for (const ev of bundle.recentCoachingEvents) {
+      for (const ev of syncDomains.coachingEvents) {
         if (ev.studentId) next.add(String(ev.studentId))
       }
       return next
     })
-  }, [bundle?.recentCoachingEvents])
+  }, [syncDomains?.coachingEvents])
 
   useEffect(() => {
     const onKey = (e) => {
@@ -1919,12 +1870,10 @@ const SkatingOpsPage = () => {
   }
 
   const saveAddAthletes = async () => {
-    if (!selectedSessionId || !bundle?.session) return
+    if (!selectedSessionId || !syncPrimitives.hasSessionMeta) return
     setAddAthletesSaving(true)
     try {
-      const cur = new Set(
-        (bundle.session.sessionSkaterIds || bundle.session.session_skater_ids || []).map(String),
-      )
+      const cur = new Set(syncPrimitives.sessionSkaterIds.map(String))
       for (const id of addAthletesPick) cur.add(String(id))
       await skatingOpsApi.patchSession(selectedSessionId, { sessionSkaterIds: Array.from(cur) })
       setShowAddAthletesModal(false)
@@ -1971,12 +1920,11 @@ const SkatingOpsPage = () => {
                 {reEntryWarmth}
               </div>
             ) : null}
-            {bundleLoading ? (
-              <CSpinner />
-            ) : bundle && unifiedLiveCoaching ? (
+            {unifiedLiveCoaching && selSession ? (
               <CoachLiveSessionView
-                bundle={bundle}
-                bundleLoading={bundleLoading}
+                shellSession={liveShell.shellSession}
+                syncDomains={syncDomains}
+                syncStatus={{ syncing: syncDomainsSyncing, error: syncDomainError }}
                 selSession={selSession}
                 sortedSessionBlocks={sortedSessionBlocks}
                 activeBlockId={activeBlockId}
@@ -2027,7 +1975,7 @@ const SkatingOpsPage = () => {
                 }}
                 timingSection={
                   <CoachLiveTimingSection
-                    bundle={bundle}
+                    races={syncDomains?.races || []}
                     lapStudentId={lapStudentId}
                     rosterForSession={rosterForSession}
                     lapRaceId={lapRaceId}
@@ -2111,59 +2059,15 @@ const SkatingOpsPage = () => {
                   onSetStatus: handleSetPhaseStatus,
                 }}
                 recentLapsSection={
-                  bundle?.recentLaps?.length ? (
-                    <div className="coach-live-recent-laps mt-3">
-                      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
-                        <span className="fw-semibold">{SESSION_OPS_COPY.recentLapsTitle}</span>
-                        {bundle.recentLaps.length > 6 ? (
-                          <CButton
-                            color="link"
-                            size="sm"
-                            className="p-0"
-                            onClick={() => setRecentLapsExpanded((v) => !v)}
-                          >
-                            {recentLapsExpanded ? 'Show fewer' : `Show all (${bundle.recentLapCount})`}
-                          </CButton>
-                        ) : null}
-                      </div>
-                      <div className="table-responsive">
-                        <CTable small responsive hover className="mb-0 coach-live-laps-table">
-                          <CTableHead color="light">
-                            <CTableRow>
-                              <CTableHeaderCell>Time</CTableHeaderCell>
-                              <CTableHeaderCell>Skater</CTableHeaderCell>
-                              {showTimingLaneColumnInLapsTable ? (
-                                <CTableHeaderCell>{SESSION_OPS_COPY.timingLaneColumn}</CTableHeaderCell>
-                              ) : null}
-                              <CTableHeaderCell className="text-end">Lap</CTableHeaderCell>
-                            </CTableRow>
-                          </CTableHead>
-                          <CTableBody>
-                            {(recentLapsExpanded ? bundle.recentLaps : bundle.recentLaps.slice(0, 6)).map(
-                              (row) => (
-                                <CTableRow key={row.id}>
-                                  <CTableDataCell className="text-nowrap">
-                                    {formatTime(row.recordedAt ?? row.recorded_at)}
-                                  </CTableDataCell>
-                                  <CTableDataCell>
-                                    {row.studentName ?? row.student_full_name ?? row.student_id}
-                                  </CTableDataCell>
-                                  {showTimingLaneColumnInLapsTable ? (
-                                    <CTableDataCell className="small">
-                                      {raceLabelForLap(row, bundle.races)}
-                                    </CTableDataCell>
-                                  ) : null}
-                                  <CTableDataCell className="text-end font-monospace">
-                                    {lapSecondsFromRow(row)}
-                                  </CTableDataCell>
-                                </CTableRow>
-                              ),
-                            )}
-                          </CTableBody>
-                        </CTable>
-                      </div>
-                    </div>
-                  ) : null
+                  <CoachLiveRecentLaps
+                    recentLaps={syncDomains?.recentLaps}
+                    recentLapCount={syncDomains?.recentLapCount}
+                    races={syncDomains?.races}
+                    showTimingLaneColumn={showTimingLaneColumnInLapsTable}
+                    expanded={recentLapsExpanded}
+                    onToggleExpanded={() => setRecentLapsExpanded((v) => !v)}
+                    syncing={syncDomainsSyncing}
+                  />
                 }
               />
             ) : null}
