@@ -121,7 +121,7 @@ const scheduleSlice = createSlice({
       })
       .addCase(deactivatePattern.rejected, (state, action) => {
         state.saving = false
-        state.mutationError = action.payload || { message: 'Unable to disable schedule.' }
+        state.mutationError = action.payload || { message: 'Unable to delete schedule.' }
       })
   },
 })

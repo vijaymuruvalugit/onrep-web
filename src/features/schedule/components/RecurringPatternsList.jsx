@@ -122,7 +122,7 @@ function PatternCard({
                   onClick={() => onDeactivate(pattern)}
                   disabled={!pattern.isActive}
                 >
-                  Disable schedule
+                  Delete schedule
                 </CDropdownItem>
               </CDropdownMenu>
             </CDropdown>
@@ -136,7 +136,7 @@ function PatternCard({
 /**
  * Render a list of recurring session patterns as cards, plus an "Add" button.
  * Each card has Edit + a per-pattern operations menu (Skip next / Adjust next
- * / Disable). Future sessions are maintained automatically by the platform.
+ * / Delete schedule). Future sessions are maintained automatically by the platform.
  */
 export default function RecurringPatternsList({
   patterns,

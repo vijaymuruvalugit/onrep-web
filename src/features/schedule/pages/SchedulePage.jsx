@@ -433,7 +433,7 @@ const SchedulePage = () => {
       if (!pattern?.id) return
       if (
         !window.confirm(
-          `Disable “${pattern.name || 'this schedule'}”? Future un-touched sessions will be removed; past attendance is preserved.`,
+          `Delete “${pattern.name || 'this schedule'}”?\n\nStops new sessions. Past sessions and attendance are not affected.`,
         )
       ) {
         return
@@ -444,13 +444,13 @@ const SchedulePage = () => {
         const kept = res?.keptFutureSessions ?? 0
         setPageNotice({
           type: 'success',
-          text: `Schedule disabled. ${deleted} future planned removed${kept ? `, ${kept} kept` : ''}.`,
+          text: `Schedule deleted. ${deleted} future planned removed${kept ? `, ${kept} kept` : ''}.`,
         })
         refreshAll()
       } catch (e) {
         setPageNotice({
           type: 'danger',
-          text: e?.response?.data?.error || e?.message || 'Could not disable schedule.',
+          text: e?.response?.data?.error || e?.message || 'Could not delete schedule.',
         })
       }
     },
