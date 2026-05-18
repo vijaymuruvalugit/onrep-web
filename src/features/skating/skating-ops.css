@@ -206,3 +206,94 @@
   min-height: 2.75rem;
 }
 
+/* Coaching phase blocks — operational spine (not UI sections) */
+.skating-ops-page .session-blocks-shell {
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 992px) {
+  .skating-ops-page .session-blocks-shell--column {
+    position: sticky;
+    top: 0.5rem;
+    align-self: flex-start;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+  }
+}
+
+.skating-ops-page .session-blocks-list__item {
+  border-radius: 0.35rem;
+  margin-bottom: 0.35rem;
+  border: 1px solid rgba(var(--cui-secondary-rgb, 73, 80, 87), 0.15);
+  background: var(--cui-body-bg, #fff);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.skating-ops-page .session-blocks-list__item--active {
+  border-color: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.45);
+  box-shadow: 0 1px 4px rgba(var(--cui-primary-rgb, 50, 31, 219), 0.12);
+  background: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.04);
+  border-left: 3px solid rgba(var(--cui-primary-rgb, 50, 31, 219), 0.85);
+}
+
+.skating-ops-page .session-blocks-list__item:not(.session-blocks-list__item--active) {
+  opacity: 0.88;
+}
+
+.skating-ops-page .session-blocks-list__item:not(.session-blocks-list__item--active) .session-blocks-list__title {
+  color: var(--cui-body-color-secondary, #6c757d);
+}
+
+.skating-ops-page .session-blocks-list__tap {
+  cursor: pointer;
+  min-height: 2.75rem;
+}
+
+.skating-ops-page .session-blocks-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 0.75rem;
+}
+
+.skating-ops-page .session-blocks-strip .session-blocks-list {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.skating-ops-page .session-blocks-strip .session-blocks-list__item {
+  flex: 0 0 auto;
+  min-width: 9rem;
+  max-width: 12rem;
+  margin-bottom: 0;
+}
+
+.skating-ops-page .session-blocks-strip .session-blocks-list__actions {
+  display: none;
+}
+
+.skating-ops-page .session-blocks-strip .session-blocks-panel__header {
+  display: none;
+}
+
+.skating-ops-page .session-blocks-coaching-context {
+  border-left: 2px solid rgba(var(--cui-primary-rgb, 50, 31, 219), 0.2);
+  padding-left: 0.5rem;
+}
+
+@media (max-width: 991.98px) {
+  .skating-ops-page .session-blocks-shell--column {
+    display: none;
+  }
+}
+
+@media (min-width: 992px) {
+  .skating-ops-page .session-blocks-shell--strip {
+    display: none;
+  }
+}
+

@@ -28,6 +28,18 @@ vi.mock('../../../domain/operationalSessions/operationalSessionsApi', () => ({
   },
 }))
 
+vi.mock('../../../domain/sessionBlocks/sessionBlocksApi', () => ({
+  sessionBlocksApi: {
+    listBlocks: vi.fn().mockResolvedValue([]),
+    createBlock: vi.fn(),
+    reorderBlocks: vi.fn(),
+    patchBlock: vi.fn(),
+    deleteBlock: vi.fn(),
+  },
+  BLOCK_TYPE_LABELS: {},
+  BLOCK_TYPE_OPTIONS: [],
+}))
+
 vi.mock('../../places/api/placesApi', () => ({
   default: {
     listPlaces: vi.fn().mockResolvedValue({ places: [], total: 0 }),
@@ -97,5 +109,57 @@ describe('SkatingOpsPage (operational command center)', () => {
     )
 
     expect(container.ownerDocument.location.search).not.toMatch(/session=/)
+  })
+
+  it('shows block list when a session workspace is open', async () => {
+    const { default: operationalSessionsApi } = await import(
+      '../../../domain/operationalSessions/operationalSessionsApi'
+    )
+    const { sessionBlocksApi } = await import('../../../domain/sessionBlocks/sessionBlocksApi')
+
+    operationalSessionsApi.getDayBoard.mockResolvedValue({
+      date: '2026-05-18',
+      sessions: [
+        {
+          id: '22222222-2222-2222-2222-222222222222',
+          state: 'active',
+          sessionMode: 'practice',
+          title: 'Morning',
+          sessionDate: '2026-05-18',
+        },
+      ],
+    })
+
+    sessionBlocksApi.listBlocks.mockResolvedValue([
+      { id: 'b1', title: 'Warmup', blockType: 'warmup', sequenceNo: 1 },
+      { id: 'b2', title: 'Technical work', blockType: 'technical', sequenceNo: 2 },
+      { id: 'b3', title: 'Conditioning', blockType: 'conditioning', sequenceNo: 3 },
+      { id: 'b4', title: 'Cooldown', blockType: 'cooldown', sequenceNo: 4 },
+    ])
+
+    const { skatingOpsApi } = await import('../api/skatingOpsApi')
+    skatingOpsApi.getSessionBundle.mockResolvedValue({
+      session: { id: '22222222-2222-2222-2222-222222222222', state: 'active' },
+    })
+
+    renderWithProviders(
+      <Routes>
+        <Route
+          path="/coach/skating"
+          element={<SkatingOpsPage />}
+        />
+      </Routes>,
+      { initialEntries: ['/coach/skating?session=22222222-2222-2222-2222-222222222222'] },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-session-workspace-shell')).toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getAllByTestId('session-block-list').length).toBeGreaterThan(0)
+    })
+    expect(sessionBlocksApi.listBlocks).toHaveBeenCalledWith(
+      '22222222-2222-2222-2222-222222222222',
+    )
   })
 })

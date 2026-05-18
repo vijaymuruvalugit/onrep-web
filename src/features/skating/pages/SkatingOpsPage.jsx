@@ -50,6 +50,9 @@ import { sortDayBoardSessions } from '../../../domain/operationalSessions/helper
 import SkatingOpsDayBoard from '../../../domain/operationalSessions/components/SkatingOpsDayBoard'
 import SkatingOpsWorkspaceChrome from '../components/SkatingOpsWorkspaceChrome'
 import ActiveSessionWorkspaceShell from '../components/ActiveSessionWorkspaceShell'
+import SessionBlockList from '../components/SessionBlockList'
+import SessionBlockAddModal from '../components/SessionBlockAddModal'
+import { sessionBlocksApi } from '../../../domain/sessionBlocks/sessionBlocksApi'
 import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
 import '../skating-ops.css'
 
@@ -68,6 +71,11 @@ const SK_ACTIVE_SESSION = 'onrep.skating.activeSessionId'
 const SK_OBS_TEMPLATE = 'onrep.skating.obsScoreTemplate'
 /** Session-scoped active benchmark (`skating_skills`) for tagged laps + PB hints. */
 const SK_ACTIVE_EFFORT = 'onrep.skating.activeEffort'
+/**
+ * Phase 2: which coaching phase is active — client-local until session-level persistence ships.
+ * Conceptually belongs to the live session (assistants, TV, mobile will share later).
+ */
+const SK_ACTIVE_BLOCK = 'onrep.skating.activeBlockBySession'
 
 /** Coach “oops” window for last lap removal (operational rhythm). */
 const UNDO_WINDOW_MS = 45_000
@@ -179,6 +187,33 @@ function readActiveEffort(sessionId, studentId) {
     }
   } catch {
     return { skillId: '', skillName: '' }
+  }
+}
+
+function readActiveBlockId(sessionId) {
+  if (!sessionId) return ''
+  try {
+    const raw = sessionStorage.getItem(SK_ACTIVE_BLOCK)
+    if (!raw) return ''
+    const o = JSON.parse(raw)
+    if (o?.sessionId !== sessionId) return ''
+    return o.blockId ? String(o.blockId) : ''
+  } catch {
+    return ''
+  }
+}
+
+function writeActiveBlockId(sessionId, blockId) {
+  if (!sessionId) return
+  try {
+    if (!blockId) sessionStorage.removeItem(SK_ACTIVE_BLOCK)
+    else
+      sessionStorage.setItem(
+        SK_ACTIVE_BLOCK,
+        JSON.stringify({ sessionId, blockId: String(blockId) }),
+      )
+  } catch {
+    /* ignore */
   }
 }
 
@@ -311,6 +346,13 @@ const SkatingOpsPage = () => {
   const [athleteFocusSaving, setAthleteFocusSaving] = useState(false)
   const [athleteFocusSaveMsg, setAthleteFocusSaveMsg] = useState('')
 
+  const [sessionBlocks, setSessionBlocks] = useState([])
+  const [blocksLoading, setBlocksLoading] = useState(false)
+  const [blocksBusy, setBlocksBusy] = useState(false)
+  /** Exactly one active coaching phase at a time (session-level concept; stored client-side for now). */
+  const [activeBlockId, setActiveBlockId] = useState('')
+  const [showAddBlockModal, setShowAddBlockModal] = useState(false)
+
   const athletePanelRef = useRef(null)
   const defaultRaceEnsureAttemptedRef = useRef(new Set())
 
@@ -407,6 +449,30 @@ const SkatingOpsPage = () => {
       }
     } finally {
       if (!silent) setBundleLoading(false)
+    }
+  }, [])
+
+  const loadBlocks = useCallback(async (sessionId, opts = {}) => {
+    const silent = Boolean(opts.silent)
+    if (!sessionId) {
+      setSessionBlocks([])
+      setActiveBlockId('')
+      return
+    }
+    if (!silent) setBlocksLoading(true)
+    try {
+      const blocks = await sessionBlocksApi.listBlocks(sessionId)
+      setSessionBlocks(blocks)
+      const stored = readActiveBlockId(sessionId)
+      const valid = blocks.some((b) => String(b.id) === stored)
+      const firstId = blocks[0]?.id ? String(blocks[0].id) : ''
+      const nextActive = valid ? stored : firstId
+      setActiveBlockId(nextActive)
+      if (nextActive) writeActiveBlockId(sessionId, nextActive)
+    } catch {
+      if (!silent) setSessionBlocks([])
+    } finally {
+      if (!silent) setBlocksLoading(false)
     }
   }, [])
 
@@ -532,15 +598,24 @@ const SkatingOpsPage = () => {
   }, [selectedSessionId])
 
   useEffect(() => {
-    if (selectedSessionId) loadBundle(selectedSessionId)
-    else setBundle(null)
-  }, [selectedSessionId, loadBundle])
+    if (selectedSessionId) {
+      void loadBundle(selectedSessionId)
+      void loadBlocks(selectedSessionId)
+    } else {
+      setBundle(null)
+      setSessionBlocks([])
+      setActiveBlockId('')
+    }
+  }, [selectedSessionId, loadBundle, loadBlocks])
 
   /** Reconnect / tab return — refresh data without swapping the UI for spinners (avoids “full refresh” feel). */
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState !== 'visible') return
-      if (selectedSessionId) void loadBundle(selectedSessionId, { silent: true })
+      if (selectedSessionId) {
+        void loadBundle(selectedSessionId, { silent: true })
+        void loadBlocks(selectedSessionId, { silent: true })
+      }
       void loadDayBoard({ silent: true })
       const snap = flowSnapRef.current
       if (snap.coachLive && snap.sessionId && (snap.studentName || snap.place)) {
@@ -553,7 +628,7 @@ const SkatingOpsPage = () => {
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
-  }, [selectedSessionId, loadBundle, loadDayBoard])
+  }, [selectedSessionId, loadBundle, loadBlocks, loadDayBoard])
 
   useEffect(() => {
     try {
@@ -1300,6 +1375,137 @@ const SkatingOpsPage = () => {
     void submitObservation({ manual: true })
   }
 
+  const sortedSessionBlocks = useMemo(
+    () =>
+      [...sessionBlocks].sort(
+        (a, b) => Number(a.sequenceNo ?? 0) - Number(b.sequenceNo ?? 0),
+      ),
+    [sessionBlocks],
+  )
+
+  const activeBlockTitle = useMemo(() => {
+    const b = sortedSessionBlocks.find((x) => String(x.id) === String(activeBlockId))
+    return b?.title || ''
+  }, [sortedSessionBlocks, activeBlockId])
+
+  const handleSelectBlock = useCallback(
+    (blockId) => {
+      setActiveBlockId(blockId)
+      if (selectedSessionId) writeActiveBlockId(selectedSessionId, blockId)
+    },
+    [selectedSessionId],
+  )
+
+  const handleReorderBlocks = useCallback(
+    async (orderedIds) => {
+      if (!selectedSessionId) return
+      setBlocksBusy(true)
+      try {
+        const reordered = await sessionBlocksApi.reorderBlocks(selectedSessionId, orderedIds)
+        setSessionBlocks(reordered)
+      } finally {
+        setBlocksBusy(false)
+      }
+    },
+    [selectedSessionId],
+  )
+
+  const handleMoveBlock = useCallback(
+    (id, direction) => {
+      const sorted = [...sortedSessionBlocks]
+      const idx = sorted.findIndex((b) => String(b.id) === String(id))
+      if (idx < 0) return
+      const swap = direction === 'up' ? idx - 1 : idx + 1
+      if (swap < 0 || swap >= sorted.length) return
+      ;[sorted[idx], sorted[swap]] = [sorted[swap], sorted[idx]]
+      void handleReorderBlocks(sorted.map((b) => b.id))
+    },
+    [sortedSessionBlocks, handleReorderBlocks],
+  )
+
+  const handleRenameBlock = useCallback(
+    async (blockId, title, blockType) => {
+      setBlocksBusy(true)
+      try {
+        const body = { title }
+        if (blockType) body.blockType = blockType
+        const updated = await sessionBlocksApi.patchBlock(blockId, body)
+        if (updated) {
+          setSessionBlocks((prev) =>
+            prev.map((b) => (String(b.id) === String(blockId) ? updated : b)),
+          )
+        }
+      } finally {
+        setBlocksBusy(false)
+      }
+    },
+    [],
+  )
+
+  const handleDeleteBlock = useCallback(
+    async (blockId) => {
+      if (!selectedSessionId) return
+      setBlocksBusy(true)
+      try {
+        const result = await sessionBlocksApi.deleteBlock(blockId)
+        if (result.reset && result.block) {
+          setSessionBlocks([result.block])
+          const rid = String(result.block.id)
+          setActiveBlockId(rid)
+          writeActiveBlockId(selectedSessionId, rid)
+        } else {
+          const blocks = await sessionBlocksApi.listBlocks(selectedSessionId)
+          setSessionBlocks(blocks)
+          const stored = readActiveBlockId(selectedSessionId)
+          const valid =
+            stored &&
+            stored !== String(blockId) &&
+            blocks.some((b) => String(b.id) === stored)
+          const first = blocks[0]?.id ? String(blocks[0].id) : ''
+          const next = valid ? stored : first
+          setActiveBlockId(next)
+          if (next) writeActiveBlockId(selectedSessionId, next)
+        }
+      } finally {
+        setBlocksBusy(false)
+      }
+    },
+    [selectedSessionId],
+  )
+
+  const handleAddBlock = useCallback(
+    async ({ title, blockType }) => {
+      if (!selectedSessionId) return
+      setBlocksBusy(true)
+      try {
+        const created = await sessionBlocksApi.createBlock(selectedSessionId, {
+          title,
+          blockType,
+        })
+        if (created) {
+          setSessionBlocks((prev) => [...prev, created])
+          handleSelectBlock(String(created.id))
+        }
+        setShowAddBlockModal(false)
+      } finally {
+        setBlocksBusy(false)
+      }
+    },
+    [selectedSessionId, handleSelectBlock],
+  )
+
+  const blockListProps = {
+    blocks: sortedSessionBlocks,
+    activeBlockId,
+    onSelectBlock: handleSelectBlock,
+    onRename: handleRenameBlock,
+    onDelete: handleDeleteBlock,
+    onMoveUp: (id) => handleMoveBlock(id, 'up'),
+    onMoveDown: (id) => handleMoveBlock(id, 'down'),
+    onAddRequest: () => setShowAddBlockModal(true),
+    busy: blocksBusy || blocksLoading,
+  }
+
   const openStartLiveModal = () => {
     try {
       const lp = sessionStorage.getItem(SK_LAST_PLACE) || ''
@@ -1509,7 +1715,19 @@ const SkatingOpsPage = () => {
                     </div>
                   ) : null}
                 </CCol>
-                <CCol lg={4}>
+                <CCol xs={12} className="session-blocks-shell session-blocks-shell--strip">
+                  {blocksLoading ? (
+                    <CSpinner size="sm" className="mb-2" />
+                  ) : (
+                    <div className="session-blocks-strip">
+                      <SessionBlockList {...blockListProps} />
+                    </div>
+                  )}
+                </CCol>
+                <CCol lg={3} className="session-blocks-shell session-blocks-shell--column">
+                  {blocksLoading ? <CSpinner size="sm" /> : <SessionBlockList {...blockListProps} />}
+                </CCol>
+                <CCol lg={3}>
                   <AthletesInSessionPanel
                     coachLive={coachLive}
                     rosterFiltered={rosterFiltered}
@@ -1552,7 +1770,12 @@ const SkatingOpsPage = () => {
                     </div>
                   ) : null}
                 </CCol>
-                <CCol lg={8} className={coachLive ? 'operational-sticky-stack' : undefined}>
+                <CCol lg={6} className={coachLive ? 'operational-sticky-stack' : undefined}>
+                  <div
+                    className="session-blocks-coaching-context"
+                    data-active-block-id={activeBlockId || undefined}
+                    data-active-block-title={activeBlockTitle || undefined}
+                  >
                   <section
                     className={`skating-obs-primary-panel border rounded p-3 mb-3 bg-body-tertiary${obsPulse ? ' skating-obs-block--pulse' : ''}`}
                   >
@@ -1984,6 +2207,7 @@ const SkatingOpsPage = () => {
                       ) : null}
                     </CAlert>
                   ) : null}
+                  </div>
                 </CCol>
               </CRow>
             ) : null}
@@ -2090,6 +2314,13 @@ const SkatingOpsPage = () => {
         defaultRink={defaultRinkForModal}
         currentUserId={currentUserId}
         onSessionStarted={onSessionStartedFromModal}
+      />
+
+      <SessionBlockAddModal
+        visible={showAddBlockModal}
+        onClose={() => setShowAddBlockModal(false)}
+        onSubmit={handleAddBlock}
+        busy={blocksBusy}
       />
 
       <CModal
