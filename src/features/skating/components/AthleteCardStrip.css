@@ -1,0 +1,187 @@
+/* Compact live athlete strip — horizontal scroll, tuned for 20–25+ athletes */
+
+.athlete-card-strip__scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.4rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.2rem 0.1rem 0.45rem;
+  margin: 0 -0.1rem;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+
+.athlete-card-strip__scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.athlete-card {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.3rem;
+  width: 3.65rem;
+  min-height: 0;
+  padding: 0.35rem 0.25rem 0.4rem;
+  border: 2px solid transparent;
+  border-radius: 0.55rem;
+  background: rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.athlete-card:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.athlete-card--selected {
+  border-color: var(--cui-primary, #321fdb);
+  background: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.1);
+  box-shadow: 0 0 0 1px rgba(var(--cui-primary-rgb, 50, 31, 219), 0.2);
+}
+
+.athlete-card--selected .athlete-card__avatar {
+  background: var(--cui-primary, #321fdb);
+  color: #fff;
+}
+
+.athlete-card--has-signal .athlete-card__avatar {
+  box-shadow: 0 0 0 2px rgba(var(--cui-success-rgb, 25, 135, 84), 0.45);
+}
+
+.athlete-card__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.athlete-card__avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.14);
+  color: var(--cui-body-color, #212529);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.athlete-card__name {
+  width: 100%;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--cui-body-color, #212529);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.athlete-card--selected .athlete-card__name {
+  font-weight: 700;
+  color: var(--cui-primary, #321fdb);
+}
+
+.athlete-card__status-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--cui-body-bg, #fff);
+  box-sizing: content-box;
+}
+
+.athlete-card__status-dot--resting {
+  background: var(--cui-warning, #f9b115);
+}
+
+.athlete-card__status-dot--injured {
+  background: var(--cui-danger, #e55353);
+}
+
+.athlete-card__status-dot--skipped {
+  background: var(--cui-secondary, #9da5b1);
+}
+
+.athlete-card-strip--empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.1rem;
+}
+
+/* Live coaching: lighter than phase tiles; sticky nav unchanged in skating-ops.css */
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card-strip__scroll {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  gap: 0.35rem;
+  padding: 0.2rem 0.1rem 0.35rem;
+  max-width: none;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card {
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 3.5rem !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  padding: 0.3rem 0.2rem 0.35rem !important;
+  background: rgba(0, 0, 0, 0.025) !important;
+  text-align: center;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card--selected {
+  background: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.12) !important;
+  box-shadow: 0 2px 8px rgba(var(--cui-primary-rgb, 50, 31, 219), 0.18);
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__avatar {
+  width: 2rem !important;
+  height: 2rem !important;
+  font-size: 0.68rem !important;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__name {
+  font-size: 0.72rem !important;
+  font-weight: 600;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__phase,
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__sep,
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__signal,
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__label {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .athlete-card {
+    width: 3.85rem;
+  }
+
+  .athlete-card__avatar {
+    width: 2.15rem;
+    height: 2.15rem;
+    font-size: 0.72rem;
+  }
+
+  .athlete-card__name {
+    font-size: 0.75rem;
+  }
+}

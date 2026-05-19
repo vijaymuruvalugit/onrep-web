@@ -1,0 +1,121 @@
+/* Live coaching workspace — scores first, minimal chrome */
+
+.skating-ops-page .active-athlete-workspace--live {
+  padding: 0.25rem 0.1rem 0.65rem;
+}
+
+.skating-ops-page .active-athlete-workspace--live .active-athlete-workspace__header {
+  margin-bottom: 0.45rem;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.skating-ops-page .active-athlete-workspace--live .active-athlete-workspace__name {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.skating-ops-page .active-athlete-workspace--live .active-athlete-workspace__capture {
+  margin: 0 0 0.5rem;
+}
+
+.skating-ops-page .fast-coaching-panel--live {
+  margin: 0;
+}
+
+.skating-ops-page .fast-coaching-panel--live .fast-coaching-panel__heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cui-secondary-color, #6c757d);
+}
+
+.skating-ops-page .fast-coaching-panel--live .fast-coaching-row {
+  margin-bottom: 0.45rem !important;
+}
+
+.skating-ops-page .fast-coaching-panel--live .fast-coaching-score-chip {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--cui-body-bg, #fff);
+  box-shadow: none;
+}
+
+.skating-ops-page .fast-coaching-panel--live .fast-coaching-score-chip--active {
+  border-color: transparent;
+}
+
+.skating-ops-page .fast-coaching-panel--live .fast-coaching-tag,
+.skating-ops-page .fast-coaching-panel--live .fast-coaching-marker {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--cui-body-bg, #fff);
+  box-shadow: none;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.skating-ops-page .fast-coaching-panel--live .fast-coaching-sync {
+  margin-bottom: 0.35rem !important;
+  min-height: 1rem;
+}
+
+.skating-ops-page .coach-workspace-fold {
+  margin: 0.35rem 0 0;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: 0.35rem;
+}
+
+.skating-ops-page .coach-workspace-fold__summary {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cui-body-color, #212529);
+  cursor: pointer;
+  padding: 0.35rem 0;
+  list-style: none;
+}
+
+.skating-ops-page .coach-workspace-fold__summary::-webkit-details-marker {
+  display: none;
+}
+
+.skating-ops-page .coach-workspace-fold__body {
+  padding: 0.15rem 0 0.35rem;
+}
+
+.skating-ops-page .coach-live-time {
+  margin: 0.35rem 0 0;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: 0.25rem;
+}
+
+.skating-ops-page .coach-live-time__summary {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.skating-ops-page .coach-live-time__body {
+  padding-top: 0.35rem;
+}
+
+.skating-ops-page .athlete-intel-tabs--stacked {
+  margin-top: 0.35rem;
+  padding-top: 0;
+  border-top: none;
+}
+
+.skating-ops-page .athlete-intel-tabs--stacked .athlete-intel-tabs__nav {
+  display: none;
+}
+
+.skating-ops-page .athlete-intel-tabs--stacked .athlete-intel-today-focus {
+  margin-bottom: 0.35rem;
+}
+
+.skating-ops-page .athlete-intel-tabs--stacked .athlete-intel-skill-row,
+.skating-ops-page .athlete-intel-tabs--stacked .athlete-intel-progress-row {
+  border-bottom: none;
+  padding: 0.25rem 0;
+}

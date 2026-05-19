@@ -204,6 +204,7 @@ describe('SkatingOpsPage (operational command center)', () => {
     const { default: operationalSessionsApi } = await import(
       '../../../domain/operationalSessions/operationalSessionsApi'
     )
+    const { sessionBlocksApi } = await import('../../../domain/sessionBlocks/sessionBlocksApi')
     const { skatingOpsApi } = await import('../api/skatingOpsApi')
 
     operationalSessionsApi.getDayBoard.mockResolvedValue({
@@ -218,6 +219,17 @@ describe('SkatingOpsPage (operational command center)', () => {
         },
       ],
     })
+    operationalSessionsApi.getSession.mockResolvedValue({
+      id: '33333333-3333-3333-3333-333333333333',
+      placeName: 'Upcoming Rink',
+      sessionMode: 'practice',
+      state: 'scheduled',
+    })
+
+    sessionBlocksApi.listBlocks.mockResolvedValue([
+      { id: 'b1', title: 'Warmup', blockType: 'warmup', sequenceNo: 1 },
+      { id: 'b2', title: 'Technical work', blockType: 'technical', sequenceNo: 2 },
+    ])
 
     skatingOpsApi.getSessionBundle.mockResolvedValue({
       session: {
@@ -238,6 +250,13 @@ describe('SkatingOpsPage (operational command center)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('coach-live-session-view')).toBeInTheDocument()
     })
+    await waitFor(() => {
+      expect(screen.getByTestId('phase-mode-strip')).toBeInTheDocument()
+    })
+    expect(screen.getByTestId('phase-mode-chip-b1')).toBeInTheDocument()
+    expect(sessionBlocksApi.listBlocks).toHaveBeenCalledWith(
+      '33333333-3333-3333-3333-333333333333',
+    )
     expect(screen.queryByText('Laps stay in main panel.')).not.toBeInTheDocument()
   })
 

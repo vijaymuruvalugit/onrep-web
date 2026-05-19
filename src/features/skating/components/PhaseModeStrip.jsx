@@ -1,8 +1,20 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
+import {
+  CCloseButton,
+  COffcanvas,
+  COffcanvasBody,
+  COffcanvasHeader,
+  COffcanvasTitle,
+} from '@coreui/react'
 import { livePhaseLabel } from '../constants/coachLiveLabels'
+import './PhaseModeStrip.css'
+
+function phaseLabelForBlock(block) {
+  return livePhaseLabel(block.blockType, block.title)
+}
 
 /**
- * Horizontal phase mode-switch — live coaching only (no inline edit).
+ * Phase mode-switch — desktop: horizontal chips; mobile/tablet: single selector + sheet.
  */
 export default function PhaseModeStrip({
   blocks,
@@ -10,41 +22,122 @@ export default function PhaseModeStrip({
   onSelectBlock,
   athleteCountByPhaseId = {},
   busy = false,
+  loading = false,
 }) {
+  const [sheetOpen, setSheetOpen] = useState(false)
+
+  const phases = useMemo(
+    () =>
+      (blocks || []).map((block) => {
+        const id = String(block.id)
+        return {
+          id,
+          label: phaseLabelForBlock(block),
+          count: athleteCountByPhaseId[id] ?? 0,
+          isActive: id === String(activeBlockId),
+        }
+      }),
+    [blocks, activeBlockId, athleteCountByPhaseId],
+  )
+
+  const activePhase = phases.find((p) => p.isActive) || phases[0]
+
   if (!blocks?.length) {
     return (
       <div className="phase-mode-strip phase-mode-strip--empty small text-body-secondary py-2">
-        No phases yet.
+        {loading ? 'Loading phases…' : 'No phases'}
       </div>
     )
   }
 
+  const handleSelect = (id) => {
+    onSelectBlock(id)
+    setSheetOpen(false)
+  }
+
   return (
     <nav className="phase-mode-strip" data-testid="phase-mode-strip" aria-label="Training phase">
-      <div className="phase-mode-strip__scroll" role="list">
-        {blocks.map((block) => {
-          const id = String(block.id)
-          const isActive = id === String(activeBlockId)
-          const count = athleteCountByPhaseId[id] ?? 0
-          const label = livePhaseLabel(block.blockType, block.title)
-          return (
-            <button
-              key={id}
-              type="button"
-              role="listitem"
-              className={`phase-mode-chip${isActive ? ' phase-mode-chip--active' : ''}`}
-              data-testid={`phase-mode-chip-${id}`}
-              disabled={busy}
-              aria-pressed={isActive}
-              onClick={() => onSelectBlock(id)}
-            >
-              <span className="phase-mode-chip__label">{label}</span>
-              <span className="phase-mode-chip__count" aria-hidden>
-                · {count}
+      <div className="phase-mode-strip__mobile">
+        <button
+          type="button"
+          className="phase-mode-strip__trigger"
+          data-testid="phase-mode-strip-mobile-trigger"
+          disabled={busy}
+          aria-haspopup="dialog"
+          aria-expanded={sheetOpen}
+          onClick={() => setSheetOpen(true)}
+        >
+          <span className="phase-mode-strip__trigger-label">
+            {activePhase?.label || 'Phase'}
+          </span>
+          <span className="phase-mode-strip__trigger-meta">
+            {activePhase != null ? (
+              <span className="phase-mode-strip__trigger-count" aria-hidden>
+                · {activePhase.count}
               </span>
-            </button>
-          )
-        })}
+            ) : null}
+            <span className="phase-mode-strip__trigger-chevron" aria-hidden>
+              ▼
+            </span>
+          </span>
+        </button>
+
+        <COffcanvas
+          placement="bottom"
+          visible={sheetOpen}
+          onHide={() => setSheetOpen(false)}
+          className="phase-mode-sheet"
+        >
+          <COffcanvasHeader className="border-bottom">
+            <COffcanvasTitle>Phases</COffcanvasTitle>
+            <CCloseButton onClick={() => setSheetOpen(false)} />
+          </COffcanvasHeader>
+          <COffcanvasBody>
+            <div
+              className="phase-mode-sheet__list"
+              role="listbox"
+              aria-label="Training phases"
+            >
+              {phases.map((phase) => (
+                <button
+                  key={phase.id}
+                  type="button"
+                  role="option"
+                  aria-selected={phase.isActive}
+                  className={`phase-mode-sheet__option${phase.isActive ? ' phase-mode-sheet__option--active' : ''}`}
+                  data-testid={`phase-mode-sheet-option-${phase.id}`}
+                  disabled={busy}
+                  onClick={() => handleSelect(phase.id)}
+                >
+                  <span>{phase.label}</span>
+                  <span className="phase-mode-sheet__option-count" aria-hidden>
+                    · {phase.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </COffcanvasBody>
+        </COffcanvas>
+      </div>
+
+      <div className="phase-mode-strip__scroll phase-mode-strip__scroll--desktop" role="list">
+        {phases.map((phase) => (
+          <button
+            key={phase.id}
+            type="button"
+            role="listitem"
+            className={`phase-mode-chip${phase.isActive ? ' phase-mode-chip--active' : ''}`}
+            data-testid={`phase-mode-chip-${phase.id}`}
+            disabled={busy}
+            aria-pressed={phase.isActive}
+            onClick={() => onSelectBlock(phase.id)}
+          >
+            <span className="phase-mode-chip__label">{phase.label}</span>
+            <span className="phase-mode-chip__count" aria-hidden>
+              · {phase.count}
+            </span>
+          </button>
+        ))}
       </div>
     </nav>
   )

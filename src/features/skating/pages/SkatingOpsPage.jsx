@@ -28,6 +28,7 @@ import { skatingOpsApi } from '../api/skatingOpsApi'
 import { skatingChecklistApi } from '../api/skatingChecklistApi'
 import { DEFAULT_RAPID_KPIS } from '../constants/rapidObservationKpis'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
+import { SKATING_OPS_COPY } from '../constants/skatingOpsCopy'
 import AthleteCaptureDrawer from '../components/AthleteCaptureDrawer'
 import CoachLiveSessionView from '../components/CoachLiveSessionView'
 import CoachLiveRecentLaps from '../components/CoachLiveRecentLaps'
@@ -1018,6 +1019,7 @@ const SkatingOpsPage = () => {
     bumpSkatingOpsMetric('sessionStartedOnIce')
     await loadBundle(selectedSessionId)
     await loadDayBoard()
+    await refreshShell({ silent: true })
   }
 
   const dayBoardEmptyVariant = useMemo(() => {
@@ -1910,7 +1912,19 @@ const SkatingOpsPage = () => {
         />
       ) : (
         <>
-          <SkatingOpsWorkspaceChrome session={selSession ?? null} onBack={exitWorkspace} />
+          {!unifiedLiveCoaching ? (
+            <SkatingOpsWorkspaceChrome session={selSession ?? null} onBack={exitWorkspace} />
+          ) : (
+            <div className="skating-ops-live-back mb-2">
+              <CButton
+                color="link"
+                className="p-0 text-decoration-none small"
+                onClick={exitWorkspace}
+              >
+                ← {SKATING_OPS_COPY.backToDayBoard}
+              </CButton>
+            </div>
+          )}
           <ActiveSessionWorkspaceShell>
         <CCard className={`mb-3${opsState === 'active' ? ' coach-session-live' : ''}`}>
           <CCardBody>
@@ -1920,7 +1934,7 @@ const SkatingOpsPage = () => {
                 {reEntryWarmth}
               </div>
             ) : null}
-            {unifiedLiveCoaching && selSession ? (
+            {unifiedLiveCoaching && selectedSessionId ? (
               <CoachLiveSessionView
                 shellSession={liveShell.shellSession}
                 syncDomains={syncDomains}

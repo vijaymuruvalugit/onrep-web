@@ -1,0 +1,114 @@
+/* Mobile-first phase picker; desktop uses horizontal chips (see skating-ops.css). */
+
+.phase-mode-strip__mobile {
+  display: block;
+}
+
+.phase-mode-strip__scroll--desktop {
+  display: none !important;
+}
+
+.phase-mode-strip__trigger {
+  width: 100%;
+  min-height: 3.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 0.65rem;
+  background: var(--cui-primary, #321fdb);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  box-shadow: 0 4px 14px rgba(var(--cui-primary-rgb, 50, 31, 219), 0.38);
+  cursor: pointer;
+}
+
+.phase-mode-strip__trigger:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.phase-mode-strip__trigger-label {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phase-mode-strip__trigger-meta {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.phase-mode-strip__trigger-chevron {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.phase-mode-sheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.phase-mode-sheet__option {
+  width: 100%;
+  min-height: 3.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.6rem;
+  background: var(--cui-body-bg, #fff);
+  color: var(--cui-body-color, #212529);
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.phase-mode-sheet__option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.phase-mode-sheet__option--active {
+  background: var(--cui-primary, #321fdb);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 10px rgba(var(--cui-primary-rgb, 50, 31, 219), 0.32);
+}
+
+.phase-mode-sheet__option-count {
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+@media (min-width: 992px) {
+  .phase-mode-strip__mobile {
+    display: none;
+  }
+
+  .phase-mode-strip__scroll--desktop {
+    display: flex !important;
+  }
+
+  .skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-strip__scroll--desktop {
+    display: grid !important;
+  }
+}

@@ -4,6 +4,7 @@ import { liveLabel, livePhaseLabel } from '../constants/coachLiveLabels'
 import FastCoachingPanel from './FastCoachingPanel'
 import AthleteIntelligenceTabs from './AthleteIntelligenceTabs'
 import AthleteQuickActionsMenu from './AthleteQuickActionsMenu'
+import './coaching-workspace.css'
 
 const STATUS_LINE = {
   resting: 'Resting',
@@ -65,9 +66,12 @@ export default function ActiveAthleteWorkspace({
   const contextLine = [phaseLabel, coachingState].filter(Boolean).join(' · ')
 
   return (
-    <section className="active-athlete-workspace" data-testid="active-athlete-workspace">
+    <section
+      className="active-athlete-workspace active-athlete-workspace--live"
+      data-testid="active-athlete-workspace"
+    >
       {!lapStudentId ? (
-        <div className="active-athlete-workspace__empty small text-body-secondary py-5 text-center">
+        <div className="active-athlete-workspace__empty small text-body-secondary py-3 text-center">
           {SESSION_OPS_COPY.selectAthletePrompt}
         </div>
       ) : (
@@ -80,9 +84,6 @@ export default function ActiveAthleteWorkspace({
                 </h2>
                 {contextLine ? (
                   <p className="active-athlete-workspace__context mb-0">{contextLine}</p>
-                ) : null}
-                {observedStudentIds?.has?.(String(lapStudentId)) ? (
-                  <span className="small text-success">{SESSION_OPS_COPY.observationSavedThisSession}</span>
                 ) : null}
               </div>
               <AthleteQuickActionsMenu
@@ -103,7 +104,7 @@ export default function ActiveAthleteWorkspace({
 
           <div className="active-athlete-workspace__capture">
             {obsAdvancePending ? (
-              <div className="small mb-2 skating-advance-pause py-1">
+              <div className="small mb-1 skating-advance-pause py-1">
                 {(() => {
                   const dur =
                     obsAdvancePending.durationMs ??
@@ -135,17 +136,17 @@ export default function ActiveAthleteWorkspace({
               </div>
             ) : null}
             {obsReturnSkater && Date.now() < obsReturnSkater.until ? (
-              <div className="small mb-2">
+              <div className="small mb-1">
                 <button type="button" className="btn btn-link btn-sm p-0" onClick={onReturnSkater}>
                   Return to {obsReturnSkater.name}
                 </button>
               </div>
             ) : null}
             {lastObsLabel ? (
-              <div className="small text-body-secondary mb-2 opacity-90">Last: {lastObsLabel}</div>
+              <div className="small text-body-secondary mb-1 opacity-90">Last: {lastObsLabel}</div>
             ) : null}
             {obsError ? (
-              <div className="small text-danger mb-2 d-flex gap-2 align-items-center">
+              <div className="small text-danger mb-1 d-flex gap-2 align-items-center">
                 <span>{obsError}</span>
                 <button type="button" className="btn btn-link btn-sm p-0" onClick={onRetryObservation}>
                   Retry
@@ -154,32 +155,27 @@ export default function ActiveAthleteWorkspace({
             ) : null}
 
             {(uiProfile?.showQuickScores !== false || uiProfile?.showFormalScoreGrid) && (
-              <>
-                <h3 className="active-athlete-workspace__coach-heading h6 text-body-secondary mb-2">
-                  {liveLabel('coachNow')}
-                </h3>
-                <FastCoachingPanel
-                  sessionMode={sessionMode}
-                  draft={coachingQueue.draft}
-                  syncState={coachingQueue.syncState}
-                  syncError={coachingQueue.syncError || obsError}
-                  disabled={coachingDisabled}
-                  comfortable
-                  liveMode
-                  uiProfile={uiProfile}
-                  onQuickScore={onQuickScore}
-                  onToggleTag={coachingQueue.toggleTag}
-                  onMarker={coachingQueue.addMarker}
-                  markerPulse={coachingQueue.markerPulse}
-                  onNotesChange={coachingQueue.setNotes}
-                  onManualSync={() => void coachingQueue.flushNow()}
-                  obsScores={obsScores}
-                  obsFlashKeys={obsFlashKeys}
-                  onFormalTap={onFormalTap}
-                  formalDisabled={formalDisabled}
-                  formalSaving={formalSaving}
-                />
-              </>
+              <FastCoachingPanel
+                sessionMode={sessionMode}
+                draft={coachingQueue.draft}
+                syncState={coachingQueue.syncState}
+                syncError={coachingQueue.syncError || obsError}
+                disabled={coachingDisabled}
+                comfortable
+                liveMode
+                uiProfile={uiProfile}
+                onQuickScore={onQuickScore}
+                onToggleTag={coachingQueue.toggleTag}
+                onMarker={coachingQueue.addMarker}
+                markerPulse={coachingQueue.markerPulse}
+                onNotesChange={coachingQueue.setNotes}
+                onManualSync={() => void coachingQueue.flushNow()}
+                obsScores={obsScores}
+                obsFlashKeys={obsFlashKeys}
+                onFormalTap={onFormalTap}
+                formalDisabled={formalDisabled}
+                formalSaving={formalSaving}
+              />
             )}
 
             {timingSection}
@@ -188,6 +184,7 @@ export default function ActiveAthleteWorkspace({
           {uiProfile?.showIntelligenceTabs !== false ? (
             <AthleteIntelligenceTabs
               className={uiProfile?.deEmphasizeIntelligence ? 'athlete-intel-tabs--recede' : ''}
+              stackedAdvanced
               studentId={lapStudentId}
               sessionId={sessionId}
               studentName={athleteName}

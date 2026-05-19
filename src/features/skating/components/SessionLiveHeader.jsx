@@ -1,5 +1,6 @@
 import React from 'react'
 import { CBadge, CButton } from '@coreui/react'
+import OperationalSessionModeBadge from '../../../domain/operationalSessions/components/OperationalSessionModeBadge'
 import { liveLabel } from '../constants/coachLiveLabels'
 
 /**
@@ -12,7 +13,10 @@ export default function SessionLiveHeader({
   athleteCount = 0,
   lifecycle,
   elapsedLabel,
+  sessionMode,
+  timeRangeLabel,
   isRaceMode = false,
+  streamlined = false,
   onPauseToggle,
   pauseLabel,
   onEnd,
@@ -23,7 +27,84 @@ export default function SessionLiveHeader({
   canEnd,
   onRaceFocus,
 }) {
-  const skaterWord = athleteCount === 1 ? 'skater' : 'skaters'
+  const skaterWord = athleteCount === 1 ? 'athlete' : 'athletes'
+  const phaseSummary =
+    phaseLabel && String(phaseLabel).trim()
+      ? `${phaseLabel} · ${athleteCount} ${skaterWord}`
+      : null
+
+  const showTimeRange =
+    timeRangeLabel && String(timeRangeLabel).trim() && timeRangeLabel !== '—'
+
+  if (streamlined) {
+    const title = sessionTitle || placeName || 'Session'
+
+    return (
+      <header
+        className="session-live-header session-live-header--streamlined"
+        data-testid="session-live-header"
+      >
+        <div className="session-live-header__shell">
+          <div className="session-live-header__primary">
+            <h1 className="session-live-header__title text-truncate mb-0">{title}</h1>
+            {phaseSummary ? (
+              <p className="session-live-header__phase-summary mb-0 text-truncate">
+                {phaseSummary}
+              </p>
+            ) : null}
+          </div>
+          {(canStart || canPause || canEnd || (isRaceMode && onRaceFocus)) && (
+            <div
+              className="session-live-header__toolbar"
+              role="toolbar"
+              aria-label="Session actions"
+            >
+              {canStart ? (
+                <CButton size="sm" color="success" onClick={onStart}>
+                  {liveLabel('start')}
+                </CButton>
+              ) : null}
+              {canPause ? (
+                <CButton size="sm" color="warning" variant="outline" onClick={onPauseToggle}>
+                  {pauseLabel}
+                </CButton>
+              ) : null}
+              {canEnd ? (
+                <CButton size="sm" color="dark" variant="outline" onClick={onEnd}>
+                  {liveLabel('end')}
+                </CButton>
+              ) : null}
+              {isRaceMode && onRaceFocus ? (
+                <CButton size="sm" color="danger" variant="outline" onClick={onRaceFocus}>
+                  {liveLabel('race')}
+                </CButton>
+              ) : null}
+            </div>
+          )}
+          <div className="session-live-header__context">
+            {lifecycle ? (
+              <CBadge
+                color={lifecycle.badgeColor}
+                className="session-live-header__live-badge"
+                data-testid="session-live-lifecycle-badge"
+              >
+                {lifecycle.label}
+              </CBadge>
+            ) : null}
+            {sessionMode ? (
+              <OperationalSessionModeBadge
+                mode={sessionMode}
+                className="session-live-header__mode-badge"
+              />
+            ) : null}
+            {showTimeRange ? (
+              <span className="session-live-header__time-range">{timeRangeLabel}</span>
+            ) : null}
+          </div>
+        </div>
+      </header>
+    )
+  }
 
   return (
     <header className="session-live-header" data-testid="session-live-header">

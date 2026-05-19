@@ -35,12 +35,15 @@ export const BLOCK_TYPE_LIVE_LABELS = Object.freeze({
 })
 
 const LIVE_LABELS = Object.freeze({
-  coachNow: 'Coach now',
+  coachNow: 'Coach',
   athletes: 'Athletes',
   pickAthlete: 'Pick athlete',
-  time: 'Time',
+  time: 'Lap time',
+  quickTags: 'Quick tags',
   note: 'Note',
+  notes: 'Notes',
   score: 'Score',
+  assessment: 'Assessment',
   track: 'Track',
   progress: 'Progress',
   skills: 'Skills',

@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
+import './AthleteCardStrip.css'
 
-const STATUS_SUBLINE = {
-  resting: 'Rest',
+const STATUS_LABEL = {
+  resting: 'Resting',
   injured: 'Injured',
-  skipped: 'Skip',
+  skipped: 'Skipped',
 }
 
 function initials(name) {
@@ -18,16 +19,17 @@ function firstName(name) {
 }
 
 /**
- * Sticky horizontal athlete navigation — [Name • Phase|Status], tap selects workspace.
+ * Compact horizontal athlete strip — avatar, name, optional status dot.
  */
 export default function AthleteCardStrip({
   rows = [],
   lapStudentId,
   observedStudentIds,
   participationByStudentId = {},
-  athletePhaseLabelByStudentId = {},
+  athletePhaseLabelByStudentId: _athletePhaseLabelByStudentId,
   onPickSkater,
   onAddAthletesRequest,
+  suppressPhaseSubline: _suppressPhaseSubline,
 }) {
   const enriched = useMemo(
     () =>
@@ -35,19 +37,16 @@ export default function AthleteCardStrip({
         const sid = String(r.id)
         const placement = participationByStudentId[sid]
         const status = placement?.status || 'active'
-        const phaseLabel = athletePhaseLabelByStudentId[sid] || ''
-        const statusSub = STATUS_SUBLINE[status]
-        const subline =
-          status !== 'active' && statusSub ? statusSub : phaseLabel || '—'
         return {
           sid,
           fullName: r.full_name,
           shortName: firstName(r.full_name),
-          subline,
+          status,
+          statusLabel: STATUS_LABEL[status] || null,
           hasSignal: observedStudentIds?.has?.(sid),
         }
       }),
-    [rows, observedStudentIds, participationByStudentId, athletePhaseLabelByStudentId],
+    [rows, observedStudentIds, participationByStudentId],
   )
 
   if (!enriched.length) {
@@ -68,6 +67,7 @@ export default function AthleteCardStrip({
       <div className="athlete-card-strip__scroll" role="list">
         {enriched.map((a) => {
           const selected = String(lapStudentId) === a.sid
+          const showStatusDot = a.status !== 'active' && a.statusLabel
           return (
             <button
               key={a.sid}
@@ -77,21 +77,28 @@ export default function AthleteCardStrip({
                 a.hasSignal ? ' athlete-card--has-signal' : ''
               }`}
               data-athlete-id={a.sid}
+              data-testid={`athlete-card-${a.sid}`}
               aria-pressed={selected}
+              aria-label={
+                showStatusDot
+                  ? `${a.shortName}, ${a.statusLabel}`
+                  : a.shortName
+              }
               onClick={() => onPickSkater(a.sid)}
             >
-              <span className="athlete-card__avatar" aria-hidden>
-                {initials(a.fullName)}
-              </span>
-              <span className="athlete-card__label">
-                <span className="athlete-card__name">{a.shortName}</span>
-                <span className="athlete-card__sep" aria-hidden>
-                  {' '}
-                  ·{' '}
+              <span className="athlete-card__avatar-wrap">
+                <span className="athlete-card__avatar" aria-hidden>
+                  {initials(a.fullName)}
                 </span>
-                <span className="athlete-card__phase">{a.subline}</span>
+                {showStatusDot ? (
+                  <span
+                    className={`athlete-card__status-dot athlete-card__status-dot--${a.status}`}
+                    title={a.statusLabel}
+                    aria-hidden
+                  />
+                ) : null}
               </span>
-              {a.hasSignal ? <span className="athlete-card__signal" aria-hidden /> : null}
+              <span className="athlete-card__name">{a.shortName}</span>
             </button>
           )
         })}
