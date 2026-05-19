@@ -57,6 +57,11 @@ import ActiveSessionWorkspaceShell from '../components/ActiveSessionWorkspaceShe
 import SessionBlockAddModal from '../components/SessionBlockAddModal'
 import { sessionBlocksApi } from '../../../domain/sessionBlocks/sessionBlocksApi'
 import { phaseAthletesApi } from '../../../domain/phaseAthletes/phaseAthletesApi'
+import { usePhaseCapture } from '../hooks/usePhaseCapture'
+import { usePhaseEntryAutosave } from '../hooks/usePhaseEntryAutosave'
+import { phaseCaptureApi } from '../../../domain/phaseCapture/phaseCaptureApi'
+import SessionPhaseSetupModal from '../components/phaseCapture/SessionPhaseSetupModal'
+import CoachCaptureDefaultsPanel from '../components/phaseCapture/CoachCaptureDefaultsPanel'
 import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
 import '../skating-ops.css'
 
@@ -300,6 +305,10 @@ const SkatingOpsPage = () => {
   const [showAddAthletesModal, setShowAddAthletesModal] = useState(false)
   const [addAthletesPick, setAddAthletesPick] = useState(() => new Set())
   const [addAthletesSaving, setAddAthletesSaving] = useState(false)
+  const [phaseDetailAthleteId, setPhaseDetailAthleteId] = useState(null)
+  const [showPhaseSetupModal, setShowPhaseSetupModal] = useState(false)
+  const [showCoachDefaults, setShowCoachDefaults] = useState(false)
+  const [phaseLifecycleBusy, setPhaseLifecycleBusy] = useState(false)
 
   const [lapStudentId, setLapStudentId] = useState('')
   const [lapSeconds, setLapSeconds] = useState('')
@@ -1047,6 +1056,118 @@ const SkatingOpsPage = () => {
     (syncPrimitives.sessionOpsState === 'active' ||
       ['active', 'paused'].includes(String(selSession?.state || '').toLowerCase()))
   const coachLive = unifiedLiveCoaching
+
+  const phaseCaptureState = usePhaseCapture(selectedSessionId, {
+    enabled: Boolean(selectedSessionId) && coachLive,
+  })
+
+  const { queueEntry: queuePhaseEntry } = usePhaseEntryAutosave({
+    operationalSessionId: selectedSessionId,
+    phaseId: activeBlockId,
+    disabled:
+      !selectedSessionId || !activeBlockId || uiPaused || opsState === 'ended' || !coachLive,
+    onSaved: (saved) => phaseCaptureState.mergeEntries(saved),
+  })
+
+  useEffect(() => {
+    if (!phaseCaptureState.phases?.length) return
+    setSessionBlocks(
+      phaseCaptureState.phases.map((p) => ({
+        id: p.id,
+        title: p.title,
+        blockType: p.blockType,
+        sequenceNo: p.sequenceNo,
+        configJson: p.configJson,
+        runtimeStatus: p.runtimeStatus,
+        startedAt: p.startedAt,
+        completedAt: p.completedAt,
+      }))
+    )
+  }, [phaseCaptureState.phases, setSessionBlocks])
+
+  const handlePhaseEntryChange = useCallback(
+    (athleteId, fieldId, valueJson) => {
+      phaseCaptureState.mergeEntries([
+        {
+          athleteId,
+          fieldId,
+          valueJson,
+          phaseId: activeBlockId,
+          operationalSessionId: selectedSessionId,
+        },
+      ])
+      queuePhaseEntry(athleteId, fieldId, valueJson)
+    },
+    [activeBlockId, selectedSessionId, phaseCaptureState, queuePhaseEntry]
+  )
+
+  const handleCompletePhase = useCallback(
+    async (phaseId) => {
+      if (!phaseId) return
+      setPhaseLifecycleBusy(true)
+      try {
+        const result = await phaseCaptureApi.completePhase(phaseId, { autoAdvance: true })
+        if (result?.phase) phaseCaptureState.updatePhaseInList(result.phase)
+        if (result?.nextPhase?.id) {
+          shellWriteActiveBlockId(selectedSessionId, result.nextPhase.id)
+          shellSelectBlock(result.nextPhase.id)
+        }
+        await phaseCaptureState.reload()
+      } finally {
+        setPhaseLifecycleBusy(false)
+      }
+    },
+    [phaseCaptureState, selectedSessionId, shellSelectBlock, shellWriteActiveBlockId]
+  )
+
+  const handleSkipPhase = useCallback(
+    async (phaseId) => {
+      if (!phaseId) return
+      setPhaseLifecycleBusy(true)
+      try {
+        const result = await phaseCaptureApi.skipPhase(phaseId)
+        if (result?.phase) phaseCaptureState.updatePhaseInList(result.phase)
+        if (result?.nextPhase?.id) {
+          shellWriteActiveBlockId(selectedSessionId, result.nextPhase.id)
+          shellSelectBlock(result.nextPhase.id)
+        }
+        await phaseCaptureState.reload()
+      } finally {
+        setPhaseLifecycleBusy(false)
+      }
+    },
+    [phaseCaptureState, selectedSessionId, shellSelectBlock, shellWriteActiveBlockId]
+  )
+
+  const phaseCaptureProps = useMemo(
+    () => ({
+      enabled: true,
+      phases: phaseCaptureState.phases,
+      entries: phaseCaptureState.entries,
+      captureMode: phaseCaptureState.captureMode,
+      coachDefaults: phaseCaptureState.coachDefaults,
+      busy: phaseCaptureState.loading || phaseLifecycleBusy,
+      detailAthleteId: phaseDetailAthleteId,
+      onCaptureModeChange: phaseCaptureState.setCaptureMode,
+      onEntryChange: handlePhaseEntryChange,
+      onOpenDetail: setPhaseDetailAthleteId,
+      onCompletePhase: handleCompletePhase,
+      onSkipPhase: handleSkipPhase,
+    }),
+    [
+      phaseCaptureState.phases,
+      phaseCaptureState.entries,
+      phaseCaptureState.captureMode,
+      phaseCaptureState.coachDefaults,
+      phaseCaptureState.loading,
+      phaseCaptureState.setCaptureMode,
+      phaseLifecycleBusy,
+      phaseDetailAthleteId,
+      handlePhaseEntryChange,
+      handleCompletePhase,
+      handleSkipPhase,
+    ]
+  )
 
   useEffect(() => {
     if (!coachLive || !lapStudentId) return
@@ -1915,7 +2036,7 @@ const SkatingOpsPage = () => {
           {!unifiedLiveCoaching ? (
             <SkatingOpsWorkspaceChrome session={selSession ?? null} onBack={exitWorkspace} />
           ) : (
-            <div className="skating-ops-live-back mb-2">
+            <div className="skating-ops-live-back mb-2 d-flex gap-2 flex-wrap align-items-center">
               <CButton
                 color="link"
                 className="p-0 text-decoration-none small"
@@ -1923,6 +2044,24 @@ const SkatingOpsPage = () => {
               >
                 ← {SKATING_OPS_COPY.backToDayBoard}
               </CButton>
+              {coachLive ? (
+                <>
+                  <CButton
+                    color="link"
+                    className="p-0 text-decoration-none small"
+                    onClick={() => setShowPhaseSetupModal(true)}
+                  >
+                    Configure phases
+                  </CButton>
+                  <CButton
+                    color="link"
+                    className="p-0 text-decoration-none small"
+                    onClick={() => setShowCoachDefaults(true)}
+                  >
+                    Coaching preferences
+                  </CButton>
+                </>
+              ) : null}
             </div>
           )}
           <ActiveSessionWorkspaceShell>
@@ -2072,6 +2211,7 @@ const SkatingOpsPage = () => {
                   onSetHeat: handleSetPhaseHeat,
                   onSetStatus: handleSetPhaseStatus,
                 }}
+                phaseCapture={unifiedLiveCoaching ? phaseCaptureProps : null}
                 recentLapsSection={
                   <CoachLiveRecentLaps
                     recentLaps={syncDomains?.recentLaps}
@@ -2123,6 +2263,19 @@ const SkatingOpsPage = () => {
         onClose={() => setShowAddBlockModal(false)}
         onSubmit={handleAddBlock}
         busy={blocksBusy}
+      />
+
+      <SessionPhaseSetupModal
+        visible={showPhaseSetupModal}
+        onClose={() => setShowPhaseSetupModal(false)}
+        operationalSessionId={selectedSessionId}
+        phases={phaseCaptureState.phases}
+        onUpdated={() => void phaseCaptureState.reload()}
+      />
+
+      <CoachCaptureDefaultsPanel
+        visible={showCoachDefaults}
+        onClose={() => setShowCoachDefaults(false)}
       />
 
       <CModal

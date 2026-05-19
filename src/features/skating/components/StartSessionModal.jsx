@@ -24,6 +24,14 @@ const SK_LAST_RINK = 'onrep.skating.lastRinkOrRoad'
 
 const SESSION_TYPE_CHIPS = ['Technique', 'Endurance', 'Speed', 'Recovery', 'Mixed']
 
+const SESSION_PRESET_OPTIONS = [
+  { id: '', label: 'Standard practice' },
+  { id: 'beginner_skating', label: 'Beginner skating' },
+  { id: 'advanced_edge_work', label: 'Advanced edge work' },
+  { id: 'race_prep', label: 'Race prep' },
+  { id: 'conditioning', label: 'Conditioning' },
+]
+
 /* eslint-disable react-hooks/set-state-in-effect -- reset modal fields when opened; hydrate from selected batch */
 
 /**
@@ -53,6 +61,7 @@ export default function StartSessionModal({
   const [coachUserId, setCoachUserId] = useState('')
   const [sessionFocus, setSessionFocus] = useState('')
   const [sessionType, setSessionType] = useState('')
+  const [sessionPresetId, setSessionPresetId] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -66,6 +75,7 @@ export default function StartSessionModal({
     setCoachUserId(currentUserId ? String(currentUserId) : '')
     setSessionFocus('')
     setSessionType('')
+    setSessionPresetId('')
   }, [visible, defaultPlaceId, defaultRink, currentUserId])
 
   useEffect(() => {
@@ -170,6 +180,8 @@ export default function StartSessionModal({
       if (sessionType) objectivesJson.push({ kind: 'session_type', label: sessionType })
       if (startMode === 'batch' && batchId)
         objectivesJson.push({ kind: 'batch_ref', batchId: String(batchId) })
+      if (sessionPresetId)
+        objectivesJson.push({ kind: 'session_preset', id: sessionPresetId })
 
       const patch = {}
       if (sessionFocus.trim()) patch.sessionFocus = sessionFocus.trim()
@@ -259,6 +271,19 @@ export default function StartSessionModal({
         <CFormSelect value={rink} onChange={(e) => setRink(e.target.value)} className="mb-2">
           <option>Rink</option>
           <option>Road</option>
+        </CFormSelect>
+
+        <CFormLabel className="mt-2">Session plan</CFormLabel>
+        <CFormSelect
+          value={sessionPresetId}
+          onChange={(e) => setSessionPresetId(e.target.value)}
+          className="mb-2"
+        >
+          {SESSION_PRESET_OPTIONS.map((o) => (
+            <option key={o.id || 'default'} value={o.id}>
+              {o.label}
+            </option>
+          ))}
         </CFormSelect>
 
         <div className="fw-semibold mb-1">{SESSION_OPS_COPY.startAthletesOptional}</div>

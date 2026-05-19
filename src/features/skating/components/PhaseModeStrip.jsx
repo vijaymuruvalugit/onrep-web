@@ -16,6 +16,13 @@ function phaseLabelForBlock(block) {
 /**
  * Phase mode-switch — desktop: horizontal chips; mobile/tablet: single selector + sheet.
  */
+function statusClass(runtimeStatus) {
+  if (runtimeStatus === 'completed') return ' phase-mode-chip--completed'
+  if (runtimeStatus === 'skipped') return ' phase-mode-chip--skipped'
+  if (runtimeStatus === 'active') return ' phase-mode-chip--active-phase'
+  return ''
+}
+
 export default function PhaseModeStrip({
   blocks,
   activeBlockId,
@@ -23,6 +30,8 @@ export default function PhaseModeStrip({
   athleteCountByPhaseId = {},
   busy = false,
   loading = false,
+  onCompletePhase,
+  onSkipPhase,
 }) {
   const [sheetOpen, setSheetOpen] = useState(false)
 
@@ -35,6 +44,7 @@ export default function PhaseModeStrip({
           label: phaseLabelForBlock(block),
           count: athleteCountByPhaseId[id] ?? 0,
           isActive: id === String(activeBlockId),
+          runtimeStatus: block.runtimeStatus || block.runtime_status || 'pending',
         }
       }),
     [blocks, activeBlockId, athleteCountByPhaseId],
@@ -126,7 +136,7 @@ export default function PhaseModeStrip({
             key={phase.id}
             type="button"
             role="listitem"
-            className={`phase-mode-chip${phase.isActive ? ' phase-mode-chip--active' : ''}`}
+            className={`phase-mode-chip${phase.isActive ? ' phase-mode-chip--active' : ''}${statusClass(phase.runtimeStatus)}`}
             data-testid={`phase-mode-chip-${phase.id}`}
             disabled={busy}
             aria-pressed={phase.isActive}
@@ -139,6 +149,30 @@ export default function PhaseModeStrip({
           </button>
         ))}
       </div>
+      {onCompletePhase || onSkipPhase ? (
+        <div className="phase-lifecycle-actions">
+          {onCompletePhase ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary"
+              disabled={busy || !activeBlockId}
+              onClick={() => onCompletePhase(activeBlockId)}
+            >
+              Complete phase
+            </button>
+          ) : null}
+          {onSkipPhase ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-link"
+              disabled={busy || !activeBlockId}
+              onClick={() => onSkipPhase(activeBlockId)}
+            >
+              Skip
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </nav>
   )
 }

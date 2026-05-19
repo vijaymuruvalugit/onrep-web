@@ -1,3 +1,4 @@
+
 /**
  * Coach Session Mode — larger touch-friendly controls during active training (Layer 1 ergonomics).
  * Applied when session opsState is active (see SkatingOpsPage).
@@ -1099,3 +1100,4 @@
   border-radius: 0.375rem;
 }
 
+@import './components/phaseCapture/phaseCapture.css';

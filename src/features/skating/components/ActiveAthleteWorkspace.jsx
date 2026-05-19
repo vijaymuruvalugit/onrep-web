@@ -56,6 +56,7 @@ export default function ActiveAthleteWorkspace({
   onSetLane,
   onSetHeat,
   onSetStatus,
+  hideQuickCoaching = false,
 }) {
   const phaseLabel = activeBlockMeta
     ? livePhaseLabel(activeBlockMeta.blockType, activeBlockMeta.title)
@@ -154,7 +155,8 @@ export default function ActiveAthleteWorkspace({
               </div>
             ) : null}
 
-            {(uiProfile?.showQuickScores !== false || uiProfile?.showFormalScoreGrid) && (
+            {!hideQuickCoaching &&
+            (uiProfile?.showQuickScores !== false || uiProfile?.showFormalScoreGrid) ? (
               <FastCoachingPanel
                 sessionMode={sessionMode}
                 draft={coachingQueue.draft}
@@ -176,7 +178,7 @@ export default function ActiveAthleteWorkspace({
                 formalDisabled={formalDisabled}
                 formalSaving={formalSaving}
               />
-            )}
+            ) : null}
 
             {timingSection}
           </div>

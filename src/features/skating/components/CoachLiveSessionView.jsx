@@ -4,6 +4,9 @@ import PhaseModeStrip from './PhaseModeStrip'
 import AthleteCardStrip from './AthleteCardStrip'
 import ActiveAthleteWorkspace from './ActiveAthleteWorkspace'
 import RaceTimingWorkspace from './RaceTimingWorkspace'
+import CaptureModeToggle from './phaseCapture/CaptureModeToggle'
+import PhaseAthleteCaptureList from './phaseCapture/PhaseAthleteCaptureList'
+import PhaseAthleteDetailDrawer from './phaseCapture/PhaseAthleteDetailDrawer'
 import { getLiveUiProfile, liveLabel } from '../constants/coachLiveLabels'
 import LiveSessionSyncDot from './LiveSessionSyncDot'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
@@ -11,6 +14,7 @@ import {
   sessionDisplayTitle,
   sessionTimeRangeLabel,
 } from '../../../domain/operationalSessions/helpers/sessionDisplay'
+import { inlineCaptureItemsForCard } from '../utils/phaseCaptureDisplay'
 
 /**
  * Live coaching shell — stable mount; background session sync enriches via syncDomains props.
@@ -48,6 +52,7 @@ function CoachLiveSessionView({
   timingSection,
   recentLapsSection,
   sessionHeaderProps,
+  phaseCapture,
 }) {
   const uiProfile = getLiveUiProfile(
     sessionMode,
@@ -62,6 +67,25 @@ function CoachLiveSessionView({
     activeBlockId != null ? athleteCountByPhaseId[String(activeBlockId)] ?? 0 : 0
 
   const showCoachingWorkspace = !isRaceMode || !coachingCollapsed
+  const usePhaseCapture = Boolean(phaseCapture?.enabled && !isRaceMode)
+  const activePhase =
+    phaseCapture?.phases?.find((p) => String(p.id) === String(activeBlockId)) || activeBlockMeta
+  const captureItems = activePhase?.captureItems || []
+  const reviewOnly =
+    activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped'
+
+  const inlineItems = usePhaseCapture
+    ? inlineCaptureItemsForCard(captureItems, {
+        captureMode: phaseCapture.captureMode,
+        coachDefaults: phaseCapture.coachDefaults,
+        activePhase,
+      })
+    : []
+  const inlineIds = inlineItems.map((it) => it.id)
+
+  const detailAthlete = phaseCapture?.detailAthleteId
+    ? rosterForSession.find((r) => String(r.id) === String(phaseCapture.detailAthleteId))
+    : null
 
   return (
     <div
@@ -87,7 +111,16 @@ function CoachLiveSessionView({
           }
           {...sessionHeaderProps}
         />
-        <LiveSessionSyncDot syncing={syncStatus?.syncing} className="coach-live-sync-dot--header" />
+        <div className="d-flex align-items-center gap-2">
+          {usePhaseCapture ? (
+            <CaptureModeToggle
+              mode={phaseCapture.captureMode}
+              disabled={uiPaused || opsState === 'ended'}
+              onChange={phaseCapture.onCaptureModeChange}
+            />
+          ) : null}
+          <LiveSessionSyncDot syncing={syncStatus?.syncing} className="coach-live-sync-dot--header" />
+        </div>
       </header>
 
       <nav className="coach-live-stack__nav" aria-label="Session navigation">
@@ -99,12 +132,14 @@ function CoachLiveSessionView({
             Phases
           </h2>
           <PhaseModeStrip
-            blocks={sortedSessionBlocks}
+            blocks={phaseCapture?.phases?.length ? phaseCapture.phases : sortedSessionBlocks}
             activeBlockId={activeBlockId}
             onSelectBlock={onSelectBlock}
             athleteCountByPhaseId={athleteCountByPhaseId}
-            busy={blocksBusy || blocksLoading}
+            busy={blocksBusy || blocksLoading || phaseCapture?.busy}
             loading={blocksLoading && !sortedSessionBlocks?.length}
+            onCompletePhase={phaseCapture?.onCompletePhase}
+            onSkipPhase={phaseCapture?.onSkipPhase}
           />
         </section>
 
@@ -160,18 +195,41 @@ function CoachLiveSessionView({
           </div>
         ) : null}
 
+        {showCoachingWorkspace && usePhaseCapture ? (
+          <section className="coach-live-phase-capture mb-3" aria-label="Phase capture">
+            {phaseCapture.captureMode === 'fast' ? (
+              <p className="small text-body-secondary mb-2">
+                Tap a tag when something stands out — no need to rate everyone.
+              </p>
+            ) : null}
+            <PhaseAthleteCaptureList
+              roster={rosterForSession}
+              captureItems={captureItems}
+              entries={phaseCapture.entries}
+              captureMode={phaseCapture.captureMode}
+              coachDefaults={phaseCapture.coachDefaults}
+              activePhase={activePhase}
+              disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
+              reviewOnly={reviewOnly}
+              onValueChange={phaseCapture.onEntryChange}
+              onOpenDetail={phaseCapture.onOpenDetail}
+            />
+          </section>
+        ) : null}
+
         {showCoachingWorkspace ? (
-          !lapStudentId ? (
+          !lapStudentId && !usePhaseCapture ? (
             <div className="coach-live-pick-athlete">
               <p className="coach-live-pick-athlete__text mb-0">
                 {SESSION_OPS_COPY.selectAthletePrompt}
               </p>
             </div>
-          ) : (
+          ) : lapStudentId ? (
             <ActiveAthleteWorkspace
               {...workspaceProps}
               sessionMode={sessionMode}
               uiProfile={uiProfile}
+              hideQuickCoaching={usePhaseCapture}
               timingSection={
                 timingSection ? (
                   <details className="coach-live-time" open={uiProfile.timeExpanded}>
@@ -181,11 +239,28 @@ function CoachLiveSessionView({
                 ) : null
               }
             />
-          )
+          ) : usePhaseCapture ? (
+            <p className="small text-body-secondary mb-2">
+              Select an athlete above for timing and athlete details.
+            </p>
+          ) : null
         ) : null}
 
         {recentLapsSection}
       </div>
+
+      {usePhaseCapture ? (
+        <PhaseAthleteDetailDrawer
+          visible={Boolean(phaseCapture.detailAthleteId)}
+          athlete={detailAthlete}
+          captureItems={captureItems}
+          entries={phaseCapture.entries}
+          inlineItemIds={inlineIds}
+          disabled={uiPaused || opsState === 'ended'}
+          onClose={() => phaseCapture.onOpenDetail?.(null)}
+          onValueChange={phaseCapture.onEntryChange}
+        />
+      ) : null}
     </div>
   )
 }

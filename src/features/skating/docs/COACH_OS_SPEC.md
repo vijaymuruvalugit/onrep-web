@@ -273,3 +273,11 @@ Orchestration: [`CoachLiveSessionView`](../components/CoachLiveSessionView.jsx).
 - [ ] No Setup link on live athlete workspace  
 - [ ] Race phase: timing-first; coaching stack collapsible  
 - [ ] Assessment `session_mode`: nine-dimension **Score** grid expanded
+
+## Phase capture (v1)
+
+- **Observation-first:** tags/notes primary; at most one inline rating row per athlete card; notes/counters in detail drawer only.
+- **Card height:** fixed horizontal rows (~56px fast / ~72px full); no expandable list cards.
+- **Modes:** Full vs Fast capture; coach defaults (`Coaching preferences`) + session presets at start.
+- **Lifecycle:** Complete phase / Skip on strip; `runtime_status` on phases.
+- Components: `phaseCapture/*`, `usePhaseCapture`, `usePhaseEntryAutosave`; APIs via `phaseCaptureApi.js`.

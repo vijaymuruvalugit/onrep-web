@@ -1,0 +1,156 @@
+/* Rink-side phase capture — fixed-height horizontal cards */
+
+.phase-capture-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: min(42vh, 320px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.phase-athlete-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 56px;
+  max-height: 72px;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--cui-body-bg, #fff);
+  border: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.1));
+}
+
+.phase-athlete-card--fast {
+  min-height: 48px;
+  max-height: 56px;
+}
+
+.phase-athlete-card--review {
+  opacity: 0.85;
+}
+
+.phase-athlete-card__name {
+  flex: 0 0 auto;
+  max-width: 4.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.phase-athlete-card__capture {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.phase-athlete-card__more {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--cui-secondary-color);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.25rem;
+}
+
+.phase-tags {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  overflow-x: auto;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.phase-tags::-webkit-scrollbar {
+  display: none;
+}
+
+.phase-tags--compact .phase-tags__chip {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  white-space: nowrap;
+}
+
+.phase-tags__chip {
+  border-radius: 999px;
+  border: 1px solid var(--cui-border-color);
+  background: transparent;
+  color: inherit;
+}
+
+.phase-tags__chip--on {
+  background: var(--cui-primary);
+  border-color: var(--cui-primary);
+  color: #fff;
+}
+
+.phase-tags__overflow {
+  font-size: 0.7rem;
+  color: var(--cui-secondary-color);
+  align-self: center;
+}
+
+.phase-rating-compact {
+  display: flex;
+  flex-direction: row;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.phase-rating-compact__btn {
+  width: 1.65rem;
+  height: 1.65rem;
+  padding: 0;
+  font-size: 0.7rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--cui-border-color);
+  background: transparent;
+  color: inherit;
+}
+
+.phase-rating-compact__btn--on {
+  background: var(--cui-primary);
+  border-color: var(--cui-primary);
+  color: #fff;
+}
+
+.phase-counter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.phase-counter__value {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.capture-mode-toggle {
+  flex-shrink: 0;
+}
+
+.phase-mode-strip__chip--completed::after {
+  content: ' ✓';
+}
+
+.phase-mode-strip__chip--skipped {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.phase-lifecycle-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
