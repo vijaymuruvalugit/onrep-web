@@ -1,26 +1,56 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { CButton } from '@coreui/react'
 
-export default function StopwatchPrimitive({ disabled, onStopMs, className = '' }) {
+const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
+  { disabled, onStopMs, onTick, className = '', autoStart = false },
+  ref,
+) {
   const [running, setRunning] = useState(false)
   const [elapsedMs, setElapsedMs] = useState(0)
   const startRef = useRef(0)
+  const lastCaptureRef = useRef(0)
   const tickRef = useRef(null)
+
+  useEffect(() => {
+    if (autoStart && !disabled) {
+      startRef.current = Date.now()
+      lastCaptureRef.current = 0
+      setElapsedMs(0)
+      setRunning(true)
+    }
+  }, [autoStart, disabled])
 
   useEffect(() => {
     if (!running) return undefined
     tickRef.current = window.setInterval(() => {
-      setElapsedMs(Date.now() - startRef.current)
+      const ms = Date.now() - startRef.current
+      setElapsedMs(ms)
+      onTick?.(ms)
     }, 50)
     return () => {
       if (tickRef.current) window.clearInterval(tickRef.current)
     }
-  }, [running])
+  }, [running, onTick])
 
   const start = () => {
     startRef.current = Date.now()
+    lastCaptureRef.current = 0
     setElapsedMs(0)
     setRunning(true)
+  }
+
+  const reset = () => {
+    setRunning(false)
+    setElapsedMs(0)
+    lastCaptureRef.current = 0
+  }
+
+  const captureProgressEvent = () => {
+    if (!running) start()
+    const cumulativeTimeMs = Math.round(Date.now() - startRef.current)
+    const splitTimeMs = Math.round(cumulativeTimeMs - lastCaptureRef.current)
+    lastCaptureRef.current = cumulativeTimeMs
+    return { splitTimeMs, cumulativeTimeMs }
   }
 
   const stop = () => {
@@ -28,12 +58,17 @@ export default function StopwatchPrimitive({ disabled, onStopMs, className = '' 
     const ms = Math.round(Date.now() - startRef.current)
     setElapsedMs(ms)
     onStopMs?.(ms)
+    return ms
   }
 
-  const reset = () => {
-    setRunning(false)
-    setElapsedMs(0)
-  }
+  useImperativeHandle(ref, () => ({
+    start,
+    reset,
+    stop,
+    captureProgressEvent,
+    isRunning: () => running,
+    getElapsedMs: () => elapsedMs,
+  }))
 
   const display =
     elapsedMs >= 60000
@@ -61,4 +96,6 @@ export default function StopwatchPrimitive({ disabled, onStopMs, className = '' 
       </div>
     </div>
   )
-}
+})
+
+export default StopwatchPrimitive

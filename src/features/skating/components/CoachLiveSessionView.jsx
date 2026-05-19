@@ -170,6 +170,7 @@ function CoachLiveSessionView({
                 athletes={activityRunSectionProps.athletes || rosterForSession}
                 activitySlug={activityRunSectionProps.activitySlug || 'skating'}
                 heatNumber={activityRunSectionProps.heatNumber}
+                phaseTitle={activeBlockTitle}
                 disabled={uiPaused || opsState === 'ended'}
                 busy={activityRunSectionProps.busy}
                 leaderboard={syncDomains?.leaderboard}

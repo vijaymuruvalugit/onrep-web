@@ -1,7 +1,243 @@
+/* ── Activity Run Engine — live race zone ───────────────────────────── */
+
 .activity-run-workspace {
-  --activity-stopwatch-size: 2.75rem;
+  --activity-stopwatch-size: 3rem;
+  --run-accent: var(--cui-primary, #321fdb);
+  --run-live-bg: linear-gradient(165deg, #1a237e 0%, #283593 42%, #3949ab 100%);
+  --run-live-surface: rgba(255, 255, 255, 0.12);
+  --run-chip-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
+.activity-run-workspace__phase-context {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--cui-primary, #321fdb);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.activity-run-workspace__phase-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--cui-success, #2eb85c);
+  box-shadow: 0 0 0 3px rgba(46, 184, 92, 0.35);
+  animation: activity-run-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes activity-run-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
+}
+
+/* Idle — compact prompt, not a gray void */
+.activity-run-workspace__idle-hero {
+  text-align: center;
+  padding: 1rem 0.75rem 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.activity-run-workspace__idle-pulse {
+  display: inline-block;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #5c6bc0, #1a237e);
+  margin-bottom: 0.5rem;
+  animation: activity-run-pulse 2s ease-in-out infinite;
+}
+
+.activity-run-workspace__idle-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.activity-run-workspace__idle-hint {
+  color: var(--cui-secondary-color, #6c757d);
+}
+
+/* Launch chips — horizontal quick-launch */
+.run-type-selector__prompt {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cui-secondary-color, #6c757d);
+  margin: 0;
+}
+
+.run-type-selector__prompt--compact {
+  margin-top: 0.75rem;
+}
+
+.run-type-selector__strip {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.25rem 0 0.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.run-type-selector__strip::-webkit-scrollbar {
+  display: none;
+}
+
+.run-launch-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-width: 4.5rem;
+  min-height: 4.25rem;
+  padding: 0.5rem 0.65rem;
+  border: 2px solid transparent;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: var(--run-chip-shadow);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.run-launch-chip:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.run-launch-chip--active,
+.run-launch-chip:focus-visible {
+  border-color: var(--cui-primary, #321fdb);
+  box-shadow: 0 0 0 3px rgba(50, 31, 219, 0.2);
+}
+
+.run-launch-chip--heat {
+  background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);
+}
+.run-launch-chip--sprint {
+  background: linear-gradient(180deg, #e3f2fd 0%, #fff 100%);
+}
+.run-launch-chip--skill {
+  background: linear-gradient(180deg, #fff8e1 0%, #fff 100%);
+}
+.run-launch-chip--relay {
+  background: linear-gradient(180deg, #e8eaf6 0%, #fff 100%);
+}
+.run-launch-chip--react {
+  background: linear-gradient(180deg, #fff3e0 0%, #fff 100%);
+}
+
+.run-launch-chip__emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.run-launch-chip__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--cui-body-color, #212529);
+}
+
+.run-launch-chip:disabled {
+  opacity: 0.5;
+}
+
+/* Live run hero — central focus */
+.live-run-stage {
+  background: var(--run-live-bg);
+  color: #fff;
+  border-radius: 0.75rem;
+  padding: 1rem 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 8px 24px rgba(26, 35, 126, 0.35);
+}
+
+.live-run-stage__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.live-run-stage__badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.25rem;
+  background: #ff5252;
+  color: #fff;
+  margin-bottom: 0.35rem;
+  animation: live-badge-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes live-badge-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.live-run-stage__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.live-run-stage__subtitle {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin: 0.25rem 0 0;
+}
+
+.live-run-stage__body {
+  background: var(--run-live-surface);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.live-run-stage__body .activity-stopwatch__display {
+  color: #fff;
+  font-size: 3.5rem;
+}
+
+.live-run-stage__body .activity-stopwatch__actions .btn-light {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.live-run-stage__body .ranking-primitive .btn-light {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.live-run-stage__body .small.text-body-secondary {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.live-run-stage__body .run-results-card__row {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Stopwatch */
 .activity-stopwatch__display {
   font-size: var(--activity-stopwatch-size);
   font-weight: 700;
@@ -15,12 +251,79 @@
   min-height: 48px;
 }
 
-.coach-live-stack--race .activity-run-workspace {
-  max-width: 100%;
+.activity-runs-sticky-bar .btn-primary {
+  font-weight: 700;
 }
 
-.run-type-selector__card {
-  min-height: 56px;
+/* Timeline — completed runs */
+.session-run-timeline__heading {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cui-secondary-color, #6c757d);
+  margin: 1rem 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.session-run-timeline--compact .session-run-timeline__heading {
+  margin-top: 0.5rem;
+}
+
+.session-run-timeline__count {
+  background: var(--cui-tertiary-bg, #e9ecef);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.65rem;
+}
+
+.session-run-timeline__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  background: #fff;
+  border: 1px solid var(--cui-border-color, #dee2e6);
+  border-radius: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.session-run-timeline__emoji {
+  font-size: 1.15rem;
+}
+
+.session-run-timeline__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.session-run-timeline__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.session-run-timeline__seq {
+  margin-left: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--cui-secondary-color, #6c757d);
+}
+
+.session-run-timeline__stats {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.session-run-timeline__time {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.session-run-timeline__check {
+  color: var(--cui-success, #2eb85c);
+  font-weight: 700;
 }
 
 .athlete-selection-grid__chip {
@@ -45,6 +348,80 @@
   min-height: 48px;
 }
 
+.heat-flow__go-btn {
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+}
+
+/* Progression stage */
+.progression-stage__heading {
+  color: #fff;
+}
+
+.progression-stage__dots {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.progression-stage__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.progression-stage__dot--filled {
+  background: #ffca28;
+  box-shadow: 0 0 6px rgba(255, 202, 40, 0.8);
+}
+
+.progress-results-panel__row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.capture-progress-btn {
+  margin-top: 1rem;
+}
+
+.participant-progress-grid {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.participant-progress-grid__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.participant-progress-grid__card--active {
+  border-color: #ffca28;
+  background: rgba(255, 202, 40, 0.15);
+}
+
+.participant-progress-grid__name {
+  font-weight: 600;
+}
+
+.participant-progress-grid__count,
+.participant-progress-grid__time {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
 @media (max-width: 576px) {
   .activity-runs-sticky-bar {
     position: sticky;
@@ -54,7 +431,12 @@
     z-index: 2;
   }
 
-  .activity-stopwatch__display {
-    font-size: 3.25rem;
+  .live-run-stage__body .activity-stopwatch__display {
+    font-size: 3.75rem;
+  }
+
+  .run-launch-chip {
+    min-width: 4rem;
+    min-height: 3.75rem;
   }
 }

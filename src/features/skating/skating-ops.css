@@ -1125,6 +1125,19 @@
   padding: 0.75rem;
 }
 
+.skating-ops-page.skating-ops--coach-live.skating-ops--race-mode .coach-live-race-zone .activity-run-workspace {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-height: 12rem;
+}
+
+.skating-ops-page.skating-ops--coach-live.skating-ops--race-mode
+  .coach-live-race-zone
+  .activity-run-workspace--live {
+  min-height: 16rem;
+}
+
 .skating-ops-page.skating-ops--coach-live.skating-ops--race-mode
   .coach-live-stack--timing-focus
   .active-athlete-workspace {

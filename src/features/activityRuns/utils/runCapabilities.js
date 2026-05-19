@@ -13,7 +13,12 @@ export function supportsTeams(type) {
 }
 
 export function supportsLaps(type) {
-  return Boolean(getActivityRunDefinition(type)?.capabilities?.laps)
+  const def = getActivityRunDefinition(type)
+  return Boolean(def?.capabilities?.laps || def?.capabilities?.progression)
+}
+
+export function supportsProgression(type) {
+  return Boolean(getActivityRunDefinition(type)?.capabilities?.progression)
 }
 
 export function supportsScoring(type) {

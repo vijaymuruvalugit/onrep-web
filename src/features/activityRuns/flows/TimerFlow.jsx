@@ -3,6 +3,7 @@ import { CAlert, CButton } from '@coreui/react'
 import StopwatchPrimitive from '../components/primitives/StopwatchPrimitive'
 import AthleteSelectionGrid from '../components/AthleteSelectionGrid'
 import PenaltyStepper from '../components/primitives/PenaltyStepper'
+import ParticipantProgressionFlow from './ParticipantProgressionFlow'
 import { buildRunPayload, participationMeta } from '../utils/buildRunPayload'
 
 export default function TimerFlow({
@@ -11,8 +12,25 @@ export default function TimerFlow({
   disabled,
   busy,
   runType = 'TIME_TRIAL',
+  operationalSessionId,
+  phaseId,
   onSaveRun,
+  onRunComplete,
 }) {
+  if (definition?.capabilities?.progression) {
+    return (
+      <ParticipantProgressionFlow
+        definition={definition}
+        athletes={athletes}
+        disabled={disabled}
+        busy={busy}
+        runType={runType}
+        operationalSessionId={operationalSessionId}
+        phaseId={phaseId}
+        onRunComplete={onRunComplete}
+      />
+    )
+  }
   const [selectedId, setSelectedId] = useState('')
   const [timeMs, setTimeMs] = useState(null)
   const [penalties, setPenalties] = useState(0)

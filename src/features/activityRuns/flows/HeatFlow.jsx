@@ -1,10 +1,13 @@
-import React, { useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { CAlert, CButton } from '@coreui/react'
-import StopwatchPrimitive from '../components/primitives/StopwatchPrimitive'
-import RankingPrimitive from '../components/primitives/RankingPrimitive'
 import AthleteSelectionGrid from '../components/AthleteSelectionGrid'
+import RankingPrimitive from '../components/primitives/RankingPrimitive'
+import ProgressionStagePrimitive from '../components/primitives/ProgressionStagePrimitive'
 import RunResultsCard from '../components/RunResultsCard'
-import { buildRunPayload, participationMeta } from '../utils/buildRunPayload'
+import { resolveActivityExperience } from '../utils/activityExperience'
+import { participationMeta } from '../utils/buildRunPayload'
+import { useProgressionRun } from '../hooks/useProgressionRun'
+import { RUN_STATES } from '../hooks/useProgressionStateMachine'
 
 export default function HeatFlow({
   definition,
@@ -12,65 +15,96 @@ export default function HeatFlow({
   disabled,
   busy,
   heatNumber = 1,
-  onSaveRun,
+  operationalSessionId,
+  phaseId,
+  runType = 'HEAT_RACE',
+  onRunComplete,
 }) {
   const [selectedIds, setSelectedIds] = useState([])
-  const [results, setResults] = useState([])
-  const [error, setError] = useState('')
-  const [heatActive, setHeatActive] = useState(false)
+  const [distanceLabel, setDistanceLabel] = useState('')
+  const stopwatchRef = useRef(null)
 
-  const buildResultsFromOrder = (order, timesByStudent = {}) =>
-    order.map((studentId, i) => ({
-      student_id: studentId,
-      finish_order: i + 1,
-      time_ms: timesByStudent[studentId] ?? null,
-      ...participationMeta(),
-    }))
+  const progression = useProgressionRun({
+    operationalSessionId,
+    phaseId,
+    runType,
+    definition,
+    progressionMode: 'PACK',
+    participantIds: selectedIds,
+    heatNumber,
+  })
+
+  const experience = useMemo(
+    () =>
+      resolveActivityExperience(definition, {
+        current: progression.currentProgressIndex,
+        target: progression.targetCount,
+      }),
+    [definition, progression.currentProgressIndex, progression.targetCount],
+  )
+
+  const packEvents =
+    progression.payload?.results?.find((r) => selectedIds.includes(String(r.student_id)))
+      ?.progress_events || []
+
+  const handleStart = async () => {
+    await progression.startRun({
+      heat_number: heatNumber,
+      progression_config: {
+        target_progress_count: progression.targetCount,
+        distance_label: distanceLabel || null,
+      },
+    })
+    stopwatchRef.current?.start()
+  }
+
+  const handleCapture = () => {
+    const timing = stopwatchRef.current?.captureProgressEvent()
+    if (!timing) return
+    progression.applyCapture(timing)
+  }
+
+  const buildResultsFromOrder = (order) =>
+    order.map((studentId, i) => {
+      const existing = progression.payload.results?.find(
+        (r) => String(r.student_id) === String(studentId),
+      )
+      return {
+        student_id: studentId,
+        finish_order: i + 1,
+        time_ms: existing?.time_ms ?? null,
+        progress_events: existing?.progress_events || [],
+        ...participationMeta(),
+      }
+    })
 
   const handleFinishOrder = async (order) => {
-    const next = buildResultsFromOrder(order)
-    setResults(next)
-  }
-
-  const handleStopwatch = (timeMs) => {
-    if (selectedIds.length !== 1) return
-    const sid = selectedIds[0]
-    setResults((prev) => {
-      const existing = prev.find((r) => String(r.student_id) === sid)
-      if (existing) {
-        return prev.map((r) =>
-          String(r.student_id) === sid ? { ...r, time_ms: timeMs } : r,
-        )
-      }
-      return [
-        ...prev,
-        {
-          student_id: sid,
-          finish_order: prev.length + 1,
-          time_ms: timeMs,
-          ...participationMeta(),
-        },
-      ]
-    })
-  }
-
-  const saveHeat = async () => {
-    setError('')
-    try {
-      const payload = buildRunPayload('HEAT_RACE', {
-        heat_number: heatNumber,
-        results,
-      })
-      await onSaveRun?.('HEAT_RACE', payload)
-      setResults([])
+    const results = buildResultsFromOrder(order)
+    const run = await progression.finalizeRun({ results, heat_number: heatNumber })
+    if (run) {
+      await onRunComplete?.()
+      progression.resetAll()
       setSelectedIds([])
-      setHeatActive(false)
-    } catch (e) {
-      setError(e?.message || 'Could not save heat')
     }
   }
 
-  if (!heatActive) {
+  const handleRunAgain = () => {
+    progression.resetAll()
+    setSelectedIds([])
+  }
+
+  if (progression.isCompleted) {
+    return (
+      <div className="heat-flow text-center">
+        <p className="fw-semibold mb-3">Heat saved</p>
+        <CButton type="button" color="light" size="lg" onClick={handleRunAgain}>
+          Run again
+        </CButton>
+      </div>
+    )
+  }
+
+  if (progression.isReady) {
     return (
       <div className="heat-flow">
         <p className="small text-body-secondary mb-2">Select athletes for this heat</p>
@@ -85,16 +119,65 @@ export default function HeatFlow({
             )
           }}
         />
+        <ProgressionStagePrimitive
+          experience={experience}
+          state={RUN_STATES.READY}
+          targetCount={progression.targetCount}
+          distanceLabel={distanceLabel}
+          disabled={disabled}
+          onTargetChange={progression.setTargetProgressCount}
+          onDistanceChange={setDistanceLabel}
+        />
         <CButton
           type="button"
           color="primary"
           size="lg"
-          className="w-100 mt-3 activity-runs-sticky-action"
-          disabled={disabled || selectedIds.length < 2}
-          onClick={() => setHeatActive(true)}
+          className="w-100 mt-3 activity-runs-sticky-action heat-flow__go-btn fw-bold"
+          disabled={disabled || selectedIds.length < 2 || progression.saving}
+          onClick={() => void handleStart()}
         >
-          Start heat
+          {experience.startActionLabel} →
         </CButton>
+        {progression.error ? (
+          <CAlert color="danger" className="small py-2 mt-2">
+            {progression.error}
+          </CAlert>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (progression.isReview) {
+    return (
+      <div className="heat-flow">
+        <p className="fw-semibold mb-2">Capture finish order</p>
+        <RunResultsCard
+          results={(progression.payload.results || []).map((r) => {
+            const a = athletes.find((x) => String(x.studentId || x.id) === String(r.student_id))
+            return { ...r, student_name: a?.fullName || a?.full_name }
+          })}
+        />
+        {definition.capabilities.ranking ? (
+          <RankingPrimitive
+            athletes={athletes.filter((a) =>
+              selectedIds.includes(String(a.studentId || a.id)),
+            )}
+            disabled={disabled}
+            busy={busy || progression.saving}
+            onSubmitOrder={handleFinishOrder}
+          />
+        ) : (
+          <CButton
+            type="button"
+            color="primary"
+            size="lg"
+            className="w-100 mt-3"
+            disabled={disabled || progression.saving}
+            onClick={() => void handleFinishOrder(selectedIds)}
+          >
+            {experience.completeActionLabel}
+          </CButton>
+        )}
       </div>
     )
   }
@@ -102,48 +185,25 @@ export default function HeatFlow({
   return (
     <div className="heat-flow">
       <p className="fw-semibold mb-2">Heat {heatNumber}</p>
-      {definition.capabilities.timing ? (
-        <StopwatchPrimitive disabled={disabled} onStopMs={handleStopwatch} className="mb-3" />
-      ) : null}
-      {definition.capabilities.ranking ? (
-        <RankingPrimitive
-          athletes={athletes.filter((a) =>
-            selectedIds.includes(String(a.studentId || a.id)),
-          )}
-          disabled={disabled}
-          busy={busy}
-          onSubmitOrder={handleFinishOrder}
-        />
-      ) : null}
-      <RunResultsCard
-        results={results.map((r) => {
-          const a = athletes.find((x) => String(x.studentId || x.id) === String(r.student_id))
-          return {
-            ...r,
-            student_name: a?.fullName || a?.full_name,
-          }
-        })}
+      <ProgressionStagePrimitive
+        experience={experience}
+        state={RUN_STATES.ACTIVE}
+        targetCount={progression.targetCount}
+        currentIndex={progression.currentProgressIndex}
+        distanceLabel={distanceLabel}
+        metrics={progression.metrics}
+        progressEvents={packEvents}
+        disabled={disabled}
+        busy={busy || progression.saving}
+        stopwatchRef={stopwatchRef}
+        onCapture={handleCapture}
+        onFinishProgress={progression.finishProgress}
       />
-      {error ? (
+      {progression.error ? (
         <CAlert color="danger" className="small py-2 mt-2">
-          {error}
+          {progression.error}
         </CAlert>
       ) : null}
-      <div className="activity-runs-sticky-bar d-flex gap-2 mt-3">
-        <CButton
-          type="button"
-          color="primary"
-          size="lg"
-          className="flex-grow-1"
-          disabled={disabled || busy || results.length < 1}
-          onClick={() => void saveHeat()}
-        >
-          Save heat
-        </CButton>
-        <CButton type="button" color="light" size="lg" disabled={disabled} onClick={() => setHeatActive(false)}>
-          Cancel
-        </CButton>
-      </div>
     </div>
   )
 }
