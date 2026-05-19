@@ -1,0 +1,60 @@
+.activity-run-workspace {
+  --activity-stopwatch-size: 2.75rem;
+}
+
+.activity-stopwatch__display {
+  font-size: var(--activity-stopwatch-size);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+}
+
+.activity-runs-sticky-action,
+.activity-runs-sticky-bar {
+  min-height: 48px;
+}
+
+.coach-live-stack--race .activity-run-workspace {
+  max-width: 100%;
+}
+
+.run-type-selector__card {
+  min-height: 56px;
+}
+
+.athlete-selection-grid__chip {
+  min-height: 48px;
+  min-width: 120px;
+}
+
+.athlete-selection-grid__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 0.5rem;
+}
+
+.ranking-primitive__btn {
+  min-height: 48px;
+}
+
+@media (max-width: 576px) {
+  .activity-runs-sticky-bar {
+    position: sticky;
+    bottom: 0;
+    background: var(--cui-body-bg, #fff);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    z-index: 2;
+  }
+
+  .activity-stopwatch__display {
+    font-size: 3.25rem;
+  }
+}

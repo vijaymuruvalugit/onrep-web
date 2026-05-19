@@ -87,6 +87,10 @@ const SK_ACTIVE_EFFORT = 'onrep.skating.activeEffort'
  */
 const SK_ACTIVE_BLOCK = 'onrep.skating.activeBlockBySession'
 
+const ACTIVITY_RUN_ENGINE_ENABLED =
+  import.meta.env.VITE_ACTIVITY_RUN_ENGINE === '1' ||
+  import.meta.env.VITE_ACTIVITY_RUN_ENGINE === 'true'
+
 /** Coach “oops” window for last lap removal (operational rhythm). */
 const UNDO_WINDOW_MS = 45_000
 /** After full 5-KPI tap, commit quickly; partial sets wait longer (avoid assessment spam). */
@@ -2126,6 +2130,19 @@ const SkatingOpsPage = () => {
                   heatNumber: activePhaseAthletes[0]?.heatNumber,
                   onFinishOrder: handleRaceFinishOrder,
                   onManualTime: handleRaceManualTime,
+                }}
+                activityRunSectionProps={{
+                  enabled: ACTIVITY_RUN_ENGINE_ENABLED,
+                  operationalSessionId: selectedSessionId,
+                  phaseId: activeBlockId,
+                  athletes: activePhaseAthletes.length ? activePhaseAthletes : rosterForSession,
+                  activitySlug: String(activeActivity?.type || 'skating').toLowerCase(),
+                  busy: raceBusy,
+                  heatNumber: activePhaseAthletes[0]?.heatNumber,
+                  onRefresh: async () => {
+                    await refreshLeaderboardSyncDomain()
+                    await refreshRaceResultsSyncDomain()
+                  },
                 }}
                 sessionHeaderProps={{
                   onPauseToggle: () => setUiPaused((p) => !p),

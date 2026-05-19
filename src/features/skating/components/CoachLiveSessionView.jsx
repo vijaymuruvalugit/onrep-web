@@ -4,6 +4,7 @@ import PhaseModeStrip from './PhaseModeStrip'
 import AthleteCardStrip from './AthleteCardStrip'
 import ActiveAthleteWorkspace from './ActiveAthleteWorkspace'
 import RaceTimingWorkspace from './RaceTimingWorkspace'
+import { ActivityRunWorkspace } from '../../activityRuns'
 import CaptureModeToggle from './phaseCapture/CaptureModeToggle'
 import AthleteSessionPanel from './sessionWorkspace/AthleteSessionPanel'
 import { getLiveUiProfile, liveLabel } from '../constants/coachLiveLabels'
@@ -45,6 +46,7 @@ function CoachLiveSessionView({
   uiPaused,
   opsState,
   raceSectionProps,
+  activityRunSectionProps,
   workspaceProps,
   timingSection,
   recentLapsSection,
@@ -161,15 +163,29 @@ function CoachLiveSessionView({
       <div className="coach-live-stack__coaching" data-testid="coach-live-coaching-area">
         {isRaceMode && uiProfile.showRaceTiming ? (
           <div className="coach-live-race-zone">
-            <RaceTimingWorkspace
-              athletes={raceSectionProps?.athletes || rosterForSession}
-              leaderboard={syncDomains?.leaderboard}
-              disabled={uiPaused || opsState === 'ended'}
-              busy={raceSectionProps?.busy}
-              heatNumber={raceSectionProps?.heatNumber}
-              onFinishOrder={raceSectionProps?.onFinishOrder}
-              onManualTime={raceSectionProps?.onManualTime}
-            />
+            {activityRunSectionProps?.enabled ? (
+              <ActivityRunWorkspace
+                operationalSessionId={activityRunSectionProps.operationalSessionId}
+                phaseId={activityRunSectionProps.phaseId}
+                athletes={activityRunSectionProps.athletes || rosterForSession}
+                activitySlug={activityRunSectionProps.activitySlug || 'skating'}
+                heatNumber={activityRunSectionProps.heatNumber}
+                disabled={uiPaused || opsState === 'ended'}
+                busy={activityRunSectionProps.busy}
+                leaderboard={syncDomains?.leaderboard}
+                onRefresh={activityRunSectionProps.onRefresh}
+              />
+            ) : (
+              <RaceTimingWorkspace
+                athletes={raceSectionProps?.athletes || rosterForSession}
+                leaderboard={syncDomains?.leaderboard}
+                disabled={uiPaused || opsState === 'ended'}
+                busy={raceSectionProps?.busy}
+                heatNumber={raceSectionProps?.heatNumber}
+                onFinishOrder={raceSectionProps?.onFinishOrder}
+                onManualTime={raceSectionProps?.onManualTime}
+              />
+            )}
             {!coachingCollapsed ? (
               <button
                 type="button"
