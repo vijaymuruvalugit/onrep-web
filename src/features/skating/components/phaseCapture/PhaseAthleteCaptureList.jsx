@@ -1,5 +1,5 @@
 import React from 'react'
-import PhaseAthleteCaptureCard from './PhaseAthleteCaptureCard'
+import ExpandableAthleteCard from './ExpandableAthleteCard'
 import './phaseCapture.css'
 
 export default function PhaseAthleteCaptureList({
@@ -7,12 +7,15 @@ export default function PhaseAthleteCaptureList({
   captureItems = [],
   entries = [],
   captureMode = 'full',
-  coachDefaults = {},
-  activePhase,
+  participationByStudentId = {},
+  expandedAthleteId = null,
+  selectedAthleteId = null,
   disabled = false,
   reviewOnly = false,
   onValueChange,
-  onOpenDetail,
+  onSelectAthlete,
+  onToggleExpand,
+  onOpenPanel,
 }) {
   if (!roster.length) {
     return (
@@ -24,21 +27,27 @@ export default function PhaseAthleteCaptureList({
 
   return (
     <div className="phase-capture-list" data-testid="phase-athlete-capture-list">
-      {roster.map((athlete) => (
-        <PhaseAthleteCaptureCard
-          key={String(athlete.id)}
-          athlete={athlete}
-          captureItems={captureItems}
-          entries={entries}
-          captureMode={captureMode}
-          coachDefaults={coachDefaults}
-          activePhase={activePhase}
-          disabled={disabled}
-          reviewOnly={reviewOnly}
-          onValueChange={onValueChange}
-          onOpenDetail={onOpenDetail}
-        />
-      ))}
+      {roster.map((athlete) => {
+        const athleteId = String(athlete.id)
+        return (
+          <ExpandableAthleteCard
+            key={athleteId}
+            athlete={athlete}
+            captureItems={captureItems}
+            entries={entries}
+            captureMode={captureMode}
+            expanded={expandedAthleteId != null && String(expandedAthleteId) === athleteId}
+            selected={selectedAthleteId != null && String(selectedAthleteId) === athleteId}
+            participationStatus={participationByStudentId[athleteId]}
+            disabled={disabled}
+            reviewOnly={reviewOnly}
+            onValueChange={onValueChange}
+            onSelectAthlete={onSelectAthlete}
+            onToggleExpand={onToggleExpand}
+            onOpenPanel={onOpenPanel}
+          />
+        )
+      })}
     </div>
   )
 }

@@ -61,6 +61,7 @@ import { usePhaseCapture } from '../hooks/usePhaseCapture'
 import { usePhaseEntryAutosave } from '../hooks/usePhaseEntryAutosave'
 import { phaseCaptureApi } from '../../../domain/phaseCapture/phaseCaptureApi'
 import SessionPhaseSetupModal from '../components/phaseCapture/SessionPhaseSetupModal'
+import EditSessionPhasesModal from '../components/sessionWorkspace/EditSessionPhasesModal'
 import CoachCaptureDefaultsPanel from '../components/phaseCapture/CoachCaptureDefaultsPanel'
 import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
 import '../skating-ops.css'
@@ -305,8 +306,10 @@ const SkatingOpsPage = () => {
   const [showAddAthletesModal, setShowAddAthletesModal] = useState(false)
   const [addAthletesPick, setAddAthletesPick] = useState(() => new Set())
   const [addAthletesSaving, setAddAthletesSaving] = useState(false)
-  const [phaseDetailAthleteId, setPhaseDetailAthleteId] = useState(null)
+  const [expandedAthleteId, setExpandedAthleteId] = useState(null)
+  const [athletePanelTab, setAthletePanelTab] = useState('timing')
   const [showPhaseSetupModal, setShowPhaseSetupModal] = useState(false)
+  const [showEditPhasesModal, setShowEditPhasesModal] = useState(false)
   const [showCoachDefaults, setShowCoachDefaults] = useState(false)
   const [phaseLifecycleBusy, setPhaseLifecycleBusy] = useState(false)
 
@@ -1147,10 +1150,17 @@ const SkatingOpsPage = () => {
       captureMode: phaseCaptureState.captureMode,
       coachDefaults: phaseCaptureState.coachDefaults,
       busy: phaseCaptureState.loading || phaseLifecycleBusy,
-      detailAthleteId: phaseDetailAthleteId,
+      expandedAthleteId,
+      athletePanelTab,
       onCaptureModeChange: phaseCaptureState.setCaptureMode,
       onEntryChange: handlePhaseEntryChange,
-      onOpenDetail: setPhaseDetailAthleteId,
+      onToggleExpand: (athleteId) => {
+        setExpandedAthleteId(athleteId || null)
+      },
+      onSelectAthlete: (athleteId) => {
+        if (athleteId) setLapStudentId(String(athleteId))
+      },
+      onPanelTabChange: (tab) => setAthletePanelTab(tab || 'timing'),
       onCompletePhase: handleCompletePhase,
       onSkipPhase: handleSkipPhase,
     }),
@@ -1162,7 +1172,8 @@ const SkatingOpsPage = () => {
       phaseCaptureState.loading,
       phaseCaptureState.setCaptureMode,
       phaseLifecycleBusy,
-      phaseDetailAthleteId,
+      expandedAthleteId,
+      athletePanelTab,
       handlePhaseEntryChange,
       handleCompletePhase,
       handleSkipPhase,
@@ -2049,9 +2060,16 @@ const SkatingOpsPage = () => {
                   <CButton
                     color="link"
                     className="p-0 text-decoration-none small"
+                    onClick={() => setShowEditPhasesModal(true)}
+                  >
+                    Edit phases
+                  </CButton>
+                  <CButton
+                    color="link"
+                    className="p-0 text-decoration-none small"
                     onClick={() => setShowPhaseSetupModal(true)}
                   >
-                    Configure phases
+                    Configure observations
                   </CButton>
                   <CButton
                     color="link"
@@ -2263,6 +2281,14 @@ const SkatingOpsPage = () => {
         onClose={() => setShowAddBlockModal(false)}
         onSubmit={handleAddBlock}
         busy={blocksBusy}
+      />
+
+      <EditSessionPhasesModal
+        visible={showEditPhasesModal}
+        onClose={() => setShowEditPhasesModal(false)}
+        operationalSessionId={selectedSessionId}
+        phases={phaseCaptureState.phases}
+        onUpdated={() => void phaseCaptureState.reload()}
       />
 
       <SessionPhaseSetupModal

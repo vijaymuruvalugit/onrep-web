@@ -1,0 +1,41 @@
+.athlete-session-panel {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.1));
+  border-radius: 0.5rem;
+  background: var(--cui-tertiary-bg, #f8f9fa);
+}
+
+.athlete-session-panel__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.5rem 0;
+  border-bottom: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.08));
+  padding-bottom: 0.35rem;
+}
+
+.athlete-session-panel__tab {
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.35rem;
+  color: var(--cui-secondary-color);
+  cursor: pointer;
+}
+
+.athlete-session-panel__tab--active {
+  background: var(--cui-primary);
+  color: #fff;
+}
+
+.athlete-session-panel__body {
+  max-height: min(45vh, 360px);
+  overflow-y: auto;
+}
+
+.athlete-session-panel__placeholder {
+  padding: 1rem 0;
+}

@@ -66,8 +66,8 @@ export default function CoachCaptureDefaultsPanel({ visible, onClose }) {
               setDefaults((d) => ({ ...d, defaultCaptureMode: e.target.value }))
             }
           >
-            <option value="full">Full capture</option>
-            <option value="fast">Fast capture (exceptions only)</option>
+            <option value="full">Detailed</option>
+            <option value="fast">Quick capture</option>
           </CFormSelect>
         </div>
         <CFormCheck

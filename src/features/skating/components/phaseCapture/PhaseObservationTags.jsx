@@ -32,7 +32,9 @@ export default function PhaseObservationTags({
           </button>
         )
       })}
-      {overflow > 0 ? <span className="phase-tags__overflow">+{overflow}</span> : null}
+      {overflow > 0 ? (
+        <span className="phase-tags__overflow">+{overflow} more</span>
+      ) : null}
     </div>
   )
 }

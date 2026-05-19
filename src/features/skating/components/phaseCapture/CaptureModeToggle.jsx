@@ -3,7 +3,7 @@ import { CButtonGroup, CButton } from '@coreui/react'
 
 export default function CaptureModeToggle({ mode = 'full', disabled = false, onChange }) {
   return (
-    <CButtonGroup size="sm" className="capture-mode-toggle">
+    <CButtonGroup size="sm" className="capture-mode-toggle" aria-label="Capture mode">
       <CButton
         type="button"
         color={mode === 'fast' ? 'primary' : 'secondary'}
@@ -11,7 +11,7 @@ export default function CaptureModeToggle({ mode = 'full', disabled = false, onC
         disabled={disabled}
         onClick={() => onChange?.('fast')}
       >
-        Fast
+        Quick capture
       </CButton>
       <CButton
         type="button"
@@ -20,7 +20,7 @@ export default function CaptureModeToggle({ mode = 'full', disabled = false, onC
         disabled={disabled}
         onClick={() => onChange?.('full')}
       >
-        Full
+        Detailed
       </CButton>
     </CButtonGroup>
   )

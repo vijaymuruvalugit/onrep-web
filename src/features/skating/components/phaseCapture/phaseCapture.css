@@ -1,12 +1,105 @@
-/* Rink-side phase capture — fixed-height horizontal cards */
+/* Rink-side phase capture — expandable quick-layer cards */
 
 .phase-capture-list {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  max-height: min(42vh, 320px);
+  gap: 0.5rem;
+  max-height: min(48vh, 380px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.expandable-athlete-card {
+  border-radius: 0.5rem;
+  background: var(--cui-body-bg, #fff);
+  border: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.1));
+  padding: 0.4rem 0.55rem;
+  min-height: 44px;
+}
+
+.expandable-athlete-card--selected {
+  border-color: var(--cui-primary);
+  box-shadow: 0 0 0 1px var(--cui-primary);
+}
+
+.expandable-athlete-card--expanded {
+  max-height: min(35vh, 280px);
+  overflow-y: auto;
+}
+
+.expandable-athlete-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  min-height: 44px;
+}
+
+.expandable-athlete-card__name {
+  flex: 0 0 auto;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: none;
+  background: transparent;
+  padding: 0.25rem 0;
+  color: inherit;
+  min-height: 44px;
+}
+
+.expandable-athlete-card__summary {
+  flex: 1 1 6rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.expandable-athlete-card__observe {
+  flex-shrink: 0;
+  min-height: 36px;
+}
+
+.expandable-athlete-card__quick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.35rem 0 0.25rem;
+  border-top: 1px solid var(--cui-border-color-translucent, rgba(0, 0, 0, 0.06));
+  margin-top: 0.25rem;
+}
+
+.expandable-athlete-card__status-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--cui-warning);
+  margin-right: 0.25rem;
+  vertical-align: middle;
+}
+
+.phase-semantic-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.phase-semantic-rating__label {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 4.5rem;
+  color: var(--cui-secondary-color);
+}
+
+.phase-quick-note {
+  font-size: 0.85rem;
+}
+
+.observation-summary--empty {
+  font-style: italic;
 }
 
 .phase-athlete-card {

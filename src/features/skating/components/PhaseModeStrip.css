@@ -99,6 +99,32 @@
   opacity: 0.9;
 }
 
+.phase-mode-strip__sequence {
+  align-items: center;
+}
+
+.phase-mode-strip__connector {
+  flex: 0 0 0.75rem;
+  height: 2px;
+  background: var(--cui-border-color, rgba(0, 0, 0, 0.15));
+  border-radius: 1px;
+  margin: 0 0.1rem;
+}
+
+.phase-mode-chip--current {
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(var(--cui-primary-rgb, 50, 31, 219), 0.25);
+}
+
+.phase-mode-chip--completed .phase-mode-chip__label {
+  opacity: 0.75;
+}
+
+.phase-mode-chip--skipped {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
 @media (min-width: 992px) {
   .phase-mode-strip__mobile {
     display: none;
@@ -109,6 +135,7 @@
   }
 
   .skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-strip__scroll--desktop {
-    display: grid !important;
+    display: flex !important;
+    flex-wrap: wrap;
   }
 }
