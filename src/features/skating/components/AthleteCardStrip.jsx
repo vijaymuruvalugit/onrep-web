@@ -30,7 +30,10 @@ export default function AthleteCardStrip({
   onPickSkater,
   onAddAthletesRequest,
   suppressPhaseSubline: _suppressPhaseSubline,
+  /** 'tiles' — avatar + name tiles with horizontal scroll (Skating Ops live) */
+  variant = 'default',
 }) {
+  const useTiles = variant === 'tiles'
   const enriched = useMemo(
     () =>
       (rows || []).map((r) => {
@@ -63,7 +66,10 @@ export default function AthleteCardStrip({
   }
 
   return (
-    <div className="athlete-card-strip" data-testid="athlete-card-strip">
+    <div
+      className={`athlete-card-strip${useTiles ? ' athlete-card-strip--tiles' : ''}`}
+      data-testid="athlete-card-strip"
+    >
       <div className="athlete-card-strip__scroll" role="list">
         {enriched.map((a) => {
           const selected = String(lapStudentId) === a.sid
@@ -73,7 +79,7 @@ export default function AthleteCardStrip({
               key={a.sid}
               type="button"
               role="listitem"
-              className={`athlete-card${selected ? ' athlete-card--selected' : ''}${
+              className={`athlete-card${useTiles ? ' athlete-card--tile' : ''}${selected ? ' athlete-card--selected' : ''}${
                 a.hasSignal ? ' athlete-card--has-signal' : ''
               }`}
               data-athlete-id={a.sid}

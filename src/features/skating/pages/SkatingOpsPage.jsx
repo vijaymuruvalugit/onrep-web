@@ -306,8 +306,7 @@ const SkatingOpsPage = () => {
   const [showAddAthletesModal, setShowAddAthletesModal] = useState(false)
   const [addAthletesPick, setAddAthletesPick] = useState(() => new Set())
   const [addAthletesSaving, setAddAthletesSaving] = useState(false)
-  const [expandedAthleteId, setExpandedAthleteId] = useState(null)
-  const [athletePanelTab, setAthletePanelTab] = useState('timing')
+  const [athletePanelTab, setAthletePanelTab] = useState('observe')
   const [showPhaseSetupModal, setShowPhaseSetupModal] = useState(false)
   const [showEditPhasesModal, setShowEditPhasesModal] = useState(false)
   const [showCoachDefaults, setShowCoachDefaults] = useState(false)
@@ -1150,17 +1149,13 @@ const SkatingOpsPage = () => {
       captureMode: phaseCaptureState.captureMode,
       coachDefaults: phaseCaptureState.coachDefaults,
       busy: phaseCaptureState.loading || phaseLifecycleBusy,
-      expandedAthleteId,
       athletePanelTab,
       onCaptureModeChange: phaseCaptureState.setCaptureMode,
       onEntryChange: handlePhaseEntryChange,
-      onToggleExpand: (athleteId) => {
-        setExpandedAthleteId(athleteId || null)
-      },
       onSelectAthlete: (athleteId) => {
         if (athleteId) setLapStudentId(String(athleteId))
       },
-      onPanelTabChange: (tab) => setAthletePanelTab(tab || 'timing'),
+      onPanelTabChange: (tab) => setAthletePanelTab(tab || 'observe'),
       onCompletePhase: handleCompletePhase,
       onSkipPhase: handleSkipPhase,
     }),
@@ -1172,7 +1167,6 @@ const SkatingOpsPage = () => {
       phaseCaptureState.loading,
       phaseCaptureState.setCaptureMode,
       phaseLifecycleBusy,
-      expandedAthleteId,
       athletePanelTab,
       handlePhaseEntryChange,
       handleCompletePhase,

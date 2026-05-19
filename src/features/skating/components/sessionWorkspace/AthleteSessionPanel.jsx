@@ -1,9 +1,18 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
+import { CFormInput } from '@coreui/react'
 import PhaseCaptureRenderer from '../phaseCapture/PhaseCaptureRenderer'
-import { deepLayerItems, entryValueForField, uiRoleLabel } from '../../utils/phaseCaptureDisplay'
+import PhaseSemanticRating from '../phaseCapture/PhaseSemanticRating'
+import {
+  deepLayerItems,
+  entryValueForField,
+  quickLayerItems,
+  uiRoleLabel,
+} from '../../utils/phaseCaptureDisplay'
+import '../phaseCapture/phaseCapture.css'
 import './AthleteSessionPanel.css'
 
 const TABS = [
+  { id: 'observe', label: 'Observe' },
   { id: 'timing', label: 'Timing' },
   { id: 'notes', label: 'Notes' },
   { id: 'advanced', label: 'Advanced' },
@@ -12,15 +21,18 @@ const TABS = [
 ]
 
 /**
- * Deep athlete context panel — timing, notes, secondary observations.
+ * Student context panel — quick observations, timing, notes, advanced fields.
  */
 export default function AthleteSessionPanel({
   athlete,
   captureItems = [],
   entries = [],
-  activeTab = 'timing',
+  captureMode = 'full',
+  activeTab = 'observe',
   onTabChange,
   disabled = false,
+  reviewOnly = false,
+  participationStatus,
   timingSection,
   focusText = '',
   onChangeFocus,
@@ -29,26 +41,41 @@ export default function AthleteSessionPanel({
   focusSaveMessage = '',
   onValueChange,
 }) {
-  const [internalTab, setInternalTab] = useState('timing')
+  const [internalTab, setInternalTab] = useState('observe')
   const tab = activeTab || internalTab
   const setTab = onTabChange || setInternalTab
+  const quickItems = useMemo(() => quickLayerItems(captureItems), [captureItems])
+  const tagItem = quickItems.find((it) => it.fieldType === 'tags')
+  const ratingItem = quickItems.find((it) => it.fieldType === 'rating')
+  const quickNoteItem = quickItems.find((it) => it.fieldType === 'note')
 
   if (!athlete) return null
 
   const athleteId = String(athlete.id)
-  const name = athlete.full_name || athlete.fullName || 'Athlete'
+  const name = athlete.full_name || athlete.fullName || 'Student'
   const deepItems = deepLayerItems(captureItems)
-  const noteItems = (captureItems || []).filter((it) => it.fieldType === 'note')
+  const noteItems = deepItems.filter((it) => it.fieldType === 'note')
+
+  const showInactive =
+    participationStatus && participationStatus !== 'active' && participationStatus !== 'on_ice'
 
   const handleTab = (id) => {
     setTab(id)
   }
 
+  const handleQuickChange = (item, valueJson) => {
+    if (reviewOnly || disabled) return
+    onValueChange?.(athleteId, item.id, valueJson)
+  }
+
   return (
     <section className="athlete-session-panel" data-testid="athlete-session-panel">
       <header className="athlete-session-panel__header">
-        <h3 className="athlete-session-panel__title mb-0">{name}</h3>
-        <p className="small text-body-secondary mb-0">Athlete context for this session</p>
+        <h3 className="athlete-session-panel__title mb-0">
+          {showInactive ? <span className="athlete-session-panel__status-dot" aria-hidden /> : null}
+          {name}
+        </h3>
+        <p className="small text-body-secondary mb-0">Student context for this session</p>
       </header>
 
       <div className="athlete-session-panel__tabs" role="tablist">
@@ -67,6 +94,43 @@ export default function AthleteSessionPanel({
       </div>
 
       <div className="athlete-session-panel__body">
+        {tab === 'observe' ? (
+          <div className="athlete-session-panel__pane athlete-session-panel__observe">
+            {tagItem ? (
+              <PhaseCaptureRenderer
+                item={tagItem}
+                compact
+                disabled={disabled || reviewOnly}
+                valueJson={entryValueForField(entries, athleteId, tagItem.id)}
+                onChange={(v) => handleQuickChange(tagItem, v)}
+              />
+            ) : null}
+            {captureMode !== 'fast' && ratingItem ? (
+              <PhaseSemanticRating
+                label={ratingItem.label}
+                value={entryValueForField(entries, athleteId, ratingItem.id)?.value}
+                scale={ratingItem.configurationJson?.scale || 5}
+                compact
+                disabled={disabled || reviewOnly}
+                onChange={(v) => handleQuickChange(ratingItem, { value: v })}
+              />
+            ) : null}
+            {quickNoteItem ? (
+              <CFormInput
+                className="phase-quick-note"
+                size="sm"
+                disabled={disabled || reviewOnly}
+                placeholder="Quick note…"
+                value={entryValueForField(entries, athleteId, quickNoteItem.id)?.text || ''}
+                onChange={(e) => handleQuickChange(quickNoteItem, { text: e.target.value })}
+              />
+            ) : null}
+            {!tagItem && !ratingItem && !quickNoteItem ? (
+              <p className="small text-body-secondary mb-0">No quick observations for this phase.</p>
+            ) : null}
+          </div>
+        ) : null}
+
         {tab === 'timing' ? (
           <div className="athlete-session-panel__pane">
             {timingSection || (
@@ -83,7 +147,7 @@ export default function AthleteSessionPanel({
               rows={2}
               disabled={disabled}
               value={focusText}
-              placeholder="Focus for this athlete today…"
+              placeholder="Focus for this student today…"
               onChange={(e) => onChangeFocus?.(e.target.value)}
             />
             {onSaveFocus ? (
@@ -118,7 +182,7 @@ export default function AthleteSessionPanel({
             {deepItems.length === 0 ? (
               <p className="small text-body-secondary mb-0">No advanced observations for this phase.</p>
             ) : (
-              deepItems.map((item) => (
+              deepItems.filter((item) => item.fieldType !== 'note').map((item) => (
                 <div key={item.id} className="athlete-session-panel__field mb-3">
                   <div className="small text-body-secondary mb-1">
                     {uiRoleLabel(item.configurationJson?.uiRole)} · {item.label}

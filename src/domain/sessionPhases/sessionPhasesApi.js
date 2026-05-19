@@ -8,7 +8,10 @@ export const sessionPhasesApi = {
     const { data } = await http.get(
       `/operational-sessions/${encodeURIComponent(operationalSessionId)}/phases`,
     )
-    return data?.phases ?? []
+    return {
+      phases: data?.phases ?? [],
+      removedPhases: data?.removedPhases ?? [],
+    }
   },
 
   async createPhase(operationalSessionId, body) {
@@ -51,10 +54,11 @@ export const sessionPhasesApi = {
   },
 }
 
+/** @deprecated use addablePhaseTypeOptions from sessionPhaseOptions.js */
 export const PHASE_TYPE_OPTIONS = [
   { value: 'warmup', label: 'Warmup' },
   { value: 'technical', label: 'Technical work' },
-  { value: 'conditioning', label: 'Conditioning' },
+  { value: 'conditioning', label: 'Fitness' },
   { value: 'race', label: 'Race' },
   { value: 'cooldown', label: 'Cooldown' },
   { value: 'custom', label: 'Custom' },

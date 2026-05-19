@@ -40,7 +40,10 @@ export default function PhaseModeStrip({
   loading = false,
   onCompletePhase,
   onSkipPhase,
+  /** 'tiles' — horizontal phase cards (Skating Ops live); 'default' — mobile sheet + desktop chips */
+  layout = 'default',
 }) {
+  const useTiles = layout === 'tiles'
   const [sheetOpen, setSheetOpen] = useState(false)
   const activeChipRef = useRef(null)
 
@@ -82,7 +85,12 @@ export default function PhaseModeStrip({
   }
 
   return (
-    <nav className="phase-mode-strip" data-testid="phase-mode-strip" aria-label="Training phase">
+    <nav
+      className={`phase-mode-strip${useTiles ? ' phase-mode-strip--tiles' : ''}`}
+      data-testid="phase-mode-strip"
+      aria-label="Training phase"
+    >
+      {!useTiles ? (
       <div className="phase-mode-strip__mobile">
         <button
           type="button"
@@ -142,14 +150,17 @@ export default function PhaseModeStrip({
           </COffcanvasBody>
         </COffcanvas>
       </div>
+      ) : null}
 
       <div
-        className="phase-mode-strip__scroll phase-mode-strip__scroll--desktop phase-mode-strip__sequence"
+        className={`phase-mode-strip__scroll phase-mode-strip__scroll--desktop${useTiles ? '' : ' phase-mode-strip__sequence'}`}
         role="list"
       >
         {phases.map((phase, index) => (
           <React.Fragment key={phase.id}>
-            {index > 0 ? <span className="phase-mode-strip__connector" aria-hidden /> : null}
+            {!useTiles && index > 0 ? (
+              <span className="phase-mode-strip__connector" aria-hidden />
+            ) : null}
             <button
               type="button"
               role="listitem"
@@ -161,7 +172,9 @@ export default function PhaseModeStrip({
               aria-current={phase.isActive ? 'step' : undefined}
               onClick={() => onSelectBlock(phase.id)}
             >
-              <span className="phase-mode-chip__label">{phase.displayLabel}</span>
+              <span className="phase-mode-chip__label">
+                {useTiles ? phase.label : phase.displayLabel}
+              </span>
               <span className="phase-mode-chip__count" aria-hidden>
                 · {phase.count}
               </span>

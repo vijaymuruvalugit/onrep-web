@@ -39,3 +39,19 @@
 .athlete-session-panel__placeholder {
   padding: 1rem 0;
 }
+
+.athlete-session-panel__observe {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.athlete-session-panel__status-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--cui-warning);
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}

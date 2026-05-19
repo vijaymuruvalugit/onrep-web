@@ -499,7 +499,8 @@
   color: var(--cui-secondary-color, #6c757d);
 }
 
-.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .coach-live-nav-section__heading {
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .coach-live-nav-section__heading,
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--students .coach-live-nav-section__heading {
   font-size: 0.75rem;
   color: var(--cui-body-color, #212529);
 }
@@ -686,10 +687,22 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Unified live: phases as dominant section tiles (not pills) */
+/* Skating Ops live: phase tiles (horizontal cards), always visible — no mobile dropdown */
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-strip--tiles .phase-mode-strip__mobile {
+  display: none !important;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-strip--tiles .phase-mode-strip__scroll--desktop {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(5.75rem, 1fr));
+  gap: var(--coach-phase-gap, 0.65rem);
+  overflow: visible;
+  padding: 0;
+}
+
 .skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-strip__scroll {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(7.25rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(5.75rem, 1fr));
   gap: var(--coach-phase-gap, 0.65rem);
   overflow: visible;
   padding: 0;
@@ -739,6 +752,56 @@
   transform: none;
 }
 
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-chip--active .phase-mode-chip__count {
+  color: rgba(255, 255, 255, 0.92);
+  opacity: 1;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-chip:not(.phase-mode-chip--active) .phase-mode-chip__count {
+  color: var(--cui-secondary-color, #6c757d);
+  opacity: 1;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-chip--completed:not(.phase-mode-chip--active) {
+  opacity: 0.72;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-mode-chip--completed:not(.phase-mode-chip--active) .phase-mode-chip__label::after {
+  content: ' ✓';
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-lifecycle-actions {
+  margin-top: 0.5rem;
+  padding-left: 0.1rem;
+  gap: 0.5rem 0.75rem;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-lifecycle-actions .btn-outline-primary {
+  color: var(--cui-primary, #321fdb);
+  border-color: var(--cui-primary, #321fdb);
+  background: transparent;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.85rem;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-lifecycle-actions .btn-outline-primary:hover {
+  background: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.08);
+  color: var(--cui-primary, #321fdb);
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-lifecycle-actions .btn-link {
+  color: var(--cui-primary, #321fdb);
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0.35rem 0.5rem;
+}
+
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--phases .phase-lifecycle-actions .btn-link:hover {
+  color: var(--cui-primary, #321fdb);
+  text-decoration: underline;
+}
+
 .skating-ops-page .phase-mode-chip--active {
   background: var(--cui-primary, #321fdb);
   color: #fff;
@@ -765,12 +828,13 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card-strip__scroll {
+/* Coach live student tiles: column layout + scroll (see AthleteCardStrip.css) */
+.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--students .athlete-card-strip__scroll {
   padding: 0;
   gap: 0.45rem;
 }
 
-.skating-ops-page .athlete-card {
+.skating-ops-page .athlete-card:not(.athlete-card--tile) {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -783,35 +847,6 @@
   cursor: pointer;
   text-align: left;
   max-width: 11rem;
-}
-
-.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card {
-  min-height: 2.85rem;
-  max-width: 9.5rem;
-  padding: 0.35rem 0.65rem 0.35rem 0.35rem;
-  border-radius: 0.55rem;
-  background: var(--coach-surface-subtle);
-}
-
-.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card--selected {
-  background: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.12);
-}
-
-.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__avatar {
-  width: 2rem;
-  height: 2rem;
-  font-size: 0.7rem;
-}
-
-.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__name {
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
-/* Hide duplicate phase on athlete cards — active phase is shown above */
-.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__phase,
-.skating-ops-page.skating-ops--coach-live .coach-live-nav-section--athletes .athlete-card__sep {
-  display: none;
 }
 
 .skating-ops-page.skating-ops--coach-live .coach-live-pick-athlete {
@@ -836,7 +871,7 @@
   display: none;
 }
 
-.skating-ops-page .athlete-card--selected {
+.skating-ops-page .athlete-card--selected:not(.athlete-card--tile) {
   background: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.14);
   box-shadow: inset 0 0 0 2px rgba(var(--cui-primary-rgb, 50, 31, 219), 0.45);
 }

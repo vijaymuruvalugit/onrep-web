@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CAlert,
   CButton,
@@ -10,11 +10,9 @@ import {
   CModalHeader,
   CSpinner,
 } from '@coreui/react'
-import {
-  PHASE_TYPE_OPTIONS,
-  sessionPhasesApi,
-} from '../../../../domain/sessionPhases/sessionPhasesApi'
+import { sessionPhasesApi } from '../../../../domain/sessionPhases/sessionPhasesApi'
 import { livePhaseLabel } from '../../constants/coachLiveLabels'
+import { addablePhaseTypeOptions } from '../../utils/sessionPhaseOptions'
 
 export default function EditSessionPhasesModal({
   visible,
@@ -39,9 +37,20 @@ export default function EditSessionPhasesModal({
     }
   }, [visible, phases])
 
+  const addTypeOptions = useMemo(
+    () => addablePhaseTypeOptions(localPhases),
+    [localPhases],
+  )
+
+  useEffect(() => {
+    if (!addTypeOptions.some((o) => o.value === addType)) {
+      setAddType(addTypeOptions[0]?.value || 'technical')
+    }
+  }, [addTypeOptions, addType])
+
   const reload = useCallback(async () => {
     if (!operationalSessionId) return
-    const next = await sessionPhasesApi.listPhases(operationalSessionId)
+    const { phases: next } = await sessionPhasesApi.listPhases(operationalSessionId)
     setLocalPhases(next)
     onUpdated?.()
   }, [operationalSessionId, onUpdated])
@@ -52,7 +61,7 @@ export default function EditSessionPhasesModal({
     try {
       const title =
         addTitle.trim() ||
-        PHASE_TYPE_OPTIONS.find((o) => o.value === addType)?.label ||
+        addTypeOptions.find((o) => o.value === addType)?.label ||
         'New phase'
       await sessionPhasesApi.createPhase(operationalSessionId, {
         title,
@@ -220,12 +229,20 @@ export default function EditSessionPhasesModal({
           <p className="fw-semibold small mb-2">Add phase</p>
           <div className="row g-2">
             <div className="col-md-5">
-              <CFormSelect value={addType} onChange={(e) => setAddType(e.target.value)}>
-                {PHASE_TYPE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
+              <CFormSelect
+                value={addType}
+                onChange={(e) => setAddType(e.target.value)}
+                disabled={!addTypeOptions.length}
+              >
+                {addTypeOptions.length ? (
+                  addTypeOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">All phase types in session</option>
+                )}
               </CFormSelect>
             </div>
             <div className="col-md-5">
@@ -236,7 +253,12 @@ export default function EditSessionPhasesModal({
               />
             </div>
             <div className="col-md-2">
-              <CButton color="primary" className="w-100" disabled={busy} onClick={handleAdd}>
+              <CButton
+                color="primary"
+                className="w-100"
+                disabled={busy || !addTypeOptions.length}
+                onClick={handleAdd}
+              >
                 Add
               </CButton>
             </div>
