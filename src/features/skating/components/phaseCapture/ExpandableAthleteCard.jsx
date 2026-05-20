@@ -24,7 +24,6 @@ export default function ExpandableAthleteCard({
   reviewOnly = false,
   onSelectAthlete,
   onToggleExpand,
-  onOpenPanel,
   onValueChange,
 }) {
   const athleteId = String(athlete?.id ?? athlete?.studentId ?? '')
@@ -121,15 +120,6 @@ export default function ExpandableAthleteCard({
               value={entryValueForField(entries, athleteId, noteItem.id)?.text || ''}
               onChange={(e) => handleChange(noteItem, { text: e.target.value })}
             />
-          ) : null}
-          {onOpenPanel ? (
-            <button
-              type="button"
-              className="btn btn-link btn-sm p-0 expandable-athlete-card__panel-link"
-              onClick={() => onOpenPanel?.(athleteId, 'advanced')}
-            >
-              More in athlete panel
-            </button>
           ) : null}
         </div>
       ) : null}

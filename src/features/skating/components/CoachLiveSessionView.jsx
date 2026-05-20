@@ -1,22 +1,34 @@
-import React, { memo } from 'react'
+import React, { memo, useMemo, useState } from 'react'
 import SessionLiveHeader from './SessionLiveHeader'
 import PhaseModeStrip from './PhaseModeStrip'
 import AthleteCardStrip from './AthleteCardStrip'
-import ActiveAthleteWorkspace from './ActiveAthleteWorkspace'
 import RaceTimingWorkspace from './RaceTimingWorkspace'
 import SkatingRaceWorkspace from './SkatingRaceWorkspace'
 import CaptureModeToggle from './phaseCapture/CaptureModeToggle'
-import AthleteSessionPanel from './sessionWorkspace/AthleteSessionPanel'
-import { getLiveUiProfile, liveLabel } from '../constants/coachLiveLabels'
+import PhaseAthleteCaptureList from './phaseCapture/PhaseAthleteCaptureList'
+import SkillsPhaseWorkspace from './SkillsPhaseWorkspace'
+import { getLiveUiProfile, liveLabel, isSkillsPhaseBlock } from '../constants/coachLiveLabels'
 import LiveSessionSyncDot from './LiveSessionSyncDot'
-import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
 import {
   sessionDisplayTitle,
   sessionTimeRangeLabel,
 } from '../../../domain/operationalSessions/helpers/sessionDisplay'
 
+function rosterFromPhaseAthletes(phaseAthletes = [], rosterForSession = []) {
+  const nameById = new Map(
+    rosterForSession.map((r) => [String(r.id), r.full_name || r.fullName || '']),
+  )
+  return phaseAthletes.map((a) => {
+    const id = String(a.studentId || a.id)
+    return {
+      id,
+      full_name: a.fullName || a.full_name || nameById.get(id) || 'Athlete',
+    }
+  })
+}
+
 /**
- * Live coaching shell — quick capture cards + deep athlete panel.
+ * Live coaching shell — phases, students, phase-specific workspace.
  */
 function CoachLiveSessionView({
   shellSession,
@@ -28,6 +40,7 @@ function CoachLiveSessionView({
   activeBlockMeta,
   activeBlockTitle,
   athleteCountByPhaseId,
+  phaseAthletes = [],
   blocksBusy,
   blocksLoading,
   onSelectBlock,
@@ -41,18 +54,17 @@ function CoachLiveSessionView({
   lifecycle,
   sessionMode,
   isRaceMode,
-  coachingCollapsed,
-  onCoachingCollapsedChange,
   uiPaused,
   opsState,
   raceSectionProps,
   activityRunSectionProps,
-  workspaceProps,
   timingSection,
   recentLapsSection,
   sessionHeaderProps,
   phaseCapture,
 }) {
+  const [expandedAthleteId, setExpandedAthleteId] = useState(null)
+
   const uiProfile = getLiveUiProfile(
     sessionMode,
     isRaceMode,
@@ -65,16 +77,26 @@ function CoachLiveSessionView({
   const activePhaseAthleteCount =
     activeBlockId != null ? athleteCountByPhaseId[String(activeBlockId)] ?? 0 : 0
 
-  const showCoachingWorkspace = !isRaceMode || !coachingCollapsed
   const usePhaseCapture = Boolean(phaseCapture?.enabled && !isRaceMode)
+  const isSkillsPhase = isSkillsPhaseBlock(activeBlockMeta)
   const activePhase =
     phaseCapture?.phases?.find((p) => String(p.id) === String(activeBlockId)) || activeBlockMeta
   const captureItems = activePhase?.captureItems || []
   const reviewOnly =
     activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped'
 
+  const phaseRoster = useMemo(
+    () =>
+      rosterFromPhaseAthletes(
+        phaseAthletes.length ? phaseAthletes : rosterForSession,
+        rosterForSession,
+      ),
+    [phaseAthletes, rosterForSession],
+  )
+
   const selectedAthlete = lapStudentId
-    ? rosterForSession.find((r) => String(r.id) === String(lapStudentId))
+    ? rosterForSession.find((r) => String(r.id) === String(lapStudentId)) ||
+      phaseRoster.find((r) => String(r.id) === String(lapStudentId))
     : null
 
   const handleSelectAthlete = (athleteId) => {
@@ -82,9 +104,12 @@ function CoachLiveSessionView({
     phaseCapture?.onSelectAthlete?.(athleteId)
   }
 
+  const showTiming =
+    Boolean(timingSection) && !isSkillsPhase && !isRaceMode && uiProfile.timeExpanded
+
   return (
     <div
-      className={`coach-live-stack coach-live-stack--unified${isRaceMode ? ' coach-live-stack--race' : ''}${isRaceMode && coachingCollapsed ? ' coach-live-stack--timing-focus' : ''}`}
+      className={`coach-live-stack coach-live-stack--unified${isRaceMode ? ' coach-live-stack--race' : ''}`}
       data-testid="coach-live-session-view"
     >
       <header className="coach-live-stack__session-header">
@@ -97,17 +122,10 @@ function CoachLiveSessionView({
           timeRangeLabel={timeRangeLabel}
           isRaceMode={isRaceMode}
           streamlined
-          onRaceFocus={
-            isRaceMode && coachingCollapsed
-              ? () => onCoachingCollapsedChange?.(false)
-              : isRaceMode
-                ? () => onCoachingCollapsedChange?.(true)
-                : undefined
-          }
           {...sessionHeaderProps}
         />
         <div className="d-flex align-items-center gap-2">
-          {usePhaseCapture ? (
+          {usePhaseCapture && !isSkillsPhase ? (
             <CaptureModeToggle
               mode={phaseCapture.captureMode}
               disabled={uiPaused || opsState === 'ended'}
@@ -139,25 +157,27 @@ function CoachLiveSessionView({
           />
         </section>
 
-        <section
-          className="coach-live-nav-section coach-live-nav-section--students"
-          aria-labelledby="coach-live-students-heading"
-        >
-          <h2 id="coach-live-students-heading" className="coach-live-nav-section__heading">
-            Students
-          </h2>
-          <AthleteCardStrip
-            variant="tiles"
-            rows={rosterForSession}
-            lapStudentId={lapStudentId}
-            observedStudentIds={observedStudentIds}
-            participationByStudentId={participationByStudentId}
-            athletePhaseLabelByStudentId={athletePhaseLabelByStudentId}
-            onPickSkater={usePhaseCapture ? handleSelectAthlete : onPickSkater}
-            onAddAthletesRequest={onAddAthletesRequest}
-            suppressPhaseSubline
-          />
-        </section>
+        {!isRaceMode ? (
+          <section
+            className="coach-live-nav-section coach-live-nav-section--students"
+            aria-labelledby="coach-live-students-heading"
+          >
+            <h2 id="coach-live-students-heading" className="coach-live-nav-section__heading">
+              Students
+            </h2>
+            <AthleteCardStrip
+              variant="tiles"
+              rows={rosterForSession}
+              lapStudentId={lapStudentId}
+              observedStudentIds={observedStudentIds}
+              participationByStudentId={participationByStudentId}
+              athletePhaseLabelByStudentId={athletePhaseLabelByStudentId}
+              onPickSkater={usePhaseCapture ? handleSelectAthlete : onPickSkater}
+              onAddAthletesRequest={onAddAthletesRequest}
+              suppressPhaseSubline
+            />
+          </section>
+        ) : null}
       </nav>
 
       <div className="coach-live-stack__coaching" data-testid="coach-live-coaching-area">
@@ -185,84 +205,49 @@ function CoachLiveSessionView({
                 onManualTime={raceSectionProps?.onManualTime}
               />
             )}
-            {!coachingCollapsed ? (
-              <button
-                type="button"
-                className="btn btn-link btn-sm p-0 mt-2"
-                onClick={() => onCoachingCollapsedChange?.(true)}
-              >
-                Hide coach
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-link btn-sm p-0 mt-2"
-                onClick={() => onCoachingCollapsedChange?.(false)}
-              >
-                Show coach
-              </button>
-            )}
           </div>
         ) : null}
 
-        {showCoachingWorkspace && usePhaseCapture ? (
+        {usePhaseCapture && isSkillsPhase ? (
+          <SkillsPhaseWorkspace
+            studentId={lapStudentId}
+            athleteName={selectedAthlete?.full_name || selectedAthlete?.fullName}
+            disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
+          />
+        ) : null}
+
+        {usePhaseCapture && !isSkillsPhase ? (
           <section className="coach-live-phase-capture mb-3" aria-label="Phase capture">
-            {selectedAthlete ? (
-              <AthleteSessionPanel
-                athlete={selectedAthlete}
-                captureItems={captureItems}
-                entries={phaseCapture.entries}
-                captureMode={phaseCapture.captureMode}
-                activeTab={phaseCapture.athletePanelTab}
-                onTabChange={phaseCapture.onPanelTabChange}
-                disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
-                reviewOnly={reviewOnly}
-                participationStatus={participationByStudentId[String(lapStudentId)]}
-                timingSection={
-                  timingSection ? (
-                    <details className="coach-live-time" open={uiProfile.timeExpanded}>
-                      <summary className="coach-live-time__summary">{liveLabel('time')}</summary>
-                      <div className="coach-live-time__body">{timingSection}</div>
-                    </details>
-                  ) : null
-                }
-                focusText={workspaceProps?.focusText}
-                onChangeFocus={workspaceProps?.onChangeFocus}
-                onSaveFocus={workspaceProps?.onSaveFocus}
-                focusSaving={workspaceProps?.focusSaving}
-                focusSaveMessage={workspaceProps?.focusSaveMessage}
-                onValueChange={phaseCapture.onEntryChange}
-              />
-            ) : (
-              <p className="small text-body-secondary mb-2 mt-2">
-                Select a student above to record observations, timing, and notes.
+            <PhaseAthleteCaptureList
+              roster={phaseRoster}
+              captureItems={captureItems}
+              entries={phaseCapture.entries}
+              captureMode={phaseCapture.captureMode}
+              participationByStudentId={participationByStudentId}
+              expandedAthleteId={expandedAthleteId}
+              selectedAthleteId={lapStudentId}
+              disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
+              reviewOnly={reviewOnly}
+              onValueChange={phaseCapture.onEntryChange}
+              onSelectAthlete={handleSelectAthlete}
+              onToggleExpand={(id) => {
+                setExpandedAthleteId(id)
+                if (id) handleSelectAthlete(id)
+              }}
+            />
+            {!lapStudentId && phaseRoster.length ? (
+              <p className="small text-body-secondary mb-0 mt-2">
+                Tap a student to expand quick observations.
               </p>
-            )}
+            ) : null}
           </section>
         ) : null}
 
-        {showCoachingWorkspace && !usePhaseCapture ? (
-          !lapStudentId ? (
-            <div className="coach-live-pick-athlete">
-              <p className="coach-live-pick-athlete__text mb-0">
-                {SESSION_OPS_COPY.selectAthletePrompt}
-              </p>
-            </div>
-          ) : (
-            <ActiveAthleteWorkspace
-              {...workspaceProps}
-              sessionMode={sessionMode}
-              uiProfile={uiProfile}
-              timingSection={
-                timingSection ? (
-                  <details className="coach-live-time" open={uiProfile.timeExpanded}>
-                    <summary className="coach-live-time__summary">{liveLabel('time')}</summary>
-                    <div className="coach-live-time__body">{timingSection}</div>
-                  </details>
-                ) : null
-              }
-            />
-          )
+        {showTiming ? (
+          <details className="coach-live-time mb-3" open>
+            <summary className="coach-live-time__summary">{liveLabel('time')}</summary>
+            <div className="coach-live-time__body">{timingSection}</div>
+          </details>
         ) : null}
 
         {recentLapsSection}

@@ -96,6 +96,11 @@ export function liveLabel(key, _variant = 'simple') {
  * @param {string} blockType
  * @param {string} [fallbackTitle]
  */
+export function isSkillsPhaseBlock(block) {
+  const bt = String(block?.blockType || block?.block_type || '').toLowerCase()
+  return bt === 'technical'
+}
+
 export function livePhaseLabel(blockType, fallbackTitle) {
   const bt = String(blockType || '').toLowerCase()
   const fromType = BLOCK_TYPE_LIVE_LABELS[bt]
@@ -175,6 +180,20 @@ export function getLiveUiProfile(sessionMode, isRaceMode, blockType = '') {
       formalScoreExpanded: false,
       emphasizeRecover: false,
       intelligenceTabKeys: ['today', 'skills', 'progress', 'history'],
+    }
+  }
+
+  if (bt === 'technical') {
+    return {
+      showQuickScores: false,
+      showFormalScoreGrid: false,
+      showRaceTiming: false,
+      showModeTags: false,
+      showIntelligenceTabs: false,
+      timeExpanded: false,
+      formalScoreExpanded: false,
+      emphasizeRecover: false,
+      intelligenceTabKeys: ['today', 'progress', 'history'],
     }
   }
 

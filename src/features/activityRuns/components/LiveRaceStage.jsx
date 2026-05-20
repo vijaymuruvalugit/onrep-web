@@ -22,7 +22,7 @@ export default function LiveRaceStage({
         {onEnd ? (
           <button
             type="button"
-            className="live-run-stage__end btn btn-sm btn-outline-light"
+            className="live-run-stage__end btn btn-sm btn-outline-secondary"
             onClick={onEnd}
           >
             End

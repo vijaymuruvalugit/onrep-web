@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildPresetSubtitle,
   buildRaceStatusLine,
+  listPickerPresets,
   resolvePreset,
   resolvePresetForSession,
 } from './racePresets'
@@ -26,6 +27,14 @@ describe('racePresets', () => {
     expect(line).toContain('Race 1')
     expect(line).toContain('Lap 2/5')
     expect(line).not.toMatch(/Heat/i)
+  })
+
+  it('listPickerPresets returns only 2 Laps and 5 Laps', () => {
+    const presets = listPickerPresets()
+    expect(presets).toHaveLength(2)
+    expect(presets.map((p) => p.id)).toEqual(['2_LAP', '5_LAP'])
+    expect(presets[0].title).toBe('2 Laps')
+    expect(presets[1].title).toBe('5 Laps')
   })
 
   it('resolvePresetForSession keeps static distance when autoDistanceFromVenue false', () => {

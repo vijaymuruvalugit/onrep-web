@@ -6,11 +6,27 @@ export const VENUE_LABELS = {
   POOL: 'Pool',
 }
 
+/** Shown in race phase picker (2 / 5 / Custom only). */
+export const PICKER_PRESET_IDS = ['2_LAP', '5_LAP']
+
 export const RACE_PRESETS = [
   {
     id: '5_LAP',
     title: '5 Laps',
     targetProgressCount: 5,
+    distanceLabel: null,
+    venueType: 'RINK',
+    runType: 'HEAT_RACE',
+    progressionMode: 'PACK',
+    requiresParticipantPick: false,
+    requiresTeamSetup: false,
+    flowMode: 'HEAT',
+    context: { autoDistanceFromVenue: false, autoVenueLabel: true },
+  },
+  {
+    id: '2_LAP',
+    title: '2 Laps',
+    targetProgressCount: 2,
     distanceLabel: null,
     venueType: 'RINK',
     runType: 'HEAT_RACE',
@@ -144,10 +160,12 @@ export function resolvePreset(presetId) {
 }
 
 export function listPickerPresets() {
-  return RACE_PRESETS.map((p) => ({
-    ...p,
-    subtitle: buildPresetSubtitle(p),
-  }))
+  return PICKER_PRESET_IDS.map((id) => RACE_PRESETS.find((p) => p.id === id))
+    .filter(Boolean)
+    .map((p) => ({
+      ...p,
+      subtitle: buildPresetSubtitle(p),
+    }))
 }
 
 /**
@@ -174,11 +192,8 @@ export function buildPresetStartPatch(preset, opts = {}) {
       locked: true,
     },
     race_meta: {
-      status: 'active',
       presetId: preset.id,
       title: preset.title,
-      startedAt: new Date().toISOString(),
-      timerStartedAt: Date.now(),
       participantIds: participantIds.map(String),
       raceSequence,
       currentLap: 0,

@@ -2,10 +2,12 @@
 
 .activity-run-workspace {
   --activity-stopwatch-size: 3rem;
-  --run-accent: var(--cui-primary, #321fdb);
-  --run-live-bg: linear-gradient(165deg, #1a237e 0%, #283593 42%, #3949ab 100%);
-  --run-live-surface: rgba(255, 255, 255, 0.12);
-  --run-chip-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --run-accent: #0f766e;
+  --run-live-bg: linear-gradient(160deg, #f8fafc 0%, #eef6f5 52%, #e9eefb 100%);
+  --run-live-surface: rgba(255, 255, 255, 0.82);
+  --run-live-ink: #172033;
+  --run-live-muted: #667085;
+  --run-chip-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .activity-run-workspace__phase-context {
@@ -158,11 +160,12 @@
 /* Live run hero — central focus */
 .live-run-stage {
   background: var(--run-live-bg);
-  color: #fff;
-  border-radius: 0.75rem;
+  color: var(--run-live-ink);
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 1rem;
   padding: 1rem 1rem 1.25rem;
   margin-bottom: 0.75rem;
-  box-shadow: 0 8px 24px rgba(26, 35, 126, 0.35);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
 }
 
 .live-run-stage__header {
@@ -178,12 +181,12 @@
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.12em;
-  padding: 0.2rem 0.45rem;
-  border-radius: 0.25rem;
-  background: #ff5252;
-  color: #fff;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b42318;
   margin-bottom: 0.35rem;
-  animation: live-badge-blink 1.2s ease-in-out infinite;
+  animation: none;
 }
 
 @keyframes live-badge-blink {
@@ -205,23 +208,28 @@
 
 .live-run-stage__subtitle {
   font-size: 0.85rem;
-  opacity: 0.85;
+  color: var(--run-live-muted);
   margin: 0.25rem 0 0;
 }
 
 .live-run-stage__body {
   background: var(--run-live-surface);
-  border-radius: 0.5rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.85rem;
   padding: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .live-run-stage__body .activity-stopwatch__display {
-  color: #fff;
+  color: #111827;
   font-size: 3.5rem;
+  letter-spacing: 0.02em;
 }
 
 .live-run-stage__body .activity-stopwatch__actions .btn-light {
-  background: rgba(255, 255, 255, 0.9);
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #374151;
 }
 
 .live-run-stage__body .ranking-primitive .btn-light {
@@ -229,12 +237,12 @@
 }
 
 .live-run-stage__body .small.text-body-secondary {
-  color: rgba(255, 255, 255, 0.8) !important;
+  color: var(--run-live-muted) !important;
 }
 
 .live-run-stage__body .run-results-card__row {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: var(--run-live-ink);
+  border-color: rgba(15, 23, 42, 0.12) !important;
 }
 
 /* Stopwatch */
@@ -256,6 +264,15 @@
 }
 
 /* Timeline — completed runs */
+.session-run-timeline__summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.session-run-timeline__summary::-webkit-details-marker {
+  display: none;
+}
+
 .session-run-timeline__heading {
   font-size: 0.7rem;
   font-weight: 700;
@@ -266,6 +283,17 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.session-run-timeline__heading::after {
+  content: '▾';
+  color: var(--cui-secondary-color, #6c757d);
+  font-size: 0.7rem;
+  transition: transform 0.12s ease;
+}
+
+.session-run-timeline:not([open]) .session-run-timeline__heading::after {
+  transform: rotate(-90deg);
 }
 
 .session-run-timeline--compact .session-run-timeline__heading {
@@ -280,14 +308,39 @@
 }
 
 .session-run-timeline__item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.65rem;
   background: #fff;
   border: 1px solid var(--cui-border-color, #dee2e6);
   border-radius: 0.5rem;
   margin-bottom: 0.35rem;
+  overflow: hidden;
+}
+
+.session-run-timeline__race-details {
+  width: 100%;
+}
+
+.session-run-timeline__race-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.session-run-timeline__race-summary::-webkit-details-marker {
+  display: none;
+}
+
+.session-run-timeline__race-summary::after {
+  content: '▾';
+  color: var(--cui-secondary-color, #6c757d);
+  font-size: 0.7rem;
+  transition: transform 0.12s ease;
+}
+
+.session-run-timeline__race-details:not([open]) .session-run-timeline__race-summary::after {
+  transform: rotate(-90deg);
 }
 
 .session-run-timeline__emoji {
@@ -326,22 +379,129 @@
   font-weight: 700;
 }
 
+.session-run-timeline__details {
+  border-top: 1px solid var(--cui-border-color, #dee2e6);
+  background: #f8fafc;
+  padding: 0.65rem 0.75rem 0.75rem;
+}
+
+.session-run-timeline__detail-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  color: var(--cui-secondary-color, #6c757d);
+  font-size: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.session-run-timeline__detail-label {
+  margin: 0 0 0.35rem;
+  color: var(--cui-secondary-color, #6c757d);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.session-run-timeline__athlete-detail {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 0.5rem;
+  background: #fff;
+  padding: 0.45rem 0.55rem;
+  margin-bottom: 0.4rem;
+}
+
+.session-run-timeline__athlete-line,
+.session-run-timeline__lap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.session-run-timeline__athlete-line {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.session-run-timeline__lap-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+}
+
+.session-run-timeline__lap {
+  color: var(--cui-secondary-color, #6c757d);
+  font-size: 0.78rem;
+  padding: 0.12rem 0;
+}
+
+.athlete-selection-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
 .athlete-selection-grid__chip {
-  min-height: 48px;
-  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  width: 4rem;
+  min-width: 4rem;
+  padding: 0.45rem 0.35rem 0.5rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 0.65rem;
+  background: #fff;
+  color: var(--cui-body-color, #212529);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.athlete-selection-grid__chip:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.athlete-selection-grid__chip--selected {
+  border-color: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.35);
+  background: rgba(var(--cui-primary-rgb, 50, 31, 219), 0.1);
 }
 
 .athlete-selection-grid__avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.15rem;
+  height: 2.15rem;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.08);
-  font-size: 0.75rem;
+  color: var(--cui-secondary-color, #6c757d);
+  font-size: 0.7rem;
   font-weight: 700;
-  margin-right: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.athlete-selection-grid__chip--selected .athlete-selection-grid__avatar {
+  background: var(--cui-primary, #321fdb);
+  color: #fff;
+}
+
+.athlete-selection-grid__name {
+  width: 100%;
+  color: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.athlete-selection-grid__chip--selected .athlete-selection-grid__name {
+  color: var(--cui-primary, #321fdb);
+  font-weight: 700;
 }
 
 .ranking-primitive__btn {
@@ -355,7 +515,7 @@
 
 /* Progression stage */
 .progression-stage__heading {
-  color: #fff;
+  color: var(--run-live-ink);
 }
 
 .progression-stage__dots {
@@ -368,25 +528,39 @@
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(15, 23, 42, 0.14);
 }
 
 .progression-stage__dot--filled {
-  background: #ffca28;
-  box-shadow: 0 0 6px rgba(255, 202, 40, 0.8);
+  background: var(--run-accent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
 }
 
 .progress-results-panel__row {
   display: flex;
   justify-content: space-between;
   padding: 0.35rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+  color: var(--run-live-ink);
   font-size: 0.9rem;
 }
 
 .capture-progress-btn {
   margin-top: 1rem;
+}
+
+.capture-progress-btn.btn-warning {
+  background: linear-gradient(180deg, #14b8a6 0%, #0f766e 100%);
+  border-color: #0f766e;
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(15, 118, 110, 0.18);
+}
+
+.capture-progress-btn.btn-warning:hover,
+.capture-progress-btn.btn-warning:focus {
+  background: #0f766e;
+  border-color: #0b5f59;
+  color: #fff;
 }
 
 .participant-progress-grid {
@@ -402,14 +576,14 @@
   text-align: left;
   padding: 0.65rem 0.75rem;
   border-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(248, 250, 252, 0.8);
+  color: var(--run-live-ink);
 }
 
 .participant-progress-grid__card--active {
-  border-color: #ffca28;
-  background: rgba(255, 202, 40, 0.15);
+  border-color: rgba(15, 118, 110, 0.55);
+  background: rgba(20, 184, 166, 0.1);
 }
 
 .participant-progress-grid__name {
@@ -482,7 +656,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--run-live-muted);
   text-transform: uppercase;
 }
 

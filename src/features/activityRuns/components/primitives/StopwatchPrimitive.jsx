@@ -1,5 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { CButton } from '@coreui/react'
+import { coerceTimerAnchorMs } from '../../utils/normalizeProgressionPayload'
 
 const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
   {
@@ -20,12 +21,11 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
   const tickRef = useRef(null)
 
   const restoreTimer = useCallback((anchorMs) => {
-    if (!anchorMs) return
-    startRef.current = anchorMs
+    const anchor = coerceTimerAnchorMs(anchorMs)
+    if (anchor == null) return
+    startRef.current = anchor
     lastCaptureRef.current = 0
-    const events = []
-    void events
-    setElapsedMs(Math.max(0, Date.now() - anchorMs))
+    setElapsedMs(Math.max(0, Date.now() - anchor))
     setRunning(true)
   }, [])
 
@@ -68,9 +68,10 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
   }
 
   const captureProgressEvent = () => {
-    if (!running) start()
-    const cumulativeTimeMs = Math.round(Date.now() - startRef.current)
-    const splitTimeMs = Math.round(cumulativeTimeMs - lastCaptureRef.current)
+    if (!startRef.current) start()
+    else if (!running) start()
+    const cumulativeTimeMs = Math.max(1, Math.round(Date.now() - startRef.current))
+    const splitTimeMs = Math.max(1, Math.round(cumulativeTimeMs - lastCaptureRef.current))
     lastCaptureRef.current = cumulativeTimeMs
     return { splitTimeMs, cumulativeTimeMs }
   }

@@ -310,7 +310,6 @@ const SkatingOpsPage = () => {
   const [showAddAthletesModal, setShowAddAthletesModal] = useState(false)
   const [addAthletesPick, setAddAthletesPick] = useState(() => new Set())
   const [addAthletesSaving, setAddAthletesSaving] = useState(false)
-  const [athletePanelTab, setAthletePanelTab] = useState('observe')
   const [showPhaseSetupModal, setShowPhaseSetupModal] = useState(false)
   const [showEditPhasesModal, setShowEditPhasesModal] = useState(false)
   const [showCoachDefaults, setShowCoachDefaults] = useState(false)
@@ -355,7 +354,6 @@ const SkatingOpsPage = () => {
   const [observedStudentIds, setObservedStudentIds] = useState(() => new Set())
   const [timingPanelOpen, setTimingPanelOpen] = useState(true)
   const [raceBusy, setRaceBusy] = useState(false)
-  const [coachingCollapsed, setCoachingCollapsed] = useState(false)
   const [focusedQuickCategory, setFocusedQuickCategory] = useState('effort')
 
   const [captureDrawerStudentId, setCaptureDrawerStudentId] = useState(null)
@@ -1153,13 +1151,11 @@ const SkatingOpsPage = () => {
       captureMode: phaseCaptureState.captureMode,
       coachDefaults: phaseCaptureState.coachDefaults,
       busy: phaseCaptureState.loading || phaseLifecycleBusy,
-      athletePanelTab,
       onCaptureModeChange: phaseCaptureState.setCaptureMode,
       onEntryChange: handlePhaseEntryChange,
       onSelectAthlete: (athleteId) => {
         if (athleteId) setLapStudentId(String(athleteId))
       },
-      onPanelTabChange: (tab) => setAthletePanelTab(tab || 'observe'),
       onCompletePhase: handleCompletePhase,
       onSkipPhase: handleSkipPhase,
     }),
@@ -1171,7 +1167,6 @@ const SkatingOpsPage = () => {
       phaseCaptureState.loading,
       phaseCaptureState.setCaptureMode,
       phaseLifecycleBusy,
-      athletePanelTab,
       handlePhaseEntryChange,
       handleCompletePhase,
       handleSkipPhase,
@@ -2120,8 +2115,7 @@ const SkatingOpsPage = () => {
                 elapsedLabel={elapsedLabel || undefined}
                 sessionMode={sessionMode}
                 isRaceMode={isRaceMode}
-                coachingCollapsed={coachingCollapsed}
-                onCoachingCollapsedChange={setCoachingCollapsed}
+                phaseAthletes={activePhaseAthletes}
                 uiPaused={uiPaused}
                 opsState={opsState}
                 raceSectionProps={{
@@ -2189,57 +2183,6 @@ const SkatingOpsPage = () => {
                     lastEffortPhrase={lastEffortPhrase}
                   />
                 }
-                workspaceProps={{
-                  lapStudentId,
-                  athleteName:
-                    rosterForSession.find((r) => String(r.id) === String(lapStudentId))
-                      ?.full_name || '',
-                  activeBlockMeta,
-                  phaseContext: phaseContextForWorkspace,
-                  observedStudentIds,
-                  coachingQueue,
-                  coachingDisabled,
-                  obsScores,
-                  obsFlashKeys,
-                  obsError,
-                  onRetryObservation: retryObservation,
-                  onFormalTap: applyObsTap,
-                  formalDisabled:
-                    obsSaving || uiPaused || opsState === 'ended' || !lapStudentId,
-                  formalSaving: obsSaving,
-                  onQuickScore: (key, n) => {
-                    setFocusedQuickCategory(key)
-                    coachingQueue.setQuickScore(key, n)
-                  },
-                  obsAdvancePending,
-                  advanceTick,
-                  onCancelAdvance: cancelAdvanceAndStay,
-                  onGoAdvanceNow: goObsAdvanceNow,
-                  obsReturnSkater,
-                  onReturnSkater: () => {
-                    setLapStudentId(obsReturnSkater.id)
-                    setObsReturnSkater(null)
-                    obsChainAdvanceRef.current = false
-                    obsAutoSaveSuppressedRef.current = true
-                  },
-                  lastObsLabel,
-                  sessionId: selectedSessionId,
-                  focusText: athleteFocusDraft,
-                  onChangeFocus: setAthleteFocusDraft,
-                  onSaveFocus: () => void saveAthleteFocus(),
-                  focusSaving: athleteFocusSaving,
-                  focusSaveMessage: athleteFocusSaveMsg,
-                  phaseAthlete: activePhaseAthleteForLap,
-                  isRacePhase: isRaceMode,
-                  otherPhases: sortedSessionBlocks
-                    .filter((b) => String(b.id) !== String(activeBlockId))
-                    .map((b) => ({ id: b.id, title: b.title || 'Phase' })),
-                  phaseBusy: phaseAthletesBusy,
-                  onMoveAthlete: handleMovePhaseAthlete,
-                  onSetLane: handleSetPhaseLane,
-                  onSetHeat: handleSetPhaseHeat,
-                  onSetStatus: handleSetPhaseStatus,
-                }}
                 phaseCapture={unifiedLiveCoaching ? phaseCaptureProps : null}
                 recentLapsSection={
                   <CoachLiveRecentLaps

@@ -2,6 +2,47 @@
  * Mirror of ezyplay-backend normalizeProgressionPayload (keep in sync).
  */
 
+/** @param {unknown} value */
+export function coerceTimerAnchorMs(value) {
+  if (value == null) return null
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  const parsed = Date.parse(String(value))
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+/**
+ * @param {{ splitTimeMs?: number, cumulativeTimeMs?: number }} timing
+ * @returns {{ split_time_ms: number, cumulative_time_ms: number }|null}
+ */
+export function coerceStopwatchTiming(timing) {
+  if (!timing || typeof timing !== 'object') return null
+  let cumulative = Math.round(Number(timing.cumulativeTimeMs))
+  let split = Math.round(Number(timing.splitTimeMs))
+  if (!Number.isFinite(cumulative) || cumulative < 1) return null
+  if (!Number.isFinite(split) || split < 1) split = cumulative
+  return { split_time_ms: split, cumulative_time_ms: cumulative }
+}
+
+/**
+ * @param {object} metrics
+ * @returns {object}
+ */
+export function sanitizeTimingMetrics(metrics) {
+  if (!metrics || typeof metrics !== 'object') return {}
+  const out = {}
+  const cumulative = Number(metrics.cumulative_time_ms)
+  const split = Number(metrics.split_time_ms)
+  if (Number.isFinite(cumulative) && cumulative > 0 && Math.round(cumulative) === cumulative) {
+    out.cumulative_time_ms = Math.round(cumulative)
+  }
+  if (Number.isFinite(split) && split > 0 && Math.round(split) === split) {
+    out.split_time_ms = Math.round(split)
+  } else if (out.cumulative_time_ms != null) {
+    out.split_time_ms = out.cumulative_time_ms
+  }
+  return out
+}
+
 export function getTimingMetrics(event) {
   if (!event?.metrics || typeof event.metrics !== 'object') return null
   const m = event.metrics
@@ -39,8 +80,9 @@ export function normalizeProgressEvent(event) {
   delete e.lap_number
   delete e.lapNumber
 
-  if (Object.keys(metrics).length) e.metrics = metrics
-  else if (!e.metrics) e.metrics = {}
+  const sanitized = sanitizeTimingMetrics(metrics)
+  if (Object.keys(sanitized).length) e.metrics = sanitized
+  else delete e.metrics
 
   if (!e.captured_at && e.capturedAt) e.captured_at = e.capturedAt
   delete e.capturedAt

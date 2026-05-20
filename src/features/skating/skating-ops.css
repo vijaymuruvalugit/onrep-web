@@ -1125,6 +1125,15 @@
   padding: 0.75rem;
 }
 
+.skating-ops-page .skills-phase-workspace {
+  margin-bottom: var(--coach-section-gap, 1rem);
+}
+
+.skating-ops-page .skills-phase-workspace__header {
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--cui-border-color-translucent, rgba(0, 0, 0, 0.08));
+}
+
 .skating-ops-page.skating-ops--coach-live.skating-ops--race-mode .coach-live-race-zone .activity-run-workspace {
   background: transparent;
   border: none;

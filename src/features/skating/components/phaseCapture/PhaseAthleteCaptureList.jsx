@@ -15,7 +15,6 @@ export default function PhaseAthleteCaptureList({
   onValueChange,
   onSelectAthlete,
   onToggleExpand,
-  onOpenPanel,
 }) {
   if (!roster.length) {
     return (
@@ -44,7 +43,6 @@ export default function PhaseAthleteCaptureList({
             onValueChange={onValueChange}
             onSelectAthlete={onSelectAthlete}
             onToggleExpand={onToggleExpand}
-            onOpenPanel={onOpenPanel}
           />
         )
       })}

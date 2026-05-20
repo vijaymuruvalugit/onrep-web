@@ -1,5 +1,4 @@
 import React from 'react'
-import { CButton } from '@coreui/react'
 
 function initials(name) {
   const parts = String(name || '')
@@ -9,6 +8,10 @@ function initials(name) {
   if (parts.length === 0) return '?'
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function firstName(name) {
+  return String(name || 'Athlete').trim().split(/\s+/)[0] || 'Athlete'
 }
 
 export default function AthleteSelectionGrid({
@@ -24,25 +27,25 @@ export default function AthleteSelectionGrid({
   )
 
   return (
-    <div className="athlete-selection-grid d-flex flex-wrap gap-2">
+    <div className="athlete-selection-grid" role={multi ? 'group' : 'list'}>
       {athletes.map((a) => {
         const sid = String(a.studentId || a.id)
         const active = selectedSet.has(sid)
+        const name = a.fullName || a.full_name || 'Athlete'
         return (
-          <CButton
+          <button
             key={sid}
             type="button"
-            size="lg"
-            color={active ? 'primary' : 'light'}
-            className="athlete-selection-grid__chip"
+            className={`athlete-selection-grid__chip${active ? ' athlete-selection-grid__chip--selected' : ''}`}
             disabled={disabled}
+            aria-pressed={active}
             onClick={() => onSelect?.(sid)}
           >
             <span className="athlete-selection-grid__avatar" aria-hidden>
-              {initials(a.fullName || a.full_name)}
+              {initials(name)}
             </span>
-            <span className="text-truncate">{a.fullName || a.full_name || 'Athlete'}</span>
-          </CButton>
+            <span className="athlete-selection-grid__name">{firstName(name)}</span>
+          </button>
         )
       })}
     </div>

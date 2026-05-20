@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import sessionRunsApi from '../api/sessionRunsApi'
 import { buildRunPayload } from '../utils/buildRunPayload'
-import { normalizeProgressionPayload } from '../utils/normalizeProgressionPayload'
+import {
+  coerceStopwatchTiming,
+  normalizeProgressionPayload,
+} from '../utils/normalizeProgressionPayload'
 import {
   appendProgressEventForParticipant,
   appendProgressEventForTeam,
@@ -106,7 +109,7 @@ export function useProgressionRun({
         setError('Session and phase required')
         return null
       }
-      const timerStartedAt = initialPatch.race_meta?.timerStartedAt ?? Date.now()
+      const timerStartedAt = Date.now()
       const startPayload = normalizeProgressionPayload({
         ...payload,
         ...initialPatch,
@@ -121,6 +124,7 @@ export function useProgressionRun({
             'PACK',
         },
         race_meta: {
+          ...(initialPatch.race_meta || {}),
           status: 'active',
           startedAt: new Date().toISOString(),
           timerStartedAt,
@@ -130,7 +134,6 @@ export function useProgressionRun({
           targetLaps:
             initialPatch.progression_config?.target_progress_count ??
             targetCount,
-          ...(initialPatch.race_meta || {}),
         },
       })
       setSaving(true)
@@ -195,9 +198,10 @@ export function useProgressionRun({
 
   const applyCapture = useCallback(
     (timingMetrics) => {
-      const metrics = {
-        split_time_ms: timingMetrics.splitTimeMs,
-        cumulative_time_ms: timingMetrics.cumulativeTimeMs,
+      const metrics = coerceStopwatchTiming(timingMetrics)
+      if (!metrics) {
+        setError('Could not record lap — start the timer and try again')
+        return payload
       }
       let next = payload
       const mode = progressionMode || definition?.progressionMode || 'PACK'
@@ -234,9 +238,10 @@ export function useProgressionRun({
 
   const captureForParticipant = useCallback(
     (studentId, timingMetrics) => {
-      const metrics = {
-        split_time_ms: timingMetrics.splitTimeMs,
-        cumulative_time_ms: timingMetrics.cumulativeTimeMs,
+      const metrics = coerceStopwatchTiming(timingMetrics)
+      if (!metrics) {
+        setError('Could not record lap — start the timer and try again')
+        return payload
       }
       let next = appendProgressEventForParticipant(payload, studentId, metrics)
       next = { ...next, ...buildRaceMetaPatch(next) }

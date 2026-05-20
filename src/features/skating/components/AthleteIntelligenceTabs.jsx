@@ -9,6 +9,7 @@ import {
   writeLastIntelligenceTab,
 } from '../constants/coachLiveLabels'
 import useAthleteIntelligence from '../hooks/useAthleteIntelligence'
+import AthleteSkillsPanel from './AthleteSkillsPanel'
 
 const NOTE_TEMPLATES = [
   'Great improvement today',
@@ -151,51 +152,7 @@ export default function AthleteIntelligenceTabs({
     </div>
   )
 
-  const skillsPanel = (
-    <div>
-      {intel.skillsErr ? <div className="small text-danger mb-2">{intel.skillsErr}</div> : null}
-      {intel.skillsLoading && !intel.skillsGrouped.length ? (
-        <div className="small text-muted">Loading…</div>
-      ) : null}
-      {(intel.skillsGrouped || []).map(([category, skillRows]) => (
-        <div key={category} className="athlete-intel-skill-group mb-2">
-          <div className="small fw-semibold text-body-secondary mb-1">{category}</div>
-          {skillRows.map((s) => (
-            <div key={s.id} className="athlete-intel-skill-row mb-2">
-              <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
-                <span className="small fw-semibold">
-                  {(s.displayName || s.canonicalName).slice(0, 72)}
-                </span>
-                {s.focusPriority ? <CBadge color="primary">Focus</CBadge> : null}
-                <CBadge color={trendBadge(s.trendState)}>{String(s.trendState || '?')}</CBadge>
-              </div>
-              <div className="d-flex flex-wrap gap-1 athlete-intel-skill-levels">
-                {[1, 2, 3, 4, 5].map((lv) => (
-                  <CButton
-                    key={lv}
-                    size="sm"
-                    color={Number(s.currentLevel) === lv ? 'primary' : 'light'}
-                    disabled={Boolean(intel.skillTapSaving)}
-                    className={`fast-coaching-chip fast-coaching-score-chip${
-                      Number(s.currentLevel) === lv ? ' fast-coaching-score-chip--active' : ''
-                    }`}
-                    onClick={() => void intel.tapSkillLevel(s.id, lv)}
-                  >
-                    {lv}
-                  </CButton>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      ))}
-      {!intel.skillsLoading && !(intel.skillsGrouped && intel.skillsGrouped.length) ? (
-        <div className="small text-muted">
-          {intel.skillsErr ? null : 'No skills configured for this activity.'}
-        </div>
-      ) : null}
-    </div>
-  )
+  const skillsPanel = <AthleteSkillsPanel studentId={studentId} />
 
   const progressPanel = (
     <div>
