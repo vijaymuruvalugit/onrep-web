@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import StopwatchPrimitive from './StopwatchPrimitive'
 import ProgressSetupPanel from '../progression/ProgressSetupPanel'
 import ProgressResultsPanel from '../progression/ProgressResultsPanel'
@@ -27,10 +27,13 @@ export default function ProgressionStagePrimitive({
   onSelectParticipant,
   onCaptureParticipant,
   onFinishProgress,
+  onStopTimer,
   hideFinishEarly = false,
+  hideCaptureButton = false,
   operationalMode = false,
   timerStartedAt = null,
 }) {
+  const [timerRunning, setTimerRunning] = useState(false)
   const dots = Array.from({ length: targetCount }, (_, i) => i < currentIndex)
 
   if (state === 'READY') {
@@ -69,6 +72,8 @@ export default function ProgressionStagePrimitive({
           autoStart={!timerStartedAt}
           operationalMode={operationalMode}
           timerStartedAt={timerStartedAt}
+          onStopMs={onStopTimer}
+          onRunningChange={setTimerRunning}
           className="mb-3"
         />
         <ProgressMetricsStrip experience={experience} metrics={metrics} />
@@ -82,14 +87,14 @@ export default function ProgressionStagePrimitive({
             onSelect={onSelectParticipant}
             onCaptureParticipant={onCaptureParticipant}
           />
-        ) : (
+        ) : !hideCaptureButton ? (
           <CaptureProgressButton
             label={experience.captureProgressLabel}
-            disabled={disabled}
+            disabled={disabled || !timerRunning}
             busy={busy}
             onCapture={onCapture}
           />
-        )}
+        ) : null}
         {!hideFinishEarly ? (
           <button
             type="button"

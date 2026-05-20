@@ -1557,6 +1557,33 @@
 }
 
 /* Skills phase — training-oriented module launcher (not race chrome) */
+.skills-phase-home {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skills-phase-section {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.skills-phase-section__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.skills-phase-section__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.15rem;
+}
+
 .skills-phase-launcher__header {
   display: flex;
   align-items: flex-start;

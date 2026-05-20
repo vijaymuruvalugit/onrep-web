@@ -27,6 +27,7 @@ export default function AthleteSkillsPanel({
   disabled = false,
   className = '',
   filterPlatformCode = null,
+  filterPlatformCodes = null,
 }) {
   const intel = useAthleteIntelligence(studentId, 'skills', {
     enabled: Boolean(studentId),
@@ -34,19 +35,26 @@ export default function AthleteSkillsPanel({
   })
 
   const filteredGroups = useMemo(() => {
-    if (!filterPlatformCode) return intel.skillsGrouped || []
-    const code = String(filterPlatformCode).trim()
+    const hasFilterList = Array.isArray(filterPlatformCodes)
+    const hasSingleFilter = filterPlatformCode != null
+    const codes = new Set(
+      [...(hasFilterList ? filterPlatformCodes : []), filterPlatformCode]
+        .filter(Boolean)
+        .map((code) => String(code).trim()),
+    )
+    if ((hasFilterList || hasSingleFilter) && !codes.size) return []
+    if (!codes.size) return intel.skillsGrouped || []
     return (intel.skillsGrouped || [])
       .map(([category, rows]) => {
         const filtered = rows.filter(
           (s) =>
-            String(s.platformCode || s.platform_code || s.id || '') === code ||
-            String(s.id || '') === code,
+            codes.has(String(s.platformCode || s.platform_code || s.id || '')) ||
+            codes.has(String(s.id || '')),
         )
         return filtered.length ? [category, filtered] : null
       })
       .filter(Boolean)
-  }, [intel.skillsGrouped, filterPlatformCode])
+  }, [intel.skillsGrouped, filterPlatformCode, filterPlatformCodes])
 
   if (!studentId) {
     return (

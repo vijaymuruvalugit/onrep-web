@@ -15,6 +15,10 @@ export default function SkillsPhaseLauncher({
   phaseConfigJson,
   disabled = false,
   busy = false,
+  title = 'Skills',
+  hint = 'Tap a module to coach. Add or remove skills anytime.',
+  emptyMessage = 'No skills on this phase yet. Add Coach Assessments or Skill Drills.',
+  filterModule = null,
   onSelectModule,
   onSkillsChange,
 }) {
@@ -23,6 +27,13 @@ export default function SkillsPhaseLauncher({
 
   const skills = useMemo(() => readSkillsFromConfig(phaseConfigJson), [phaseConfigJson])
   const selectedIds = useMemo(() => skills.map((s) => s.skill_id), [skills])
+  const visibleSkills = useMemo(
+    () =>
+      filterModule
+        ? skills.filter((entry) => filterModule(getSkillModule(entry.skill_id), entry))
+        : skills,
+    [filterModule, skills],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -58,9 +69,9 @@ export default function SkillsPhaseLauncher({
     <div className="skills-phase-launcher" data-testid="skills-phase-launcher">
       <div className="skills-phase-launcher__header">
         <div>
-          <h2 className="skills-phase-launcher__title">Skills</h2>
+          <h2 className="skills-phase-launcher__title">{title}</h2>
           <p className="skills-phase-launcher__hint small text-body-secondary mb-0">
-            Tap a module to coach. Add or remove skills anytime.
+            {hint}
           </p>
         </div>
         <CButton
@@ -73,13 +84,11 @@ export default function SkillsPhaseLauncher({
         </CButton>
       </div>
 
-      {!skills.length ? (
-        <p className="small text-body-secondary py-3">
-          No skills on this phase yet. Add Coach Assessments or Skill Drills.
-        </p>
+      {!visibleSkills.length ? (
+        <p className="small text-body-secondary py-3">{emptyMessage}</p>
       ) : (
         <div className="skills-module-grid" role="list">
-          {skills.map((entry) => {
+          {visibleSkills.map((entry) => {
             const mod = getSkillModule(entry.skill_id)
             const label = getModuleDisplayName(entry.skill_id, catalogByCode)
             const group = getCoachGroupLabel(mod)

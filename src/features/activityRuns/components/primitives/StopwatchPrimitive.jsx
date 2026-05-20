@@ -21,12 +21,14 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     raceControls = false,
     onStartRace,
     onResetRace,
+    onRunningChange,
   },
   ref,
 ) {
   const [running, setRunning] = useState(false)
   const [elapsedMs, setElapsedMs] = useState(0)
   const startRef = useRef(0)
+  const elapsedRef = useRef(0)
   const lastCaptureRef = useRef(0)
   const tickRef = useRef(null)
 
@@ -35,9 +37,15 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     if (anchor == null) return
     startRef.current = anchor
     lastCaptureRef.current = 0
-    setElapsedMs(Math.max(0, Date.now() - anchor))
+    const restoredMs = Math.max(0, Date.now() - anchor)
+    elapsedRef.current = restoredMs
+    setElapsedMs(restoredMs)
     setRunning(true)
   }, [])
+
+  useEffect(() => {
+    onRunningChange?.(running)
+  }, [onRunningChange, running])
 
   useEffect(() => {
     if (timerStartedAt && !disabled) {
@@ -47,6 +55,7 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     if (autoStart && !disabled) {
       startRef.current = Date.now()
       lastCaptureRef.current = 0
+      elapsedRef.current = 0
       setElapsedMs(0)
       setRunning(true)
     }
@@ -56,6 +65,7 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     if (!running) return undefined
     tickRef.current = window.setInterval(() => {
       const ms = Date.now() - startRef.current
+      elapsedRef.current = ms
       setElapsedMs(ms)
       onTick?.(ms)
     }, 50)
@@ -67,6 +77,7 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
   const start = () => {
     startRef.current = Date.now()
     lastCaptureRef.current = 0
+    elapsedRef.current = 0
     setElapsedMs(0)
     setRunning(true)
   }
@@ -74,13 +85,16 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
   const reset = () => {
     setRunning(false)
     setElapsedMs(0)
+    elapsedRef.current = 0
     lastCaptureRef.current = 0
   }
 
   const captureProgressEvent = () => {
     if (!startRef.current) start()
-    else if (!running) start()
-    const cumulativeTimeMs = Math.max(1, Math.round(Date.now() - startRef.current))
+    const cumulativeTimeMs = Math.max(
+      1,
+      Math.round(running ? Date.now() - startRef.current : elapsedRef.current || elapsedMs),
+    )
     const splitTimeMs = Math.max(1, Math.round(cumulativeTimeMs - lastCaptureRef.current))
     lastCaptureRef.current = cumulativeTimeMs
     return { splitTimeMs, cumulativeTimeMs }
@@ -89,6 +103,7 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
   const stop = () => {
     setRunning(false)
     const ms = Math.round(Date.now() - startRef.current)
+    elapsedRef.current = ms
     setElapsedMs(ms)
     onStopMs?.(ms)
     return ms
@@ -156,7 +171,7 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
             </CButton>
           )}
         </div>
-      ) : !operationalMode ? (
+      ) : (
         <div className="activity-stopwatch__actions d-flex flex-wrap gap-2 justify-content-center">
           {!running ? (
             <CButton type="button" size="lg" color="primary" disabled={disabled} onClick={start}>
@@ -177,7 +192,7 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
             Reset
           </CButton>
         </div>
-      ) : null}
+      )}
     </div>
   )
 })

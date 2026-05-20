@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { CAlert } from '@coreui/react'
 import AthleteSkillsPanel from './AthleteSkillsPanel'
 import SkillsPhaseLauncher from './skills/SkillsPhaseLauncher'
@@ -34,6 +34,13 @@ export default function SkillsPhaseWorkspace({
     : sortSkillEntries(phaseConfigJson?.skills || [])
 
   const activeModule = activeModuleId ? getSkillModule(activeModuleId) : null
+  const assessmentSkillIds = useMemo(
+    () =>
+      skillsList
+        .filter((entry) => isAssessmentModule(getSkillModule(entry.skill_id)))
+        .map((entry) => entry.skill_id),
+    [skillsList],
+  )
 
   const handleSelectModule = useCallback(
     (skillId) => {
@@ -60,13 +67,37 @@ export default function SkillsPhaseWorkspace({
 
   if (!activeModuleId) {
     return (
-      <SkillsPhaseLauncher
-        phaseConfigJson={{ skills: skillsList }}
-        disabled={disabled}
-        busy={busy}
-        onSelectModule={handleSelectModule}
-        onSkillsChange={handleSkillsChange}
-      />
+      <div className="skills-phase-home" data-testid="skills-phase-home">
+        <section className="skills-phase-section skills-phase-section--assessments">
+          <div className="skills-phase-section__header">
+            <div>
+              <h2 className="skills-phase-section__title">Assessments</h2>
+              <p className="small text-body-secondary mb-0">
+                Rate the selected athlete without leaving this screen.
+              </p>
+            </div>
+          </div>
+          <AthleteSkillsPanel
+            studentId={studentId}
+            disabled={disabled}
+            filterPlatformCodes={assessmentSkillIds}
+          />
+        </section>
+
+        <section className="skills-phase-section skills-phase-section--drills">
+          <SkillsPhaseLauncher
+            phaseConfigJson={{ skills: skillsList }}
+            title="Skill Drills"
+            hint="Tap a drill to open timing. Add or remove skills anytime."
+            emptyMessage="No Skill Drills configured yet. Add Flying Lap or Lap Timing."
+            filterModule={isOperationalModule}
+            disabled={disabled}
+            busy={busy}
+            onSelectModule={handleSelectModule}
+            onSkillsChange={handleSkillsChange}
+          />
+        </section>
+      </div>
     )
   }
 

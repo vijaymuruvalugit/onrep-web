@@ -262,7 +262,7 @@ export default function OperationalTimingWorkspace({
             preset={activePreset}
             participantIds={participantIds}
             skipReadySetup
-            autoStart={!activeRun}
+            autoStart={false}
             resumeRun={activeRun || null}
             initialPatch={initialPatch}
             operationalMode
