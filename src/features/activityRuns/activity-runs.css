@@ -653,6 +653,50 @@
   color: #0f766e;
 }
 
+.race-finish-marks {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.race-finish-mark {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--run-live-ink);
+}
+
+.race-finish-mark__label {
+  min-width: 0;
+  font-weight: 700;
+}
+
+.race-finish-mark__time {
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.finish-assignment-editor__list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.finish-assignment-editor__row {
+  display: grid;
+  grid-template-columns: auto minmax(9rem, 1fr) minmax(5.5rem, 0.55fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.94);
+}
+
 .finish-order-editor__list {
   display: grid;
   gap: 0.45rem;

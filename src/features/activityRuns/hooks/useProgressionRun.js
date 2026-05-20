@@ -133,6 +133,8 @@ export function useProgressionRun({
           participantIds: participantIds.map(String),
           raceSequence: initialPatch.heat_number ?? heatNumber,
           currentLap: 0,
+          currentFinishes: 0,
+          finish_marks: [],
           targetLaps: initialPatch.progression_config?.target_progress_count ?? targetCount,
         },
       })
@@ -293,6 +295,40 @@ export function useProgressionRun({
     [payload, schedulePatch],
   )
 
+  const recordFinishMark = useCallback(
+    (timingMetrics) => {
+      const metrics = coerceStopwatchTiming(timingMetrics)
+      if (!metrics) {
+        setError('Could not record finish — start the timer and try again')
+        return payload
+      }
+
+      let nextPayload = payload
+      setPayload((prev) => {
+        const marks = Array.isArray(prev.race_meta?.finish_marks) ? prev.race_meta.finish_marks : []
+        const nextMark = {
+          id: `finish-${Date.now()}-${marks.length + 1}`,
+          finish_order: marks.length + 1,
+          time_ms: metrics.cumulative_time_ms,
+          captured_at: new Date().toISOString(),
+        }
+        const next = {
+          ...prev,
+          race_meta: {
+            ...(prev.race_meta || {}),
+            currentFinishes: marks.length + 1,
+            finish_marks: [...marks, nextMark],
+          },
+        }
+        nextPayload = next
+        schedulePatch(next)
+        return next
+      })
+      return nextPayload
+    },
+    [payload, schedulePatch],
+  )
+
   const finalizeRun = useCallback(
     async (patch = {}) => {
       if (!runId) return null
@@ -377,6 +413,7 @@ export function useProgressionRun({
     applyCapture,
     captureForParticipant,
     recordParticipantFinish,
+    recordFinishMark,
     finalizeRun,
     abandonRun,
     resetAll,

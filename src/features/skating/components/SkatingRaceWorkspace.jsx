@@ -35,8 +35,7 @@ function presetFromActiveRun(activeRun) {
       flowMode: getActivityRunDefinition(activeRun.runType)?.ui?.mode || 'HEAT',
       runType: activeRun.runType,
       progressionMode: activeRun.runPayload?.progression_config?.progression_mode,
-      targetProgressCount:
-        activeRun.runPayload?.progression_config?.target_progress_count ?? 5,
+      targetProgressCount: activeRun.runPayload?.progression_config?.target_progress_count ?? 5,
     }
   )
 }
@@ -58,6 +57,8 @@ export default function SkatingRaceWorkspace({
   const [pendingPreset, setPendingPreset] = useState(null)
   const [hydrating, setHydrating] = useState(true)
   const [ending, setEnding] = useState(false)
+  const [resetReady, setResetReady] = useState(false)
+  const [resetParticipantIds, setResetParticipantIds] = useState([])
   const liveKeyRef = useRef(0)
 
   const { runs, loading, error, refresh } = useSessionRuns(operationalSessionId, phaseId)
@@ -99,6 +100,8 @@ export default function SkatingRaceWorkspace({
 
     setActivePreset(customPreset)
     setCustomConfig(custom)
+    setResetReady(false)
+    setResetParticipantIds([])
     setView('setup')
     liveKeyRef.current += 1
   }, [])
@@ -134,6 +137,8 @@ export default function SkatingRaceWorkspace({
     if (!activeRun) return
     const preset = presetFromActiveRun(activeRun)
     setActivePreset(preset)
+    setResetReady(false)
+    setResetParticipantIds([])
     setView('live')
     liveKeyRef.current += 1
     writeRaceSession(phaseId, {
@@ -163,6 +168,8 @@ export default function SkatingRaceWorkspace({
     clearRaceSession(phaseId)
     setActivePreset(null)
     setCustomConfig(null)
+    setResetReady(false)
+    setResetParticipantIds([])
     setView('picker')
   }, [phaseId])
 
@@ -193,8 +200,27 @@ export default function SkatingRaceWorkspace({
   }, [abandonActiveRun, resetToPicker, onRefresh])
 
   const handleLiveUpdate = useCallback(() => {
-    void refresh()
+    if (!resetReady) void refresh()
+  }, [refresh, resetReady])
+
+  const handleRaceResetReady = useCallback((participantIds = []) => {
+    setResetParticipantIds(participantIds.map(String))
+    setResetReady(true)
+    setView('live')
+  }, [])
+
+  const handleRaceRestart = useCallback(async () => {
+    await refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (!resetReady || !activeRun) return
+    const frameId = window.requestAnimationFrame(() => {
+      setResetReady(false)
+      setResetParticipantIds([])
+    })
+    return () => window.cancelAnimationFrame(frameId)
+  }, [resetReady, activeRun])
 
   useEffect(() => {
     if (view === 'picker' && !activeRun) {
@@ -211,21 +237,16 @@ export default function SkatingRaceWorkspace({
     }
   }, [loading, runs, view])
 
-  const definition = activePreset?.runType
-    ? getActivityRunDefinition(activePreset.runType)
-    : null
-  const FlowComponent = activePreset?.flowMode
-    ? getFlowComponent(activePreset.flowMode)
-    : null
+  const definition = activePreset?.runType ? getActivityRunDefinition(activePreset.runType) : null
+  const FlowComponent = activePreset?.flowMode ? getFlowComponent(activePreset.flowMode) : null
   const launchMeta = activePreset?.runType ? getRunLaunchMeta(activePreset.runType) : null
 
   const raceSequence = activeRun?.runPayload?.race_meta?.raceSequence ?? heatNumber ?? 1
   const isSetup = view === 'setup' && activePreset && FlowComponent && definition
-  const isLive = view === 'live' && activePreset && FlowComponent && definition && activeRun
+  const isLive =
+    view === 'live' && activePreset && FlowComponent && definition && (activeRun || resetReady)
 
-  const stageTitle = activePreset
-    ? `${launchMeta?.emoji || '🏁'} ${activePreset.title}`.trim()
-    : ''
+  const stageTitle = activePreset ? `${launchMeta?.emoji || '🏁'} ${activePreset.title}`.trim() : ''
   const stageSubtitle =
     heatNumber != null
       ? `Race ${raceSequence} · ${athletes.length} athletes`
@@ -252,6 +273,8 @@ export default function SkatingRaceWorkspace({
     hideFinishEarly: false,
     onRunComplete: handleRunComplete,
     onLiveUpdate: handleLiveUpdate,
+    onRaceResetReady: handleRaceResetReady,
+    onRaceRestart: handleRaceRestart,
   }
 
   if (hydrating && loading) {
@@ -274,7 +297,11 @@ export default function SkatingRaceWorkspace({
       <div className="activity-run-workspace">
         <p className="fw-semibold mb-2">{pendingPreset.title}</p>
         <p className="small text-body-secondary mb-2">Set up teams, then start the race</p>
-        <TeamBuilderPrimitive athletes={athletes} disabled={disabled} onTeamsChange={setRelayTeams} />
+        <TeamBuilderPrimitive
+          athletes={athletes}
+          disabled={disabled}
+          onTeamsChange={setRelayTeams}
+        />
         <button
           type="button"
           className="btn btn-primary btn-lg w-100 mt-3 fw-bold"
@@ -326,12 +353,15 @@ export default function SkatingRaceWorkspace({
           onEnd={isLive ? handleEndRace : handleCancelSetup}
         >
           <FlowComponent
-            key={`${activePreset.id}-${liveKeyRef.current}-${activeRun?.id || 'new'}`}
+            key={`${activePreset.id}-${liveKeyRef.current}-${activeRun?.id || 'reset-ready'}`}
             {...flowProps}
-            participantIds={isLive ? athleteIdsFromSession(athletes) : []}
+            participantIds={
+              resetReady ? resetParticipantIds : isLive ? athleteIdsFromSession(athletes) : []
+            }
             skipReadySetup={isLive}
             autoStart={false}
-            resumeRun={isLive ? activeRun : null}
+            resumeRun={isLive && activeRun ? activeRun : null}
+            initialRestartReady={resetReady}
           />
         </LiveRunStage>
         <SessionRunTimeline

@@ -19,6 +19,7 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     operationalMode = false,
     timerStartedAt = null,
     raceControls = false,
+    onStartRace,
     onResetRace,
   },
   ref,
@@ -98,6 +99,14 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     onResetRace?.()
   }
 
+  const handleRaceStart = () => {
+    if (onStartRace) {
+      onStartRace()
+      return
+    }
+    start()
+  }
+
   useImperativeHandle(ref, () => ({
     start,
     reset,
@@ -124,6 +133,16 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
           {running ? (
             <CButton type="button" size="lg" color="danger" disabled={disabled} onClick={stop}>
               Stop
+            </CButton>
+          ) : elapsedMs <= 0 ? (
+            <CButton
+              type="button"
+              size="lg"
+              color="primary"
+              disabled={disabled}
+              onClick={handleRaceStart}
+            >
+              Start
             </CButton>
           ) : (
             <CButton

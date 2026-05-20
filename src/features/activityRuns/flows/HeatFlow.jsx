@@ -1,14 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { CAlert, CButton } from '@coreui/react'
+import { CAlert, CButton, CFormInput, CFormSelect } from '@coreui/react'
 import AthleteSelectionGrid from '../components/AthleteSelectionGrid'
-import ProgressionStagePrimitive from '../components/primitives/ProgressionStagePrimitive'
-import RunResultsCard from '../components/RunResultsCard'
 import StopwatchPrimitive from '../components/primitives/StopwatchPrimitive'
-import { resolveActivityExperience } from '../utils/activityExperience'
 import { participationMeta } from '../utils/buildRunPayload'
-import { getTimingMetrics } from '../utils/progressionPayload'
 import { useProgressionRun } from '../hooks/useProgressionRun'
-import { RUN_STATES } from '../hooks/useProgressionStateMachine'
 
 function formatMs(ms) {
   const n = Number(ms)
@@ -19,87 +14,124 @@ function athleteName(athlete) {
   return athlete?.fullName || athlete?.full_name || athlete?.name || 'Athlete'
 }
 
-function finishTimeForResult(row) {
-  if (row?.time_ms != null) return Number(row.time_ms)
-  const last = row?.progress_events?.[row.progress_events.length - 1]
-  return getTimingMetrics(last)?.cumulative_time_ms ?? null
+function finishMarksFromPayload(payload) {
+  const marks = Array.isArray(payload?.race_meta?.finish_marks)
+    ? payload.race_meta.finish_marks
+    : []
+  return [...marks]
+    .filter((mark) => Number.isFinite(Number(mark.time_ms)) && Number(mark.time_ms) > 0)
+    .sort((a, b) => Number(a.finish_order || 0) - Number(b.finish_order || 0))
 }
 
-function FinishOrderEditor({ athletes = [], results = [], disabled, busy, onSubmitOrder }) {
-  const initialOrder = useMemo(
+function FinishAssignmentEditor({
+  athletes = [],
+  marks = [],
+  disabled,
+  busy,
+  onSubmitAssignments,
+}) {
+  const initialRows = useMemo(
     () =>
-      [...results]
-        .filter((r) => finishTimeForResult(r) != null)
-        .sort((a, b) => Number(finishTimeForResult(a)) - Number(finishTimeForResult(b)))
-        .map((r) => String(r.student_id)),
-    [results],
+      marks.map((mark, index) => ({
+        markId: String(mark.id || `finish-${index + 1}`),
+        finishOrder: Number(mark.finish_order || index + 1),
+        studentId: mark.student_id ? String(mark.student_id) : '',
+        timeMs: Math.max(1, Math.round(Number(mark.time_ms) || 1)),
+        capturedAt: mark.captured_at,
+      })),
+    [marks],
   )
-  const [order, setOrder] = useState(initialOrder)
+  const [rows, setRows] = useState(initialRows)
 
-  const move = (sid, delta) => {
-    setOrder((prev) => {
-      const index = prev.indexOf(sid)
-      const nextIndex = index + delta
-      if (index < 0 || nextIndex < 0 || nextIndex >= prev.length) return prev
-      const next = [...prev]
-      const [item] = next.splice(index, 1)
-      next.splice(nextIndex, 0, item)
-      return next
-    })
+  const updateRow = (markId, patch) => {
+    setRows((prev) => prev.map((row) => (row.markId === markId ? { ...row, ...patch } : row)))
   }
 
-  const athleteById = new Map(athletes.map((a) => [String(a.studentId || a.id), a]))
-  const resultById = new Map(results.map((r) => [String(r.student_id), r]))
+  const assignedIds = rows.map((row) => row.studentId).filter(Boolean)
+  const uniqueAssignedIds = new Set(assignedIds)
+  const hasDuplicateStudents = assignedIds.length !== uniqueAssignedIds.size
+  const canSave = rows.length > 0 && assignedIds.length === rows.length && !hasDuplicateStudents
+
+  const usedByOtherRows = (studentId, markId) =>
+    rows.some((row) => row.markId !== markId && row.studentId === String(studentId))
 
   return (
-    <div className="finish-order-editor">
+    <div className="finish-assignment-editor">
       <p className="small text-body-secondary mb-2">
-        Ordered by recorded finish time. Adjust if needed, then save.
+        Assign each recorded place to a student. Edit a time if a tap was late or early.
       </p>
-      <div className="finish-order-editor__list">
-        {order.map((sid, index) => {
-          const row = resultById.get(sid)
-          return (
-            <div key={sid} className="finish-order-editor__row">
-              <span className="finish-order-editor__rank">{index + 1}</span>
-              <span className="finish-order-editor__name">{athleteName(athleteById.get(sid))}</span>
-              <span className="finish-order-editor__time font-monospace">
-                {formatMs(finishTimeForResult(row))}
-              </span>
-              <span className="finish-order-editor__actions">
-                <CButton
-                  type="button"
-                  size="sm"
-                  color="light"
-                  disabled={disabled || busy || index === 0}
-                  onClick={() => move(sid, -1)}
-                >
-                  ↑
-                </CButton>
-                <CButton
-                  type="button"
-                  size="sm"
-                  color="light"
-                  disabled={disabled || busy || index === order.length - 1}
-                  onClick={() => move(sid, 1)}
-                >
-                  ↓
-                </CButton>
-              </span>
-            </div>
-          )
-        })}
+      <div className="finish-assignment-editor__list">
+        {rows.map((row) => (
+          <div key={row.markId} className="finish-assignment-editor__row">
+            <span className="finish-order-editor__rank">{row.finishOrder}</span>
+            <CFormSelect
+              size="sm"
+              value={row.studentId}
+              disabled={disabled || busy}
+              aria-label={`Student for place ${row.finishOrder}`}
+              onChange={(event) => updateRow(row.markId, { studentId: event.target.value })}
+            >
+              <option value="">Select student</option>
+              {athletes.map((athlete) => {
+                const sid = String(athlete.studentId || athlete.id)
+                return (
+                  <option key={sid} value={sid} disabled={usedByOtherRows(sid, row.markId)}>
+                    {athleteName(athlete)}
+                  </option>
+                )
+              })}
+            </CFormSelect>
+            <CFormInput
+              type="number"
+              min="0.01"
+              step="0.01"
+              size="sm"
+              value={(row.timeMs / 1000).toFixed(2)}
+              disabled={disabled || busy}
+              aria-label={`Time for place ${row.finishOrder}`}
+              onChange={(event) => {
+                const seconds = Number(event.target.value)
+                updateRow(row.markId, {
+                  timeMs: Number.isFinite(seconds) && seconds > 0 ? Math.round(seconds * 1000) : 1,
+                })
+              }}
+            />
+          </div>
+        ))}
       </div>
+      {hasDuplicateStudents ? (
+        <CAlert color="warning" className="small py-2 mt-2 mb-0">
+          Each place needs a different student.
+        </CAlert>
+      ) : null}
       <CButton
         type="button"
         color="primary"
         size="lg"
         className="w-100 mt-3 fw-bold"
-        disabled={disabled || busy || order.length < 1}
-        onClick={() => onSubmitOrder?.(order)}
+        disabled={disabled || busy || !canSave}
+        onClick={() => onSubmitAssignments?.(rows)}
       >
         Save race
       </CButton>
+    </div>
+  )
+}
+
+function FinishMarksList({ marks = [] }) {
+  if (!marks.length) {
+    return <p className="small text-body-secondary mb-0">No finish times recorded yet.</p>
+  }
+
+  return (
+    <div className="race-finish-marks">
+      {marks.map((mark, index) => (
+        <div key={mark.id || index} className="race-finish-mark">
+          <span className="finish-order-editor__rank">{mark.finish_order || index + 1}</span>
+          <span className="race-finish-mark__label">Place {mark.finish_order || index + 1}</span>
+          <span className="race-finish-mark__time font-monospace">{formatMs(mark.time_ms)}</span>
+        </div>
+      ))}
     </div>
   )
 }
@@ -119,15 +151,20 @@ export default function HeatFlow({
   autoStart = false,
   resumeRun: resumeRunRecord = null,
   initialPatch = null,
+  initialRestartReady = false,
   onRunComplete,
   onLiveUpdate,
+  onRaceResetReady,
+  onRaceRestart,
 }) {
   const [selectedIds, setSelectedIds] = useState(() =>
     (participantIdsProp.length ? participantIdsProp : []).map(String),
   )
   const [distanceLabel, setDistanceLabel] = useState(preset?.distanceLabel || '')
   const [clockStopped, setClockStopped] = useState(false)
+  const [restartReady, setRestartReady] = useState(initialRestartReady)
   const stopwatchRef = useRef(null)
+  const finishMarkCountRef = useRef(0)
   const startedRef = useRef(false)
   const resumedRef = useRef(false)
 
@@ -140,15 +177,6 @@ export default function HeatFlow({
     participantIds: selectedIds,
     heatNumber,
   })
-
-  const experience = useMemo(
-    () =>
-      resolveActivityExperience(definition, {
-        current: progression.currentProgressIndex,
-        target: progression.targetCount,
-      }),
-    [definition, progression.currentProgressIndex, progression.targetCount],
-  )
 
   const timerStartedAt = progression.payload?.race_meta?.timerStartedAt ?? null
 
@@ -202,6 +230,7 @@ export default function HeatFlow({
   }, [progression.runId, progression.currentProgressIndex, onLiveUpdate])
 
   const handleStart = async () => {
+    const wasRestartReady = restartReady
     const patch = initialPatch
       ? {
           ...initialPatch,
@@ -233,15 +262,28 @@ export default function HeatFlow({
             progress_events: [],
           })),
         }
-    await progression.startRun(patch)
-    setClockStopped(false)
-    stopwatchRef.current?.start()
+    const run = await progression.startRun(patch)
+    if (run) {
+      finishMarkCountRef.current = 0
+      setClockStopped(false)
+      setRestartReady(false)
+      stopwatchRef.current?.start()
+      if (wasRestartReady) void onRaceRestart?.()
+    }
   }
 
-  const handleCapture = (studentId) => {
+  const handleCapture = () => {
+    if (!progression.runId || restartReady) return
+    if (selectedIds.length > 0 && finishMarkCountRef.current >= selectedIds.length) return
     const timing = stopwatchRef.current?.captureProgressEvent()
     if (!timing) return
-    progression.recordParticipantFinish(studentId, timing)
+    const nextFinishCount = finishMarkCountRef.current + 1
+    finishMarkCountRef.current = nextFinishCount
+    progression.recordFinishMark(timing)
+    if (selectedIds.length > 0 && nextFinishCount >= selectedIds.length) {
+      stopwatchRef.current?.stop()
+      setClockStopped(true)
+    }
   }
 
   const handleStopRaceClock = () => {
@@ -249,28 +291,45 @@ export default function HeatFlow({
   }
 
   const handleResetRace = async () => {
+    finishMarkCountRef.current = 0
+    setRestartReady(true)
+    onRaceResetReady?.(selectedIds)
     await progression.abandonRun()
-    setSelectedIds([])
     setClockStopped(false)
   }
 
-  const buildResultsFromOrder = (order) =>
-    order.map((studentId, i) => {
-      const existing = progression.payload.results?.find(
-        (r) => String(r.student_id) === String(studentId),
-      )
-      return {
-        student_id: studentId,
-        finish_order: i + 1,
-        time_ms: existing?.time_ms ?? null,
-        progress_events: existing?.progress_events || [],
-        ...participationMeta(),
-      }
-    })
+  const buildResultsFromAssignments = (assignments) =>
+    assignments.map((assignment) => ({
+      student_id: assignment.studentId,
+      finish_order: assignment.finishOrder,
+      time_ms: assignment.timeMs,
+      progress_events: [
+        {
+          sequence: 1,
+          captured_at: assignment.capturedAt || new Date().toISOString(),
+          metrics: {
+            split_time_ms: assignment.timeMs,
+            cumulative_time_ms: assignment.timeMs,
+          },
+        },
+      ],
+      ...participationMeta(),
+    }))
 
-  const handleFinishOrder = async (order) => {
-    const results = buildResultsFromOrder(order)
-    const run = await progression.finalizeRun({ results, heat_number: heatNumber })
+  const handleFinishAssignments = async (assignments) => {
+    const results = buildResultsFromAssignments(assignments)
+    const finishMarks = assignments.map((assignment) => ({
+      id: assignment.markId,
+      finish_order: assignment.finishOrder,
+      student_id: assignment.studentId,
+      time_ms: assignment.timeMs,
+      captured_at: assignment.capturedAt,
+    }))
+    const run = await progression.finalizeRun({
+      results,
+      heat_number: heatNumber,
+      race_meta: { finish_marks: finishMarks },
+    })
     if (run) {
       await onRunComplete?.()
       if (!skipReadySetup) {
@@ -281,18 +340,21 @@ export default function HeatFlow({
   }
 
   const handleRunAgain = () => {
+    finishMarkCountRef.current = 0
     progression.resetAll()
     setSelectedIds([])
     setClockStopped(false)
+    setRestartReady(false)
   }
 
   const selectedAthletes = athletes.filter((a) => selectedIds.includes(String(a.studentId || a.id)))
-  const recordedResults = progression.payload.results || []
-  const recordedCount = selectedIds.filter((sid) => {
-    const row = recordedResults.find((r) => String(r.student_id) === String(sid))
-    return finishTimeForResult(row) != null
-  }).length
-  const allFinishTimesRecorded = selectedIds.length > 0 && recordedCount >= selectedIds.length
+  const finishMarks = finishMarksFromPayload(progression.payload)
+  useEffect(() => {
+    finishMarkCountRef.current = finishMarks.length
+  }, [finishMarks.length])
+  const recordedCount = finishMarks.length
+  const canRecordMoreFinishes = selectedIds.length < 1 || recordedCount < selectedIds.length
+  const canReviewFinishes = recordedCount > 0 && clockStopped
 
   if (progression.isCompleted && !skipReadySetup) {
     return (
@@ -309,21 +371,15 @@ export default function HeatFlow({
     return (
       <div className="heat-flow">
         <p className="fw-semibold mb-2 text-white">
-          {skipReadySetup ? 'Finish order' : 'Confirm finish order'}
+          {skipReadySetup ? 'Assign finishers' : 'Confirm finishers'}
         </p>
-        <RunResultsCard
-          results={(progression.payload.results || []).map((r) => {
-            const a = athletes.find((x) => String(x.studentId || x.id) === String(r.student_id))
-            return { ...r, student_name: a?.fullName || a?.full_name }
-          })}
-        />
         {definition.capabilities.ranking ? (
-          <FinishOrderEditor
+          <FinishAssignmentEditor
             athletes={selectedAthletes}
-            results={recordedResults}
+            marks={finishMarks}
             disabled={disabled}
             busy={busy || progression.saving}
-            onSubmitOrder={handleFinishOrder}
+            onSubmitAssignments={handleFinishAssignments}
           />
         ) : (
           <CButton
@@ -332,7 +388,7 @@ export default function HeatFlow({
             size="lg"
             className="w-100 mt-3 fw-bold"
             disabled={disabled || progression.saving}
-            onClick={() => void handleFinishOrder(selectedIds)}
+            onClick={() => void handleFinishAssignments([])}
           >
             Save race
           </CButton>
@@ -346,64 +402,50 @@ export default function HeatFlow({
     )
   }
 
-  if (progression.isReady && !skipReadySetup) {
-    return (
-      <div className="heat-flow">
-        <p className="small text-body-secondary mb-2">Select athletes for this race</p>
-        <AthleteSelectionGrid
-          athletes={athletes}
-          selectedIds={selectedIds}
-          disabled={disabled}
-          multi
-          onSelect={(sid) => {
-            setSelectedIds((prev) =>
-              prev.includes(sid) ? prev.filter((x) => x !== sid) : [...prev, sid],
-            )
-          }}
-        />
-        <ProgressionStagePrimitive
-          experience={experience}
-          state={RUN_STATES.READY}
-          targetCount={progression.targetCount}
-          distanceLabel={distanceLabel}
-          disabled={disabled}
-          onTargetChange={progression.setTargetProgressCount}
-          onDistanceChange={setDistanceLabel}
-        />
-        <CButton
-          type="button"
-          color="primary"
-          size="lg"
-          className="w-100 mt-3 activity-runs-sticky-action heat-flow__go-btn fw-bold"
-          disabled={disabled || selectedIds.length < 2 || progression.saving}
-          onClick={() => void handleStart()}
-        >
-          {experience.startActionLabel} →
-        </CButton>
-        {progression.error ? (
-          <CAlert color="danger" className="small py-2 mt-2">
-            {progression.error}
-          </CAlert>
-        ) : null}
-      </div>
-    )
-  }
-
-  if (progression.isActive || progression.resumed) {
+  if (
+    (progression.isReady && !skipReadySetup) ||
+    progression.isActive ||
+    progression.resumed ||
+    restartReady
+  ) {
+    const raceStarted = progression.isActive || progression.resumed
+    const waitingToStart = !raceStarted || restartReady
     return (
       <div className="heat-flow">
         {!skipReadySetup ? <p className="fw-semibold mb-2 text-white">Race {heatNumber}</p> : null}
         <div className="race-finish-capture">
-          <p className="progression-stage__heading h4 fw-bold mb-1">Record finishers</p>
-          <p className="small text-body-secondary mb-2">
-            Tap Record as each student finishes. Stop the clock after the final finisher.
+          <p className="progression-stage__heading h4 fw-bold mb-1">
+            {waitingToStart ? 'Select racers' : 'Record finishers'}
           </p>
+          <p className="small text-body-secondary mb-2">
+            {restartReady
+              ? 'Race reset. Press Start to restart with these students.'
+              : waitingToStart
+                ? 'Select students, then press Start when the race begins.'
+                : 'Tap Record as each student finishes. Stop the clock after the final finisher.'}
+          </p>
+          {waitingToStart ? (
+            <div className="race-finish-capture__selection mb-3">
+              <AthleteSelectionGrid
+                athletes={athletes}
+                selectedIds={selectedIds}
+                disabled={disabled || progression.saving}
+                multi
+                onSelect={(sid) => {
+                  setSelectedIds((prev) =>
+                    prev.includes(sid) ? prev.filter((x) => x !== sid) : [...prev, sid],
+                  )
+                }}
+              />
+            </div>
+          ) : null}
           <StopwatchPrimitive
             ref={stopwatchRef}
-            disabled={disabled}
-            autoStart={!timerStartedAt}
+            disabled={disabled || (waitingToStart && selectedIds.length < 2)}
+            autoStart={raceStarted && !timerStartedAt && !restartReady}
             timerStartedAt={timerStartedAt}
             raceControls
+            onStartRace={() => void handleStart()}
             onStopMs={handleStopRaceClock}
             onResetRace={() => void handleResetRace()}
             className="mb-3"
@@ -411,45 +453,45 @@ export default function HeatFlow({
           <div className="race-finish-capture__summary small text-body-secondary mb-2">
             {recordedCount} / {selectedIds.length} finish times recorded
           </div>
-          <div className="race-finish-capture__grid">
-            {selectedAthletes.map((athlete) => {
-              const sid = String(athlete.studentId || athlete.id)
-              const row = recordedResults.find((r) => String(r.student_id) === sid)
-              const time = finishTimeForResult(row)
-              const recorded = time != null
-              return (
-                <button
-                  key={sid}
-                  type="button"
-                  className={`race-finish-card${recorded ? ' race-finish-card--recorded' : ''}`}
-                  disabled={disabled || busy || progression.saving || recorded || clockStopped}
-                  onClick={() => handleCapture(sid)}
-                >
-                  <span className="race-finish-card__name">{athleteName(athlete)}</span>
-                  <span className="race-finish-card__meta">
-                    {recorded ? formatMs(time) : 'Record'}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-          <CButton
-            type="button"
-            color="primary"
-            size="lg"
-            className="w-100 mt-3 fw-bold"
-            disabled={
-              disabled || busy || progression.saving || !allFinishTimesRecorded || !clockStopped
-            }
-            onClick={progression.finishProgress}
-          >
-            Review finish order →
-          </CButton>
-          {allFinishTimesRecorded && !clockStopped ? (
-            <p className="small text-body-secondary text-center mt-2 mb-0">
-              Press Stop to unlock finish order review.
+          {waitingToStart ? (
+            <p className="small text-body-secondary text-center mb-0">
+              Select at least 2 students to enable Start.
             </p>
-          ) : null}
+          ) : !canReviewFinishes ? (
+            <>
+              <CButton
+                type="button"
+                color="warning"
+                size="lg"
+                className="w-100 capture-progress-btn fw-bold"
+                disabled={
+                  disabled ||
+                  busy ||
+                  clockStopped ||
+                  restartReady ||
+                  !progression.runId ||
+                  !canRecordMoreFinishes
+                }
+                onClick={handleCapture}
+              >
+                Record
+              </CButton>
+              <FinishMarksList marks={finishMarks} />
+              {recordedCount > 0 && !clockStopped ? (
+                <p className="small text-body-secondary text-center mt-2 mb-0">
+                  Press Stop to assign students and save results.
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <FinishAssignmentEditor
+              athletes={selectedAthletes}
+              marks={finishMarks}
+              disabled={disabled}
+              busy={busy || progression.saving}
+              onSubmitAssignments={handleFinishAssignments}
+            />
+          )}
         </div>
         {progression.error ? (
           <CAlert color="danger" className="small py-2 mt-2">
