@@ -41,21 +41,29 @@
   }
 }
 
-/* Idle — compact prompt, not a gray void */
+/* Idle — compact prompt */
 .activity-run-workspace__idle-hero {
   text-align: center;
   padding: 1rem 0.75rem 0.5rem;
   margin-bottom: 0.75rem;
 }
 
-.activity-run-workspace__idle-pulse {
-  display: inline-block;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #5c6bc0, #1a237e);
+.activity-run-workspace__idle-hero--compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.35rem 0.5rem 0.25rem;
   margin-bottom: 0.5rem;
-  animation: activity-run-pulse 2s ease-in-out infinite;
+}
+
+.activity-run-workspace__idle-mark {
+  font-size: 1.35rem;
+  line-height: 1;
+  margin-bottom: 0.2rem;
+}
+
+.activity-run-workspace__idle-pulse {
+  display: none;
 }
 
 .activity-run-workspace__idle-title {
@@ -64,8 +72,17 @@
   margin: 0 0 0.25rem;
 }
 
+.activity-run-workspace__idle-hero--compact .activity-run-workspace__idle-title {
+  font-size: 1.05rem;
+  margin-bottom: 0.1rem;
+}
+
 .activity-run-workspace__idle-hint {
   color: var(--cui-secondary-color, #6c757d);
+}
+
+.activity-run-workspace__idle-hero--compact .activity-run-workspace__idle-hint {
+  font-size: 0.78rem;
 }
 
 /* Launch chips — horizontal quick-launch */
@@ -605,26 +622,58 @@
 
 .race-picker-card {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
   text-align: left;
   width: 100%;
-  min-height: 3.5rem;
-  padding: 0.85rem 1rem;
-  border: none;
+  min-height: 3.25rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(15, 118, 110, 0.14);
   border-radius: 0.75rem;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.07);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.race-picker-card--preset {
+  border-left: 3px solid #0f766e;
+}
+
+.race-picker-card--custom {
+  border-left: 3px solid rgba(108, 117, 125, 0.35);
+  background: rgba(248, 250, 252, 0.95);
+  box-shadow: none;
+}
+
+.race-picker-card--custom .race-picker-card__title {
+  font-weight: 600;
+  color: #495057;
+}
+
+.race-picker-card:hover:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.14);
+  border-color: rgba(15, 118, 110, 0.28);
 }
 
 .race-picker-card:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: scale(0.985);
+  box-shadow: 0 6px 16px rgba(15, 118, 110, 0.18);
 }
 
 .race-picker-card--compact {
-  min-height: 3rem;
-  padding: 0.65rem 0.85rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border-left-width: 2px;
+}
+
+.race-picker-card__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1;
 }
 
 .race-picker-card__title {
@@ -639,6 +688,14 @@
   margin-top: 0.15rem;
 }
 
+.race-picker-card__action {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f766e;
+  opacity: 0.85;
+}
+
 .race-picker-sheet__recent {
   margin-top: 1.25rem;
 }
@@ -650,6 +707,43 @@
   text-transform: uppercase;
   color: var(--cui-secondary-color, #6c757d);
   margin: 0 0 0.5rem;
+}
+
+/* Completed races — background history */
+.session-run-timeline--history {
+  margin-top: 0.75rem;
+  opacity: 0.88;
+}
+
+.session-run-timeline--history .session-run-timeline__heading {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: rgba(108, 117, 125, 0.85);
+  margin: 0.35rem 0 0.25rem;
+}
+
+.session-run-timeline--history .session-run-timeline__count {
+  background: rgba(233, 236, 239, 0.65);
+  color: rgba(108, 117, 125, 0.9);
+  font-size: 0.6rem;
+}
+
+.session-run-timeline--history .session-run-timeline__item {
+  background: rgba(248, 250, 252, 0.7);
+  border-color: rgba(222, 226, 230, 0.65);
+}
+
+.session-run-timeline--history .session-run-timeline__label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.session-run-timeline--history .session-run-timeline__time {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #868e96;
 }
 
 .live-race-stage__status {

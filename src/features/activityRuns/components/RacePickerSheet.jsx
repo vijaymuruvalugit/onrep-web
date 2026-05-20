@@ -1,16 +1,26 @@
 import React from 'react'
 import { CUSTOM_PRESET } from '../../skating/race/racePresets'
 
-function RaceCard({ title, subtitle, disabled, onClick, compact = false }) {
+function RaceCard({ title, subtitle, disabled, onClick, compact = false, variant = 'preset' }) {
+  const isCustom = variant === 'custom'
   return (
     <button
       type="button"
-      className={`race-picker-card${compact ? ' race-picker-card--compact' : ''}`}
+      className={`race-picker-card race-picker-card--${variant}${
+        compact ? ' race-picker-card--compact' : ''
+      }`}
       disabled={disabled}
       onClick={onClick}
     >
-      <span className="race-picker-card__title">{title}</span>
-      {subtitle ? <span className="race-picker-card__subtitle">{subtitle}</span> : null}
+      <span className="race-picker-card__content">
+        <span className="race-picker-card__title">{title}</span>
+        {subtitle ? <span className="race-picker-card__subtitle">{subtitle}</span> : null}
+      </span>
+      {!compact && !isCustom ? (
+        <span className="race-picker-card__action" aria-hidden>
+          →
+        </span>
+      ) : null}
     </button>
   )
 }
@@ -31,6 +41,7 @@ export default function RacePickerSheet({
             title={preset.title}
             subtitle={preset.subtitle}
             disabled={disabled}
+            variant="preset"
             onClick={() => onSelectPreset?.(preset)}
           />
         ))}
@@ -38,6 +49,7 @@ export default function RacePickerSheet({
           title={CUSTOM_PRESET.title}
           subtitle={CUSTOM_PRESET.subtitle}
           disabled={disabled}
+          variant="custom"
           onClick={() => onSelectCustom?.()}
         />
       </div>

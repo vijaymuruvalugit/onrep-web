@@ -75,7 +75,7 @@ function CoachLiveSessionView({
   const sessionTitle = sessionForHeader ? sessionDisplayTitle(sessionForHeader) : 'Session'
   const timeRangeLabel = sessionForHeader ? sessionTimeRangeLabel(sessionForHeader) : ''
   const activePhaseAthleteCount =
-    activeBlockId != null ? athleteCountByPhaseId[String(activeBlockId)] ?? 0 : 0
+    activeBlockId != null ? (athleteCountByPhaseId[String(activeBlockId)] ?? 0) : 0
 
   const usePhaseCapture = Boolean(phaseCapture?.enabled && !isRaceMode)
   const isSkillsPhase = isSkillsPhaseBlock(activeBlockMeta)
@@ -106,6 +106,7 @@ function CoachLiveSessionView({
 
   const showTiming =
     Boolean(timingSection) && !isSkillsPhase && !isRaceMode && uiProfile.timeExpanded
+  const hasPhaseFooter = Boolean(phaseCapture?.onCompletePhase || phaseCapture?.onSkipPhase)
 
   return (
     <div
@@ -132,7 +133,10 @@ function CoachLiveSessionView({
               onChange={phaseCapture.onCaptureModeChange}
             />
           ) : null}
-          <LiveSessionSyncDot syncing={syncStatus?.syncing} className="coach-live-sync-dot--header" />
+          <LiveSessionSyncDot
+            syncing={syncStatus?.syncing}
+            className="coach-live-sync-dot--header"
+          />
         </div>
       </header>
 
@@ -154,6 +158,7 @@ function CoachLiveSessionView({
             loading={blocksLoading && !sortedSessionBlocks?.length}
             onCompletePhase={phaseCapture?.onCompletePhase}
             onSkipPhase={phaseCapture?.onSkipPhase}
+            hideInlineActions={hasPhaseFooter}
           />
         </section>
 
@@ -180,7 +185,12 @@ function CoachLiveSessionView({
         ) : null}
       </nav>
 
-      <div className="coach-live-stack__coaching" data-testid="coach-live-coaching-area">
+      <div
+        className={`coach-live-stack__coaching${
+          isRaceMode ? ' coach-live-stack__coaching--race' : ''
+        }${hasPhaseFooter ? ' coach-live-stack__coaching--with-footer' : ''}`}
+        data-testid="coach-live-coaching-area"
+      >
         {isRaceMode && uiProfile.showRaceTiming ? (
           <div className="coach-live-race-zone">
             {activityRunSectionProps?.enabled ? (
@@ -189,7 +199,7 @@ function CoachLiveSessionView({
                 phaseId={activityRunSectionProps.phaseId}
                 athletes={activityRunSectionProps.athletes || rosterForSession}
                 heatNumber={activityRunSectionProps.heatNumber}
-                phaseTitle={activeBlockTitle}
+                phaseTitle={null}
                 disabled={uiPaused || opsState === 'ended'}
                 busy={activityRunSectionProps.busy}
                 onRefresh={activityRunSectionProps.onRefresh}
@@ -252,6 +262,50 @@ function CoachLiveSessionView({
 
         {recentLapsSection}
       </div>
+
+      {hasPhaseFooter ? (
+        <footer
+          className="coach-live-phase-footer"
+          role="toolbar"
+          aria-label="Phase actions"
+          data-testid="coach-live-phase-footer"
+        >
+          {phaseCapture?.onSkipPhase ? (
+            <button
+              type="button"
+              className="btn btn-link coach-live-phase-footer__skip"
+              disabled={
+                blocksBusy ||
+                blocksLoading ||
+                phaseCapture?.busy ||
+                uiPaused ||
+                opsState === 'ended'
+              }
+              onClick={() => phaseCapture.onSkipPhase(activeBlockId)}
+            >
+              Skip
+            </button>
+          ) : (
+            <span />
+          )}
+          {phaseCapture?.onCompletePhase ? (
+            <button
+              type="button"
+              className="btn btn-primary coach-live-phase-footer__complete"
+              disabled={
+                blocksBusy ||
+                blocksLoading ||
+                phaseCapture?.busy ||
+                uiPaused ||
+                opsState === 'ended'
+              }
+              onClick={() => phaseCapture.onCompletePhase(activeBlockId)}
+            >
+              Complete phase
+            </button>
+          ) : null}
+        </footer>
+      ) : null}
     </div>
   )
 }

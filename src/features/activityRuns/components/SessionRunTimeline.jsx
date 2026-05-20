@@ -66,7 +66,10 @@ function RaceRunDetails({ run, athletes = [] }) {
             const events = Array.isArray(row.progress_events) ? row.progress_events : []
             const time = row.time_ms ?? row.completion_time_ms
             return (
-              <div key={`${row.student_id || index}`} className="session-run-timeline__athlete-detail">
+              <div
+                key={`${row.student_id || index}`}
+                className="session-run-timeline__athlete-detail"
+              >
                 <div className="session-run-timeline__athlete-line">
                   <span>
                     {row.finish_order ? `${row.finish_order}. ` : ''}
@@ -79,9 +82,14 @@ function RaceRunDetails({ run, athletes = [] }) {
                 {events.length ? (
                   <ol className="session-run-timeline__lap-list">
                     {events.map((event, eventIndex) => (
-                      <li key={`${event.sequence || eventIndex}`} className="session-run-timeline__lap">
+                      <li
+                        key={`${event.sequence || eventIndex}`}
+                        className="session-run-timeline__lap"
+                      >
                         <span>Lap {event.sequence || eventIndex + 1}</span>
-                        <span className="font-monospace">{eventTimeLabel(event) || 'Recorded'}</span>
+                        <span className="font-monospace">
+                          {eventTimeLabel(event) || 'Recorded'}
+                        </span>
                       </li>
                     ))}
                   </ol>
@@ -121,6 +129,8 @@ export default function SessionRunTimeline({
   compact = false,
   headingLabel = 'Completed runs',
   defaultCollapsed = false,
+  /** 'history' — low-contrast background section for race picker */
+  variant,
 }) {
   const completedRuns = runs.filter((run) => {
     const status = run?.runPayload?.race_meta?.status
@@ -138,7 +148,9 @@ export default function SessionRunTimeline({
 
   return (
     <details
-      className={`session-run-timeline${compact ? ' session-run-timeline--compact' : ''}`}
+      className={`session-run-timeline${compact ? ' session-run-timeline--compact' : ''}${
+        variant === 'history' ? ' session-run-timeline--history' : ''
+      }`}
       open={!defaultCollapsed}
     >
       <summary className="session-run-timeline__summary">
@@ -151,8 +163,7 @@ export default function SessionRunTimeline({
         {completedRuns.map((run) => {
           const def = getActivityRunDefinition(run.runType)
           const meta = getRunLaunchMeta(run.runType)
-          const label =
-            run.runPayload?.race_meta?.title || def?.label || run.runType
+          const label = run.runPayload?.race_meta?.title || def?.label || run.runType
           const best = bestTimeFromPayload(run.runPayload)
           const n = (run.runPayload?.results || []).length
           return (

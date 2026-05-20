@@ -340,6 +340,7 @@ export default function SkatingRaceWorkspace({
           compact
           headingLabel="Completed races"
           defaultCollapsed
+          variant="history"
         />
         {error ? (
           <CAlert color="danger" className="small py-2 mt-2">
@@ -358,12 +359,12 @@ export default function SkatingRaceWorkspace({
           {phaseTitle}
         </p>
       ) : null}
-      <div className="activity-run-workspace__idle-hero">
-        <span className="activity-run-workspace__idle-pulse" aria-hidden />
+      <div className="activity-run-workspace__idle-hero activity-run-workspace__idle-hero--compact">
+        <span className="activity-run-workspace__idle-mark" aria-hidden>
+          🏁
+        </span>
         <p className="activity-run-workspace__idle-title">Ready to race</p>
-        <p className="activity-run-workspace__idle-hint small mb-0">
-          Choose a format, select athletes, then start the race
-        </p>
+        <p className="activity-run-workspace__idle-hint small mb-0">Tap a format below to begin</p>
       </div>
       {activeRun ? (
         <div className="mb-3">
@@ -400,6 +401,7 @@ export default function SkatingRaceWorkspace({
         athletes={athletes}
         headingLabel="Completed races"
         defaultCollapsed
+        variant="history"
       />
       {error ? (
         <CAlert color="danger" className="small py-2 mt-2">

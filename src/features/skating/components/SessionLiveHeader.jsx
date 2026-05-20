@@ -1,6 +1,6 @@
 import React from 'react'
 import { CBadge, CButton } from '@coreui/react'
-import OperationalSessionModeBadge from '../../../domain/operationalSessions/components/OperationalSessionModeBadge'
+import { sessionModeLabel } from '../../../domain/operationalSessions/constants/sessionModes'
 import { liveLabel } from '../constants/coachLiveLabels'
 
 /**
@@ -28,30 +28,27 @@ export default function SessionLiveHeader({
   onRaceFocus,
 }) {
   const skaterWord = athleteCount === 1 ? 'athlete' : 'athletes'
-  const phaseSummary =
-    phaseLabel && String(phaseLabel).trim()
-      ? `${phaseLabel} · ${athleteCount} ${skaterWord}`
-      : null
 
-  const showTimeRange =
-    timeRangeLabel && String(timeRangeLabel).trim() && timeRangeLabel !== '—'
+  const showTimeRange = timeRangeLabel && String(timeRangeLabel).trim() && timeRangeLabel !== '—'
 
   if (streamlined) {
     const title = sessionTitle || placeName || 'Session'
+    const metadataParts = []
+    if (lifecycle?.label) metadataParts.push(String(lifecycle.label).toUpperCase())
+    if (sessionMode) metadataParts.push(sessionModeLabel(sessionMode))
+    if (showTimeRange) {
+      metadataParts.push(String(timeRangeLabel).replace(/\s*-\s*/g, '–'))
+    }
+    const compactMetadataLine = metadataParts.join(' • ')
 
     return (
       <header
-        className="session-live-header session-live-header--streamlined"
+        className="session-live-header session-live-header--streamlined session-live-header--compact"
         data-testid="session-live-header"
       >
         <div className="session-live-header__shell">
           <div className="session-live-header__primary">
             <h1 className="session-live-header__title text-truncate mb-0">{title}</h1>
-            {phaseSummary ? (
-              <p className="session-live-header__phase-summary mb-0 text-truncate">
-                {phaseSummary}
-              </p>
-            ) : null}
           </div>
           {(canStart || canPause || canEnd || (isRaceMode && onRaceFocus)) && (
             <div
@@ -82,24 +79,26 @@ export default function SessionLiveHeader({
             </div>
           )}
           <div className="session-live-header__context">
-            {lifecycle ? (
-              <CBadge
-                color={lifecycle.badgeColor}
-                className="session-live-header__live-badge"
-                data-testid="session-live-lifecycle-badge"
-              >
-                {lifecycle.label}
-              </CBadge>
-            ) : null}
-            {sessionMode ? (
-              <OperationalSessionModeBadge
-                mode={sessionMode}
-                className="session-live-header__mode-badge"
-              />
-            ) : null}
-            {showTimeRange ? (
-              <span className="session-live-header__time-range">{timeRangeLabel}</span>
-            ) : null}
+            {compactMetadataLine ? (
+              <p className="session-live-header__metadata-line mb-0 text-truncate">
+                {compactMetadataLine}
+              </p>
+            ) : (
+              <>
+                {lifecycle ? (
+                  <CBadge
+                    color={lifecycle.badgeColor}
+                    className="session-live-header__live-badge"
+                    data-testid="session-live-lifecycle-badge"
+                  >
+                    {lifecycle.label}
+                  </CBadge>
+                ) : null}
+                {showTimeRange ? (
+                  <span className="session-live-header__time-range">{timeRangeLabel}</span>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </header>

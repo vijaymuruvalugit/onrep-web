@@ -40,6 +40,8 @@ export default function PhaseModeStrip({
   loading = false,
   onCompletePhase,
   onSkipPhase,
+  /** When true, parent renders Complete/Skip elsewhere (e.g. sticky footer). */
+  hideInlineActions = false,
   /** 'tiles' — horizontal phase cards (Skating Ops live); 'default' — mobile sheet + desktop chips */
   layout = 'default',
 }) {
@@ -68,7 +70,11 @@ export default function PhaseModeStrip({
   const activePhase = phases.find((p) => p.isActive) || phases[0]
 
   useEffect(() => {
-    activeChipRef.current?.scrollIntoView?.({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    activeChipRef.current?.scrollIntoView?.({
+      behavior: 'smooth',
+      inline: 'center',
+      block: 'nearest',
+    })
   }, [activeBlockId])
 
   if (!blocks?.length) {
@@ -91,65 +97,69 @@ export default function PhaseModeStrip({
       aria-label="Training phase"
     >
       {!useTiles ? (
-      <div className="phase-mode-strip__mobile">
-        <button
-          type="button"
-          className="phase-mode-strip__trigger"
-          data-testid="phase-mode-strip-mobile-trigger"
-          disabled={busy}
-          aria-haspopup="dialog"
-          aria-expanded={sheetOpen}
-          onClick={() => setSheetOpen(true)}
-        >
-          <span className="phase-mode-strip__trigger-label">
-            {activePhase?.label || 'Phase'}
-            {activePhase?.runtimeStatus === 'completed' ? ' ✓' : activePhase?.isActive ? ' ←' : ''}
-          </span>
-          <span className="phase-mode-strip__trigger-meta">
-            {activePhase != null ? (
-              <span className="phase-mode-strip__trigger-count" aria-hidden>
-                · {activePhase.count}
-              </span>
-            ) : null}
-            <span className="phase-mode-strip__trigger-chevron" aria-hidden>
-              ▼
+        <div className="phase-mode-strip__mobile">
+          <button
+            type="button"
+            className="phase-mode-strip__trigger"
+            data-testid="phase-mode-strip-mobile-trigger"
+            disabled={busy}
+            aria-haspopup="dialog"
+            aria-expanded={sheetOpen}
+            onClick={() => setSheetOpen(true)}
+          >
+            <span className="phase-mode-strip__trigger-label">
+              {activePhase?.label || 'Phase'}
+              {activePhase?.runtimeStatus === 'completed'
+                ? ' ✓'
+                : activePhase?.isActive
+                  ? ' ←'
+                  : ''}
             </span>
-          </span>
-        </button>
+            <span className="phase-mode-strip__trigger-meta">
+              {activePhase != null ? (
+                <span className="phase-mode-strip__trigger-count" aria-hidden>
+                  · {activePhase.count}
+                </span>
+              ) : null}
+              <span className="phase-mode-strip__trigger-chevron" aria-hidden>
+                ▼
+              </span>
+            </span>
+          </button>
 
-        <COffcanvas
-          placement="bottom"
-          visible={sheetOpen}
-          onHide={() => setSheetOpen(false)}
-          className="phase-mode-sheet"
-        >
-          <COffcanvasHeader className="border-bottom">
-            <COffcanvasTitle>Phases</COffcanvasTitle>
-            <CCloseButton onClick={() => setSheetOpen(false)} />
-          </COffcanvasHeader>
-          <COffcanvasBody>
-            <div className="phase-mode-sheet__list" role="listbox" aria-label="Training phases">
-              {phases.map((phase) => (
-                <button
-                  key={phase.id}
-                  type="button"
-                  role="option"
-                  aria-selected={phase.isActive}
-                  className={`phase-mode-sheet__option${phase.isActive ? ' phase-mode-sheet__option--active' : ''}${statusClass(phase.runtimeStatus, phase.isActive)}`}
-                  data-testid={`phase-mode-sheet-option-${phase.id}`}
-                  disabled={busy}
-                  onClick={() => handleSelect(phase.id)}
-                >
-                  <span>{phase.displayLabel}</span>
-                  <span className="phase-mode-sheet__option-count" aria-hidden>
-                    · {phase.count}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </COffcanvasBody>
-        </COffcanvas>
-      </div>
+          <COffcanvas
+            placement="bottom"
+            visible={sheetOpen}
+            onHide={() => setSheetOpen(false)}
+            className="phase-mode-sheet"
+          >
+            <COffcanvasHeader className="border-bottom">
+              <COffcanvasTitle>Phases</COffcanvasTitle>
+              <CCloseButton onClick={() => setSheetOpen(false)} />
+            </COffcanvasHeader>
+            <COffcanvasBody>
+              <div className="phase-mode-sheet__list" role="listbox" aria-label="Training phases">
+                {phases.map((phase) => (
+                  <button
+                    key={phase.id}
+                    type="button"
+                    role="option"
+                    aria-selected={phase.isActive}
+                    className={`phase-mode-sheet__option${phase.isActive ? ' phase-mode-sheet__option--active' : ''}${statusClass(phase.runtimeStatus, phase.isActive)}`}
+                    data-testid={`phase-mode-sheet-option-${phase.id}`}
+                    disabled={busy}
+                    onClick={() => handleSelect(phase.id)}
+                  >
+                    <span>{phase.displayLabel}</span>
+                    <span className="phase-mode-sheet__option-count" aria-hidden>
+                      · {phase.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </COffcanvasBody>
+          </COffcanvas>
+        </div>
       ) : null}
 
       <div
@@ -182,7 +192,7 @@ export default function PhaseModeStrip({
           </React.Fragment>
         ))}
       </div>
-      {onCompletePhase || onSkipPhase ? (
+      {!hideInlineActions && (onCompletePhase || onSkipPhase) ? (
         <div className="phase-lifecycle-actions">
           {onCompletePhase ? (
             <button
