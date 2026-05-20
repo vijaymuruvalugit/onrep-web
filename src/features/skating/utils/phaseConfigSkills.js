@@ -1,46 +1,43 @@
 /**
- * phase.config_json.skills helpers for Skills phase modules.
+ * phase.config_json.skills helpers — delegates to modules[] as canonical store.
  */
 
 import {
-  DEFAULT_TECHNICAL_SKILLS,
-  SKILL_MODULES_BY_ID,
-} from '../constants/skillModules'
+  appendModuleEntry,
+  mergeModulesIntoConfigJson,
+  modulesToSkillEntries,
+  readModulesFromConfig,
+  removeModuleEntry,
+  sortModuleEntries,
+} from '../../modules/phaseConfigModules'
+import { MODULES_BY_ID } from '../../modules/moduleRegistry'
 
-function normalizeSkillEntry(entry, index = 0) {
-  if (!entry || typeof entry !== 'object') return null
-  const skillId = String(entry.skill_id || entry.skillId || '').trim()
-  if (!skillId || !SKILL_MODULES_BY_ID[skillId]) return null
-  return {
-    skill_id: skillId,
-    order: Number.isFinite(Number(entry.order)) ? Number(entry.order) : index,
-  }
-}
+const SKILL_MODULES_BY_ID = MODULES_BY_ID
 
 export function sortSkillEntries(entries = []) {
-  return [...entries]
-    .map((e, i) => normalizeSkillEntry(e, i))
-    .filter(Boolean)
-    .sort((a, b) => a.order - b.order)
+  return modulesToSkillEntries(sortModuleEntries(entries))
 }
 
 export function readSkillsFromConfig(configJson) {
-  const raw = configJson?.skills
-  if (!Array.isArray(raw)) return []
-  return sortSkillEntries(raw)
+  return modulesToSkillEntries(readModulesFromConfig(configJson))
 }
 
 export function mergeSkillsIntoConfigJson(existingConfig = {}, skills = []) {
+  const modules = sortModuleEntries(
+    skills.map((e, i) => ({
+      module_id: e?.skill_id || e?.skillId,
+      order: e?.order ?? i,
+      enabled: true,
+      config: {},
+    })),
+  )
   const base =
     existingConfig != null && typeof existingConfig === 'object' ? { ...existingConfig } : {}
   const caps =
     base.capabilities != null && typeof base.capabilities === 'object'
       ? { ...base.capabilities }
       : {}
-  const normalized = sortSkillEntries(
-    skills.map((e, i) => normalizeSkillEntry(e, i)).filter(Boolean),
-  )
-  return { ...base, capabilities: caps, skills: normalized }
+  return { ...mergeModulesIntoConfigJson(base, modules), capabilities: caps }
 }
 
 export function validateSkillIds(skillIds) {
@@ -49,22 +46,22 @@ export function validateSkillIds(skillIds) {
 }
 
 export function getDefaultTechnicalSkillsConfig() {
-  return mergeSkillsIntoConfigJson({}, DEFAULT_TECHNICAL_SKILLS)
+  const modules = [
+    { module_id: 'EDGE_CONTROL', order: 0 },
+    { module_id: 'BALANCE', order: 1 },
+    { module_id: 'CROSSOVERS', order: 2 },
+  ]
+  return mergeModulesIntoConfigJson({}, modules)
 }
 
 export function appendSkillEntry(entries, skillId) {
-  const id = String(skillId || '').trim()
-  if (!id || !SKILL_MODULES_BY_ID[id]) return sortSkillEntries(entries)
-  const sorted = sortSkillEntries(entries)
-  if (sorted.some((e) => e.skill_id === id)) return sorted
-  return [...sorted, { skill_id: id, order: sorted.length }]
+  const mods = appendModuleEntry(readModulesFromConfig({ skills: entries }), skillId)
+  return modulesToSkillEntries(mods)
 }
 
 export function removeSkillEntry(entries, skillId) {
-  const id = String(skillId || '').trim()
-  return sortSkillEntries(entries)
-    .filter((e) => e.skill_id !== id)
-    .map((e, i) => ({ ...e, order: i }))
+  const mods = removeModuleEntry(readModulesFromConfig({ skills: entries }), skillId)
+  return modulesToSkillEntries(mods)
 }
 
 export function moveSkillEntry(entries, skillId, direction) {

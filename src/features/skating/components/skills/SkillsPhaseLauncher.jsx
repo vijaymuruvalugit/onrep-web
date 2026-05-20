@@ -8,8 +8,9 @@ import {
   isAssessmentModule,
   isOperationalModule,
 } from '../../constants/skillModules'
-import { appendSkillEntry, readSkillsFromConfig, removeSkillEntry } from '../../utils/phaseConfigSkills'
-import SkillModulePickerModal from './SkillModulePickerModal'
+import ModulePickerSheet from '../../../modules/components/ModulePickerSheet'
+import { readModulesFromConfig } from '../../../modules/phaseConfigModules'
+import { appendModuleEntry, removeModuleEntry } from '../../../modules/phaseConfigModules'
 
 export default function SkillsPhaseLauncher({
   phaseConfigJson,
@@ -25,7 +26,11 @@ export default function SkillsPhaseLauncher({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [catalogByCode, setCatalogByCode] = useState({})
 
-  const skills = useMemo(() => readSkillsFromConfig(phaseConfigJson), [phaseConfigJson])
+  const modules = useMemo(() => readModulesFromConfig(phaseConfigJson), [phaseConfigJson])
+  const skills = useMemo(
+    () => modules.map((m) => ({ skill_id: m.module_id, order: m.order })),
+    [modules],
+  )
   const selectedIds = useMemo(() => skills.map((s) => s.skill_id), [skills])
   const visibleSkills = useMemo(
     () =>
@@ -55,14 +60,16 @@ export default function SkillsPhaseLauncher({
     }
   }, [])
 
-  const handleAdd = (skillId) => {
-    onSkillsChange?.(appendSkillEntry(skills, skillId))
+  const handleAdd = (moduleId) => {
+    const next = appendModuleEntry(modules, moduleId)
+    onSkillsChange?.(next.map((m) => ({ skill_id: m.module_id, order: m.order })))
   }
 
   const handleRemove = (skillId, e) => {
     e?.stopPropagation?.()
-    if (!window.confirm('Remove this skill from the session phase?')) return
-    onSkillsChange?.(removeSkillEntry(skills, skillId))
+    if (!window.confirm('Remove this module from the phase?')) return
+    const next = removeModuleEntry(modules, skillId)
+    onSkillsChange?.(next.map((m) => ({ skill_id: m.module_id, order: m.order })))
   }
 
   return (
@@ -75,12 +82,13 @@ export default function SkillsPhaseLauncher({
           </p>
         </div>
         <CButton
-          color="primary"
+          color="secondary"
+          variant="outline"
           size="sm"
           disabled={disabled || busy}
           onClick={() => setPickerOpen(true)}
         >
-          + Add Skill
+          + Add Module
         </CButton>
       </div>
 
@@ -124,11 +132,12 @@ export default function SkillsPhaseLauncher({
         </div>
       )}
 
-      <SkillModulePickerModal
+      <ModulePickerSheet
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        selectedSkillIds={selectedIds}
+        selectedModuleIds={selectedIds}
         onAdd={handleAdd}
+        title="Add module"
       />
     </div>
   )

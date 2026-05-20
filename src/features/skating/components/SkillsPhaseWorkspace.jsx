@@ -38,7 +38,10 @@ export default function SkillsPhaseWorkspace({
     () =>
       skillsList
         .filter((entry) => isAssessmentModule(getSkillModule(entry.skill_id)))
-        .map((entry) => entry.skill_id),
+        .map((entry) => {
+          const mod = getSkillModule(entry.skill_id)
+          return mod?.platformSkillId || mod?.platformCode || entry.skill_id
+        }),
     [skillsList],
   )
 

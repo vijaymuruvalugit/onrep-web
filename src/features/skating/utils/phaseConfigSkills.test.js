@@ -17,7 +17,7 @@ describe('phaseConfigSkills', () => {
     ])
     expect(sorted).toEqual([
       { skill_id: 'SK_TECHNIQUE_BALANCE', order: 0 },
-      { skill_id: 'FLYING_LAP', order: 2 },
+      { skill_id: 'FLYING_LAP', order: 1 },
     ])
   })
 

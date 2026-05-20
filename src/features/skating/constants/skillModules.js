@@ -71,6 +71,12 @@ export const SKILL_MODULES_BY_ID = Object.freeze(
   }, {}),
 )
 
+// Bridge canonical module registry (operational modules share ids)
+export {
+  getModule as getModuleFromRegistry,
+  MODULES_BY_ID as REGISTRY_MODULES_BY_ID,
+} from '../../modules/moduleRegistry.js'
+
 export const PLATFORM_ASSESSMENT_SKILL_IDS = ASSESSMENT_SKILL_MODULES.map((m) => m.skillId)
 
 export const DEFAULT_TECHNICAL_SKILLS = PLATFORM_ASSESSMENT_SKILL_IDS.map((skillId, order) => ({

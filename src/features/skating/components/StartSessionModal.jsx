@@ -16,6 +16,7 @@ import {
 } from '@coreui/react'
 import { batchesApi } from '../../batches/api/batchesApi'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
+import { academySubActivitiesApi } from '../../../api/academySubActivitiesApi'
 import { skatingOpsApi } from '../api/skatingOpsApi'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
 
@@ -62,6 +63,10 @@ export default function StartSessionModal({
   const [sessionFocus, setSessionFocus] = useState('')
   const [sessionType, setSessionType] = useState('')
   const [sessionPresetId, setSessionPresetId] = useState('')
+  const [academySubActivities, setAcademySubActivities] = useState([])
+  const [academySubActivityId, setAcademySubActivityId] = useState('')
+  const [surfaceType, setSurfaceType] = useState('')
+  const [subActivitiesLoading, setSubActivitiesLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -76,7 +81,57 @@ export default function StartSessionModal({
     setSessionFocus('')
     setSessionType('')
     setSessionPresetId('')
+    setAcademySubActivityId('')
+    setSurfaceType('')
   }, [visible, defaultPlaceId, defaultRink, currentUserId])
+
+  useEffect(() => {
+    if (!visible) return
+    let cancelled = false
+    ;(async () => {
+      setSubActivitiesLoading(true)
+      try {
+        let list = await academySubActivitiesApi.list({ activeOnly: true })
+        if (!list?.length) {
+          try {
+            await academySubActivitiesApi.ensureGeneral()
+          } catch {
+            /* ignore */
+          }
+          list = await academySubActivitiesApi.list({ activeOnly: true })
+        }
+        if (!cancelled) {
+          setAcademySubActivities(Array.isArray(list) ? list : [])
+          if (list?.length === 1) setAcademySubActivityId(String(list[0].id))
+        }
+      } catch {
+        if (!cancelled) setAcademySubActivities([])
+      } finally {
+        if (!cancelled) setSubActivitiesLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [visible])
+
+  const selectedSubActivity = useMemo(
+    () => academySubActivities.find((s) => String(s.id) === String(academySubActivityId)),
+    [academySubActivities, academySubActivityId],
+  )
+
+  const surfaceOptions = useMemo(() => {
+    const profiles = selectedSubActivity?.surfaceProfiles || []
+    return Array.isArray(profiles) ? profiles : []
+  }, [selectedSubActivity])
+
+  useEffect(() => {
+    if (surfaceOptions.length === 1) {
+      setSurfaceType(surfaceOptions[0].type)
+    } else if (!surfaceOptions.some((p) => p.type === surfaceType)) {
+      setSurfaceType('')
+    }
+  }, [surfaceOptions, surfaceType])
 
   useEffect(() => {
     if (!visible) return
@@ -155,15 +210,30 @@ export default function StartSessionModal({
       setError('Choose a place.')
       return
     }
+    if (!academySubActivityId) {
+      setError('Choose an academy sub-activity (specialization).')
+      return
+    }
+    if (surfaceOptions.length > 1 && !surfaceType) {
+      setError('Choose a surface for this sub-activity.')
+      return
+    }
     setSubmitting(true)
     try {
       const sessionSkaterIds = Array.from(skaterIds)
+      const surfaceProfile =
+        surfaceOptions.length > 0
+          ? surfaceOptions.find((p) => p.type === surfaceType) || surfaceOptions[0]
+          : undefined
       const row = await skatingOpsApi.createSession({
         date: dateYmd,
         placeId: placeId || undefined,
         placeName: place?.name || undefined,
         rinkOrRoad: rink,
         sessionSkaterIds,
+        academySubActivityId,
+        surfaceProfile,
+        batchId: startMode === 'batch' && batchId ? batchId : undefined,
         notes: startMode === 'batch' && selectedBatch ? `batch:${selectedBatch.id}` : undefined,
         createdBy: coachUserId || undefined,
       })
@@ -256,6 +326,43 @@ export default function StartSessionModal({
               </CFormSelect>
             )}
           </div>
+        ) : null}
+
+        <CFormLabel>Academy sub-activity</CFormLabel>
+        {subActivitiesLoading ? (
+          <CSpinner size="sm" className="mb-2" />
+        ) : (
+          <CFormSelect
+            value={academySubActivityId}
+            onChange={(e) => setAcademySubActivityId(e.target.value)}
+            className="mb-2"
+          >
+            <option value="">— Select specialization —</option>
+            {academySubActivities.map((sa) => (
+              <option key={sa.id} value={sa.id}>
+                {(sa.name || 'Sub-activity').slice(0, 64)}
+              </option>
+            ))}
+          </CFormSelect>
+        )}
+
+        {surfaceOptions.length > 1 ? (
+          <>
+            <CFormLabel className="mt-2">Surface</CFormLabel>
+            <CFormSelect
+              value={surfaceType}
+              onChange={(e) => setSurfaceType(e.target.value)}
+              className="mb-2"
+            >
+              <option value="">— Select surface —</option>
+              {surfaceOptions.map((p) => (
+                <option key={p.type} value={p.type}>
+                  {p.type}
+                  {p.lap_distance_m ? ` (${p.lap_distance_m}m lap)` : ''}
+                </option>
+              ))}
+            </CFormSelect>
+          </>
         ) : null}
 
         <CFormLabel>{SESSION_OPS_COPY.startPrimaryPlace}</CFormLabel>
