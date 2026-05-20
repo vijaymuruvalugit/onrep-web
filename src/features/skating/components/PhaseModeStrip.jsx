@@ -35,7 +35,6 @@ export default function PhaseModeStrip({
   blocks,
   activeBlockId,
   onSelectBlock,
-  athleteCountByPhaseId = {},
   busy = false,
   loading = false,
   onCompletePhase,
@@ -48,6 +47,7 @@ export default function PhaseModeStrip({
   const useTiles = layout === 'tiles'
   const [sheetOpen, setSheetOpen] = useState(false)
   const activeChipRef = useRef(null)
+  const scrollRef = useRef(null)
 
   const phases = useMemo(
     () =>
@@ -59,22 +59,31 @@ export default function PhaseModeStrip({
           id,
           label: phaseLabelForBlock(block),
           displayLabel: `${phaseLabelForBlock(block)}${statusSuffix(isActive ? 'active' : runtimeStatus)}`,
-          count: athleteCountByPhaseId[id] ?? 0,
           isActive,
           runtimeStatus,
         }
       }),
-    [blocks, activeBlockId, athleteCountByPhaseId],
+    [blocks, activeBlockId],
   )
 
   const activePhase = phases.find((p) => p.isActive) || phases[0]
 
   useEffect(() => {
-    activeChipRef.current?.scrollIntoView?.({
-      behavior: 'smooth',
-      inline: 'center',
-      block: 'nearest',
+    const scroller = scrollRef.current
+    const activeChip = activeChipRef.current
+    if (!scroller || !activeChip) return undefined
+
+    const frameId = window.requestAnimationFrame(() => {
+      const chipCenter = activeChip.offsetLeft + activeChip.offsetWidth / 2
+      const targetLeft = chipCenter - scroller.clientWidth / 2
+      const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth)
+      scroller.scrollTo({
+        left: Math.min(Math.max(0, targetLeft), maxLeft),
+        behavior: 'smooth',
+      })
     })
+
+    return () => window.cancelAnimationFrame(frameId)
   }, [activeBlockId])
 
   if (!blocks?.length) {
@@ -116,11 +125,6 @@ export default function PhaseModeStrip({
                   : ''}
             </span>
             <span className="phase-mode-strip__trigger-meta">
-              {activePhase != null ? (
-                <span className="phase-mode-strip__trigger-count" aria-hidden>
-                  · {activePhase.count}
-                </span>
-              ) : null}
               <span className="phase-mode-strip__trigger-chevron" aria-hidden>
                 ▼
               </span>
@@ -151,9 +155,6 @@ export default function PhaseModeStrip({
                     onClick={() => handleSelect(phase.id)}
                   >
                     <span>{phase.displayLabel}</span>
-                    <span className="phase-mode-sheet__option-count" aria-hidden>
-                      · {phase.count}
-                    </span>
                   </button>
                 ))}
               </div>
@@ -163,6 +164,7 @@ export default function PhaseModeStrip({
       ) : null}
 
       <div
+        ref={scrollRef}
         className={`phase-mode-strip__scroll phase-mode-strip__scroll--desktop${useTiles ? '' : ' phase-mode-strip__sequence'}`}
         role="list"
       >
@@ -184,9 +186,6 @@ export default function PhaseModeStrip({
             >
               <span className="phase-mode-chip__label">
                 {useTiles ? phase.label : phase.displayLabel}
-              </span>
-              <span className="phase-mode-chip__count" aria-hidden>
-                · {phase.count}
               </span>
             </button>
           </React.Fragment>

@@ -4,7 +4,6 @@ import PhaseModeStrip from './PhaseModeStrip'
 import AthleteCardStrip from './AthleteCardStrip'
 import RaceTimingWorkspace from './RaceTimingWorkspace'
 import SkatingRaceWorkspace from './SkatingRaceWorkspace'
-import CaptureModeToggle from './phaseCapture/CaptureModeToggle'
 import PhaseAthleteCaptureList from './phaseCapture/PhaseAthleteCaptureList'
 import SkillsPhaseWorkspace from './SkillsPhaseWorkspace'
 import { getLiveUiProfile, liveLabel, isSkillsPhaseBlock } from '../constants/coachLiveLabels'
@@ -39,16 +38,12 @@ function CoachLiveSessionView({
   activeBlockId,
   activeBlockMeta,
   activeBlockTitle,
-  athleteCountByPhaseId,
-  phaseAthletes = [],
   blocksBusy,
   blocksLoading,
   onSelectBlock,
   rosterForSession,
   lapStudentId,
   observedStudentIds,
-  participationByStudentId = {},
-  athletePhaseLabelByStudentId = {},
   onPickSkater,
   onAddAthletesRequest,
   lifecycle,
@@ -74,9 +69,6 @@ function CoachLiveSessionView({
   const sessionForHeader = selSession || shellSession || null
   const sessionTitle = sessionForHeader ? sessionDisplayTitle(sessionForHeader) : 'Session'
   const timeRangeLabel = sessionForHeader ? sessionTimeRangeLabel(sessionForHeader) : ''
-  const activePhaseAthleteCount =
-    activeBlockId != null ? (athleteCountByPhaseId[String(activeBlockId)] ?? 0) : 0
-
   const usePhaseCapture = Boolean(phaseCapture?.enabled && !isRaceMode)
   const isSkillsPhase = isSkillsPhaseBlock(activeBlockMeta)
   const activePhase =
@@ -86,12 +78,8 @@ function CoachLiveSessionView({
     activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped'
 
   const phaseRoster = useMemo(
-    () =>
-      rosterFromPhaseAthletes(
-        phaseAthletes.length ? phaseAthletes : rosterForSession,
-        rosterForSession,
-      ),
-    [phaseAthletes, rosterForSession],
+    () => rosterFromPhaseAthletes(rosterForSession, rosterForSession),
+    [rosterForSession],
   )
 
   const selectedAthlete = lapStudentId
@@ -117,7 +105,7 @@ function CoachLiveSessionView({
         <SessionLiveHeader
           sessionTitle={sessionTitle}
           phaseLabel={activeBlockTitle}
-          athleteCount={activePhaseAthleteCount}
+          athleteCount={rosterForSession.length}
           lifecycle={lifecycle}
           sessionMode={sessionMode}
           timeRangeLabel={timeRangeLabel}
@@ -126,13 +114,6 @@ function CoachLiveSessionView({
           {...sessionHeaderProps}
         />
         <div className="d-flex align-items-center gap-2">
-          {usePhaseCapture && !isSkillsPhase ? (
-            <CaptureModeToggle
-              mode={phaseCapture.captureMode}
-              disabled={uiPaused || opsState === 'ended'}
-              onChange={phaseCapture.onCaptureModeChange}
-            />
-          ) : null}
           <LiveSessionSyncDot
             syncing={syncStatus?.syncing}
             className="coach-live-sync-dot--header"
@@ -153,7 +134,6 @@ function CoachLiveSessionView({
             blocks={phaseCapture?.phases?.length ? phaseCapture.phases : sortedSessionBlocks}
             activeBlockId={activeBlockId}
             onSelectBlock={onSelectBlock}
-            athleteCountByPhaseId={athleteCountByPhaseId}
             busy={blocksBusy || blocksLoading || phaseCapture?.busy}
             loading={blocksLoading && !sortedSessionBlocks?.length}
             onCompletePhase={phaseCapture?.onCompletePhase}
@@ -175,8 +155,6 @@ function CoachLiveSessionView({
               rows={rosterForSession}
               lapStudentId={lapStudentId}
               observedStudentIds={observedStudentIds}
-              participationByStudentId={participationByStudentId}
-              athletePhaseLabelByStudentId={athletePhaseLabelByStudentId}
               onPickSkater={usePhaseCapture ? handleSelectAthlete : onPickSkater}
               onAddAthletesRequest={onAddAthletesRequest}
               suppressPhaseSubline
@@ -232,8 +210,8 @@ function CoachLiveSessionView({
               roster={phaseRoster}
               captureItems={captureItems}
               entries={phaseCapture.entries}
-              captureMode={phaseCapture.captureMode}
-              participationByStudentId={participationByStudentId}
+              captureMode="full"
+              participationByStudentId={{}}
               expandedAthleteId={expandedAthleteId}
               selectedAthleteId={lapStudentId}
               disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}

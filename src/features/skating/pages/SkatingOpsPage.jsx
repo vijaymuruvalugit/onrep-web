@@ -56,7 +56,6 @@ import SkatingOpsWorkspaceChrome from '../components/SkatingOpsWorkspaceChrome'
 import ActiveSessionWorkspaceShell from '../components/ActiveSessionWorkspaceShell'
 import SessionBlockAddModal from '../components/SessionBlockAddModal'
 import { sessionBlocksApi } from '../../../domain/sessionBlocks/sessionBlocksApi'
-import { phaseAthletesApi } from '../../../domain/phaseAthletes/phaseAthletesApi'
 import { usePhaseCapture } from '../hooks/usePhaseCapture'
 import { usePhaseEntryAutosave } from '../hooks/usePhaseEntryAutosave'
 import { phaseCaptureApi } from '../../../domain/phaseCapture/phaseCaptureApi'
@@ -427,14 +426,8 @@ const SkatingOpsPage = () => {
     blocksBusy,
     setBlocksBusy,
     setSessionBlocks,
-    phaseAthletesByPhaseId,
-    phaseAthletesBusy,
-    setPhaseAthletesBusy,
-    setPhaseAthletesByPhaseId,
     loadPhaseAthletes,
     rosterForSession,
-    applyPhaseAthleteMove,
-    patchPhaseAthleteLocal,
     refreshShell,
     handleSelectBlock: shellSelectBlock,
     writeActiveBlockId: shellWriteActiveBlockId,
@@ -1148,10 +1141,9 @@ const SkatingOpsPage = () => {
       enabled: true,
       phases: phaseCaptureState.phases,
       entries: phaseCaptureState.entries,
-      captureMode: phaseCaptureState.captureMode,
+      captureMode: 'full',
       coachDefaults: phaseCaptureState.coachDefaults,
       busy: phaseCaptureState.loading || phaseLifecycleBusy,
-      onCaptureModeChange: phaseCaptureState.setCaptureMode,
       onEntryChange: handlePhaseEntryChange,
       onSelectAthlete: (athleteId) => {
         if (athleteId) setLapStudentId(String(athleteId))
@@ -1162,10 +1154,8 @@ const SkatingOpsPage = () => {
     [
       phaseCaptureState.phases,
       phaseCaptureState.entries,
-      phaseCaptureState.captureMode,
       phaseCaptureState.coachDefaults,
       phaseCaptureState.loading,
-      phaseCaptureState.setCaptureMode,
       phaseLifecycleBusy,
       handlePhaseEntryChange,
       handleCompletePhase,
@@ -1568,164 +1558,6 @@ const SkatingOpsPage = () => {
     syncPrimitives.sessionMode || selSession?.sessionMode || liveShell.shellSession?.sessionMode || 'practice'
   const isRaceMode = isRacePhaseBlock(activeBlockMeta)
 
-  const activePhaseAthletes = useMemo(() => {
-    if (!activeBlockId) return []
-    return phaseAthletesByPhaseId[String(activeBlockId)] || []
-  }, [phaseAthletesByPhaseId, activeBlockId])
-
-  const athleteCountByPhaseId = useMemo(() => {
-    const counts = {}
-    for (const [pid, list] of Object.entries(phaseAthletesByPhaseId)) {
-      counts[pid] = list?.length ?? 0
-    }
-    return counts
-  }, [phaseAthletesByPhaseId])
-
-  const studentPhasePlacementMap = useMemo(() => {
-    const m = new Map()
-    for (const phase of sortedSessionBlocks) {
-      const pid = String(phase.id)
-      const athletes = phaseAthletesByPhaseId[pid] || []
-      for (const a of athletes) {
-        m.set(String(a.studentId), {
-          phaseId: pid,
-          phaseTitle: phase.title || 'Phase',
-          status: a.participationStatus,
-        })
-      }
-    }
-    return m
-  }, [phaseAthletesByPhaseId, sortedSessionBlocks])
-
-  const phaseHintByStudentId = useMemo(() => {
-    const hints = {}
-    const active = String(activeBlockId)
-    for (const [sid, info] of studentPhasePlacementMap) {
-      if (info.phaseId !== active) {
-        hints[sid] = info.phaseTitle
-      } else if (info.status && info.status !== 'active') {
-        hints[sid] = info.status
-      }
-    }
-    return hints
-  }, [studentPhasePlacementMap, activeBlockId])
-
-  const participationByStudentId = useMemo(() => {
-    const m = {}
-    for (const list of Object.values(phaseAthletesByPhaseId)) {
-      for (const a of list || []) {
-        m[String(a.studentId)] = {
-          status: a.participationStatus || 'active',
-          lane: a.lane,
-          heatNumber: a.heatNumber,
-        }
-      }
-    }
-    return m
-  }, [phaseAthletesByPhaseId])
-
-  const activePhaseAthleteForLap = useMemo(() => {
-    if (!lapStudentId) return null
-    return (
-      activePhaseAthletes.find((a) => String(a.studentId) === String(lapStudentId)) || null
-    )
-  }, [activePhaseAthletes, lapStudentId])
-
-  const phaseContextForWorkspace = useMemo(() => {
-    if (activePhaseAthleteForLap?.lane != null) return `Lane ${activePhaseAthleteForLap.lane}`
-    return ''
-  }, [activePhaseAthleteForLap])
-
-  const athletePhaseLabelByStudentId = useMemo(() => {
-    const m = {}
-    for (const phase of sortedSessionBlocks) {
-      const lbl = livePhaseLabel(phase.blockType, phase.title)
-      for (const a of phaseAthletesByPhaseId[String(phase.id)] || []) {
-        m[String(a.studentId)] = lbl
-      }
-    }
-    return m
-  }, [sortedSessionBlocks, phaseAthletesByPhaseId])
-
-  const handleMovePhaseAthlete = useCallback(
-    async (studentId, toPhaseId) => {
-      if (!activeBlockId || !selectedSessionId) return
-      setPhaseAthletesBusy(true)
-      try {
-        const result = await phaseAthletesApi.moveToPhase(
-          activeBlockId,
-          studentId,
-          toPhaseId,
-        )
-        if (result?.athlete) {
-          applyPhaseAthleteMove(
-            result.athlete,
-            result.fromPhaseId || activeBlockId,
-            result.toPhaseId || toPhaseId,
-          )
-        } else {
-          await loadPhaseAthletes(selectedSessionId, { silent: true })
-        }
-      } catch (e) {
-        setBundleError(e?.message || 'Could not move athlete to phase.')
-        await loadPhaseAthletes(selectedSessionId, { silent: true })
-      } finally {
-        setPhaseAthletesBusy(false)
-      }
-    },
-    [activeBlockId, selectedSessionId, applyPhaseAthleteMove, loadPhaseAthletes],
-  )
-
-  const handleSetPhaseLane = useCallback(
-    async (studentId, lane) => {
-      if (!activeBlockId) return
-      setPhaseAthletesBusy(true)
-      try {
-        const athlete = await phaseAthletesApi.setLane(activeBlockId, studentId, lane)
-        if (athlete) patchPhaseAthleteLocal(activeBlockId, athlete)
-      } finally {
-        setPhaseAthletesBusy(false)
-      }
-    },
-    [activeBlockId, patchPhaseAthleteLocal],
-  )
-
-  const handleSetPhaseHeat = useCallback(
-    async (studentId, heatNumber) => {
-      if (!activeBlockId) return
-      setPhaseAthletesBusy(true)
-      try {
-        const athlete = await phaseAthletesApi.setHeatNumber(
-          activeBlockId,
-          studentId,
-          heatNumber,
-        )
-        if (athlete) patchPhaseAthleteLocal(activeBlockId, athlete)
-      } finally {
-        setPhaseAthletesBusy(false)
-      }
-    },
-    [activeBlockId, patchPhaseAthleteLocal],
-  )
-
-  const handleSetPhaseStatus = useCallback(
-    async (studentId, participationStatus) => {
-      if (!activeBlockId) return
-      setPhaseAthletesBusy(true)
-      try {
-        const athlete = await phaseAthletesApi.setParticipationStatus(
-          activeBlockId,
-          studentId,
-          participationStatus,
-        )
-        if (athlete) patchPhaseAthleteLocal(activeBlockId, athlete)
-      } finally {
-        setPhaseAthletesBusy(false)
-      }
-    },
-    [activeBlockId, patchPhaseAthleteLocal],
-  )
-
   const handleSelectBlock = useCallback(
     (blockId) => {
       void coachingQueue.flushNow()
@@ -1839,7 +1671,7 @@ const SkatingOpsPage = () => {
         await skatingOpsApi.postRaceFinishOrder(selectedSessionId, {
           studentIds,
           blockId: activeBlockId || undefined,
-          heatNumber: activePhaseAthletes[0]?.heatNumber ?? undefined,
+          heatNumber: undefined,
         })
       await refreshLeaderboardSyncDomain()
       await refreshRaceResultsSyncDomain()
@@ -1850,7 +1682,6 @@ const SkatingOpsPage = () => {
     [
       selectedSessionId,
       activeBlockId,
-      activePhaseAthletes,
       refreshLeaderboardSyncDomain,
       refreshRaceResultsSyncDomain,
     ],
@@ -1865,7 +1696,7 @@ const SkatingOpsPage = () => {
           studentId,
           seconds,
           blockId: activeBlockId || undefined,
-          heatNumber: activePhaseAthletes[0]?.heatNumber ?? undefined,
+          heatNumber: undefined,
         })
         await refreshLeaderboardSyncDomain()
         await refreshRaceResultsSyncDomain()
@@ -1876,7 +1707,6 @@ const SkatingOpsPage = () => {
     [
       selectedSessionId,
       activeBlockId,
-      activePhaseAthletes,
       refreshLeaderboardSyncDomain,
       refreshRaceResultsSyncDomain,
     ],
@@ -1935,7 +1765,6 @@ const SkatingOpsPage = () => {
     onMoveDown: (id) => handleMoveBlock(id, 'down'),
     onAddRequest: () => setShowAddBlockModal(true),
     busy: blocksBusy || blocksLoading,
-    athleteCountByPhaseId,
   }
 
   const openStartLiveModal = () => {
@@ -2094,15 +1923,12 @@ const SkatingOpsPage = () => {
                 activeBlockId={activeBlockId}
                 activeBlockMeta={activeBlockMeta}
                 activeBlockTitle={activeBlockTitle}
-                athleteCountByPhaseId={athleteCountByPhaseId}
                 blocksBusy={blocksBusy}
                 blocksLoading={blocksLoading}
                 onSelectBlock={handleSelectBlock}
                 rosterForSession={rosterForSession}
                 lapStudentId={lapStudentId}
                 observedStudentIds={observedStudentIds}
-                participationByStudentId={participationByStudentId}
-                athletePhaseLabelByStudentId={athletePhaseLabelByStudentId}
                 onPickSkater={(id) => {
                   clearPendingObsAdvance()
                   setLapStudentId(id)
@@ -2115,13 +1941,12 @@ const SkatingOpsPage = () => {
                 elapsedLabel={elapsedLabel || undefined}
                 sessionMode={sessionMode}
                 isRaceMode={isRaceMode}
-                phaseAthletes={activePhaseAthletes}
                 uiPaused={uiPaused}
                 opsState={opsState}
                 raceSectionProps={{
-                  athletes: activePhaseAthletes.length ? activePhaseAthletes : rosterForSession,
+                  athletes: rosterForSession,
                   busy: raceBusy,
-                  heatNumber: activePhaseAthletes[0]?.heatNumber,
+                  heatNumber: undefined,
                   onFinishOrder: handleRaceFinishOrder,
                   onManualTime: handleRaceManualTime,
                 }}
@@ -2129,10 +1954,10 @@ const SkatingOpsPage = () => {
                   enabled: ACTIVITY_RUN_ENGINE_ENABLED,
                   operationalSessionId: selectedSessionId,
                   phaseId: activeBlockId,
-                  athletes: activePhaseAthletes.length ? activePhaseAthletes : rosterForSession,
+                  athletes: rosterForSession,
                   activitySlug: String(activeActivity?.type || 'skating').toLowerCase(),
                   busy: raceBusy,
-                  heatNumber: activePhaseAthletes[0]?.heatNumber,
+                  heatNumber: undefined,
                   onRefresh: async () => {
                     await refreshLeaderboardSyncDomain()
                     await refreshRaceResultsSyncDomain()
