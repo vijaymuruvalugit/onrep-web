@@ -13,6 +13,8 @@ import {
 import { sessionPhasesApi } from '../../../../domain/sessionPhases/sessionPhasesApi'
 import { livePhaseLabel } from '../../constants/coachLiveLabels'
 import { addablePhaseTypeOptions } from '../../utils/sessionPhaseOptions'
+import { getDefaultTechnicalSkillsConfig } from '../../utils/phaseConfigSkills'
+import SessionPhaseSkillsPicker from './SessionPhaseSkillsPicker'
 
 export default function EditSessionPhasesModal({
   visible,
@@ -63,10 +65,11 @@ export default function EditSessionPhasesModal({
         addTitle.trim() ||
         addTypeOptions.find((o) => o.value === addType)?.label ||
         'New phase'
-      await sessionPhasesApi.createPhase(operationalSessionId, {
-        title,
-        blockType: addType,
-      })
+      const body = { title, blockType: addType }
+      if (addType === 'technical') {
+        body.configJson = getDefaultTechnicalSkillsConfig()
+      }
+      await sessionPhasesApi.createPhase(operationalSessionId, body)
       setAddTitle('')
       await reload()
     } catch (e) {
@@ -117,6 +120,22 @@ export default function EditSessionPhasesModal({
     }
   }
 
+  const handleSkillsConfigChange = async (phaseId, configJson) => {
+    setBusy(true)
+    setError('')
+    try {
+      await sessionPhasesApi.updatePhase(operationalSessionId, phaseId, { configJson })
+      setLocalPhases((prev) =>
+        prev.map((p) => (String(p.id) === String(phaseId) ? { ...p, configJson } : p)),
+      )
+      onUpdated?.()
+    } catch (e) {
+      setError(e?.response?.data?.error || e?.message || 'Could not update skills')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const movePhase = async (index, direction) => {
     const next = [...localPhases]
     const j = index + direction
@@ -149,8 +168,10 @@ export default function EditSessionPhasesModal({
             const id = String(phase.id)
             const label = livePhaseLabel(phase.blockType, phase.title)
             const isEditing = editingId === id
+            const isTechnical = String(phase.blockType || phase.block_type) === 'technical'
             return (
-              <li key={id} className="list-group-item d-flex flex-wrap align-items-center gap-2">
+              <li key={id} className="list-group-item flex-column align-items-stretch gap-2">
+                <div className="d-flex flex-wrap align-items-center gap-2 w-100">
                 <span className="text-body-secondary small">{index + 1}.</span>
                 {isEditing ? (
                   <>
@@ -221,6 +242,14 @@ export default function EditSessionPhasesModal({
                     </CButton>
                   </>
                 )}
+                </div>
+                {isTechnical && !isEditing ? (
+                  <SessionPhaseSkillsPicker
+                    phase={phase}
+                    disabled={busy}
+                    onConfigChange={(configJson) => handleSkillsConfigChange(id, configJson)}
+                  />
+                ) : null}
               </li>
             )
           })}

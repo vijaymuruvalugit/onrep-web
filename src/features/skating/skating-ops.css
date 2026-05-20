@@ -1555,3 +1555,126 @@
   border-radius: 0.5rem;
   min-height: 2.5rem;
 }
+
+/* Skills phase — training-oriented module launcher (not race chrome) */
+.skills-phase-launcher__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.skills-phase-launcher__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 0.15rem;
+}
+
+.skills-module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.65rem;
+}
+
+.skills-module-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-height: 5.5rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--cui-body-bg, #fff);
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.skills-module-tile--assessment {
+  border-color: rgba(13, 110, 253, 0.25);
+  background: linear-gradient(165deg, rgba(13, 110, 253, 0.06), transparent 55%);
+}
+
+.skills-module-tile--drill {
+  border-color: rgba(25, 135, 84, 0.28);
+  background: linear-gradient(165deg, rgba(25, 135, 84, 0.07), transparent 55%);
+}
+
+.skills-module-tile:hover:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.skills-module-tile__badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--cui-secondary-color, #6c757d);
+}
+
+.skills-module-tile__label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.skills-module-tile__remove {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.45rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--cui-secondary-color, #6c757d);
+  padding: 0.15rem 0.25rem;
+}
+
+.skills-phase-detail__module-title {
+  font-size: 1.05rem;
+}
+
+.operational-timing-workspace--live .live-run-stage {
+  border-radius: 0.65rem;
+}
+
+.operational-timing-workspace .race-picker-card {
+  border-color: rgba(25, 135, 84, 0.2);
+}
+
+.skill-module-picker__heading {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--cui-secondary-color, #6c757d);
+  margin-bottom: 0.45rem;
+}
+
+.skill-module-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.skill-module-picker__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--cui-body-bg, #fff);
+  text-align: left;
+}
+
+.skill-module-picker__item--drill {
+  border-color: rgba(25, 135, 84, 0.22);
+}
+
+.session-phase-skills-picker {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}

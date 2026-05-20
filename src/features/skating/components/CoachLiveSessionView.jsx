@@ -201,6 +201,14 @@ function CoachLiveSessionView({
             studentId={lapStudentId}
             athleteName={selectedAthlete?.full_name || selectedAthlete?.fullName}
             disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
+            busy={phaseCapture.busy}
+            phaseConfigJson={activePhase?.configJson}
+            phaseSkills={phaseCapture.skillsForActivePhase}
+            onSkillsChange={phaseCapture.onUpdatePhaseSkills}
+            operationalSessionId={phaseCapture.operationalSessionId}
+            phaseId={activeBlockId}
+            athletes={rosterForSession}
+            activityRunEngineEnabled={phaseCapture.activityRunEngineEnabled}
           />
         ) : null}
 

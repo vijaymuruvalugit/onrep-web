@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { CButton, CBadge } from '@coreui/react'
 import useAthleteIntelligence from '../hooks/useAthleteIntelligence'
 
@@ -22,11 +22,31 @@ function trendLabel(trend) {
 /**
  * Per-athlete skill levels (1–5) — used on the Skills phase surface.
  */
-export default function AthleteSkillsPanel({ studentId, disabled = false, className = '' }) {
+export default function AthleteSkillsPanel({
+  studentId,
+  disabled = false,
+  className = '',
+  filterPlatformCode = null,
+}) {
   const intel = useAthleteIntelligence(studentId, 'skills', {
     enabled: Boolean(studentId),
     prefetch: true,
   })
+
+  const filteredGroups = useMemo(() => {
+    if (!filterPlatformCode) return intel.skillsGrouped || []
+    const code = String(filterPlatformCode).trim()
+    return (intel.skillsGrouped || [])
+      .map(([category, rows]) => {
+        const filtered = rows.filter(
+          (s) =>
+            String(s.platformCode || s.platform_code || s.id || '') === code ||
+            String(s.id || '') === code,
+        )
+        return filtered.length ? [category, filtered] : null
+      })
+      .filter(Boolean)
+  }, [intel.skillsGrouped, filterPlatformCode])
 
   if (!studentId) {
     return (
@@ -53,7 +73,7 @@ export default function AthleteSkillsPanel({ studentId, disabled = false, classN
       {intel.skillsLoading && !intel.skillsGrouped.length ? (
         <div className="small text-muted">Loading skills…</div>
       ) : null}
-      {(intel.skillsGrouped || []).map(([category, skillRows]) => (
+      {filteredGroups.map(([category, skillRows]) => (
         <div key={category} className="athlete-intel-skill-group">
           <div className="athlete-intel-skill-group__heading">
             <span>{category}</span>
@@ -103,7 +123,7 @@ export default function AthleteSkillsPanel({ studentId, disabled = false, classN
           </div>
         </div>
       ))}
-      {!intel.skillsLoading && !(intel.skillsGrouped && intel.skillsGrouped.length) ? (
+      {!intel.skillsLoading && !filteredGroups.length ? (
         <div className="small text-muted">
           {intel.skillsErr ? null : 'No skills configured for this activity.'}
         </div>

@@ -61,6 +61,12 @@ import { usePhaseEntryAutosave } from '../hooks/usePhaseEntryAutosave'
 import { phaseCaptureApi } from '../../../domain/phaseCapture/phaseCaptureApi'
 import SessionPhaseSetupModal from '../components/phaseCapture/SessionPhaseSetupModal'
 import EditSessionPhasesModal from '../components/sessionWorkspace/EditSessionPhasesModal'
+import { sessionPhasesApi } from '../../../domain/sessionPhases/sessionPhasesApi'
+import {
+  mergeSkillsIntoConfigJson,
+  readSkillsFromConfig,
+  sortSkillEntries,
+} from '../utils/phaseConfigSkills'
 import CoachCaptureDefaultsPanel from '../components/phaseCapture/CoachCaptureDefaultsPanel'
 import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
 import '../skating-ops.css'
@@ -1146,6 +1152,47 @@ const SkatingOpsPage = () => {
     [phaseCaptureState, selectedSessionId, shellSelectBlock, shellWriteActiveBlockId]
   )
 
+  const activePhaseCapture = useMemo(
+    () => phaseCaptureState.phases?.find((p) => String(p.id) === String(activeBlockId)) || null,
+    [phaseCaptureState.phases, activeBlockId],
+  )
+
+  const handleUpdatePhaseSkills = useCallback(
+    async (skillEntries) => {
+      if (!selectedSessionId || !activeBlockId) return
+      const sorted = sortSkillEntries(skillEntries)
+      const configJson = mergeSkillsIntoConfigJson(
+        activePhaseCapture?.configJson || {},
+        sorted,
+      )
+      phaseCaptureState.updatePhaseInList({
+        ...activePhaseCapture,
+        id: activeBlockId,
+        configJson,
+      })
+      try {
+        const phase = await sessionPhasesApi.updatePhase(selectedSessionId, activeBlockId, {
+          configJson,
+        })
+        if (phase) phaseCaptureState.updatePhaseInList(phase)
+        setSessionBlocks((prev) =>
+          (prev || []).map((b) =>
+            String(b.id) === String(activeBlockId) ? { ...b, configJson } : b,
+          ),
+        )
+      } catch {
+        await phaseCaptureState.reload()
+      }
+    },
+    [
+      selectedSessionId,
+      activeBlockId,
+      activePhaseCapture,
+      phaseCaptureState,
+      setSessionBlocks,
+    ],
+  )
+
   const phaseCaptureProps = useMemo(
     () => ({
       enabled: true,
@@ -1154,6 +1201,10 @@ const SkatingOpsPage = () => {
       captureMode: 'full',
       coachDefaults: phaseCaptureState.coachDefaults,
       busy: phaseCaptureState.loading || phaseLifecycleBusy,
+      operationalSessionId: selectedSessionId,
+      activityRunEngineEnabled: ACTIVITY_RUN_ENGINE_ENABLED,
+      skillsForActivePhase: readSkillsFromConfig(activePhaseCapture?.configJson),
+      onUpdatePhaseSkills: handleUpdatePhaseSkills,
       onEntryChange: handlePhaseEntryChange,
       onSelectAthlete: (athleteId) => {
         if (athleteId) setLapStudentId(String(athleteId))
@@ -1167,6 +1218,9 @@ const SkatingOpsPage = () => {
       phaseCaptureState.coachDefaults,
       phaseCaptureState.loading,
       phaseLifecycleBusy,
+      selectedSessionId,
+      activePhaseCapture,
+      handleUpdatePhaseSkills,
       handlePhaseEntryChange,
       handleCompletePhase,
       handleSkipPhase,
