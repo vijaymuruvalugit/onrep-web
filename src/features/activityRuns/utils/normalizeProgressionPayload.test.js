@@ -48,12 +48,12 @@ describe('normalizeProgressionPayload', () => {
 })
 
 describe('activityExperience', () => {
-  it('HEAT_RACE uses Record Lap label', () => {
+  it('HEAT_RACE uses Record label', () => {
     const exp = resolveActivityExperience(getActivityRunDefinition('HEAT_RACE'), {
       current: 1,
       target: 5,
     })
-    expect(exp.captureProgressLabel).toBe('Record Lap')
+    expect(exp.captureProgressLabel).toBe('Record')
     expect(exp.startActionLabel).toBe('Start Race')
   })
 })

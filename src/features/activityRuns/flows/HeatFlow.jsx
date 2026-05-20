@@ -1,13 +1,108 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { CAlert, CButton } from '@coreui/react'
 import AthleteSelectionGrid from '../components/AthleteSelectionGrid'
-import RankingPrimitive from '../components/primitives/RankingPrimitive'
 import ProgressionStagePrimitive from '../components/primitives/ProgressionStagePrimitive'
 import RunResultsCard from '../components/RunResultsCard'
+import StopwatchPrimitive from '../components/primitives/StopwatchPrimitive'
 import { resolveActivityExperience } from '../utils/activityExperience'
 import { participationMeta } from '../utils/buildRunPayload'
+import { getTimingMetrics } from '../utils/progressionPayload'
 import { useProgressionRun } from '../hooks/useProgressionRun'
 import { RUN_STATES } from '../hooks/useProgressionStateMachine'
+
+function formatMs(ms) {
+  const n = Number(ms)
+  return Number.isFinite(n) && n > 0 ? `${(n / 1000).toFixed(2)}s` : 'No time'
+}
+
+function athleteName(athlete) {
+  return athlete?.fullName || athlete?.full_name || athlete?.name || 'Athlete'
+}
+
+function finishTimeForResult(row) {
+  if (row?.time_ms != null) return Number(row.time_ms)
+  const last = row?.progress_events?.[row.progress_events.length - 1]
+  return getTimingMetrics(last)?.cumulative_time_ms ?? null
+}
+
+function FinishOrderEditor({ athletes = [], results = [], disabled, busy, onSubmitOrder }) {
+  const initialOrder = useMemo(
+    () =>
+      [...results]
+        .filter((r) => finishTimeForResult(r) != null)
+        .sort((a, b) => Number(finishTimeForResult(a)) - Number(finishTimeForResult(b)))
+        .map((r) => String(r.student_id)),
+    [results],
+  )
+  const [order, setOrder] = useState(initialOrder)
+
+  const move = (sid, delta) => {
+    setOrder((prev) => {
+      const index = prev.indexOf(sid)
+      const nextIndex = index + delta
+      if (index < 0 || nextIndex < 0 || nextIndex >= prev.length) return prev
+      const next = [...prev]
+      const [item] = next.splice(index, 1)
+      next.splice(nextIndex, 0, item)
+      return next
+    })
+  }
+
+  const athleteById = new Map(athletes.map((a) => [String(a.studentId || a.id), a]))
+  const resultById = new Map(results.map((r) => [String(r.student_id), r]))
+
+  return (
+    <div className="finish-order-editor">
+      <p className="small text-body-secondary mb-2">
+        Ordered by recorded finish time. Adjust if needed, then save.
+      </p>
+      <div className="finish-order-editor__list">
+        {order.map((sid, index) => {
+          const row = resultById.get(sid)
+          return (
+            <div key={sid} className="finish-order-editor__row">
+              <span className="finish-order-editor__rank">{index + 1}</span>
+              <span className="finish-order-editor__name">{athleteName(athleteById.get(sid))}</span>
+              <span className="finish-order-editor__time font-monospace">
+                {formatMs(finishTimeForResult(row))}
+              </span>
+              <span className="finish-order-editor__actions">
+                <CButton
+                  type="button"
+                  size="sm"
+                  color="light"
+                  disabled={disabled || busy || index === 0}
+                  onClick={() => move(sid, -1)}
+                >
+                  ↑
+                </CButton>
+                <CButton
+                  type="button"
+                  size="sm"
+                  color="light"
+                  disabled={disabled || busy || index === order.length - 1}
+                  onClick={() => move(sid, 1)}
+                >
+                  ↓
+                </CButton>
+              </span>
+            </div>
+          )
+        })}
+      </div>
+      <CButton
+        type="button"
+        color="primary"
+        size="lg"
+        className="w-100 mt-3 fw-bold"
+        disabled={disabled || busy || order.length < 1}
+        onClick={() => onSubmitOrder?.(order)}
+      >
+        Save race
+      </CButton>
+    </div>
+  )
+}
 
 export default function HeatFlow({
   definition,
@@ -24,8 +119,6 @@ export default function HeatFlow({
   autoStart = false,
   resumeRun: resumeRunRecord = null,
   initialPatch = null,
-  operationalMode = false,
-  hideFinishEarly = false,
   onRunComplete,
   onLiveUpdate,
 }) {
@@ -33,6 +126,7 @@ export default function HeatFlow({
     (participantIdsProp.length ? participantIdsProp : []).map(String),
   )
   const [distanceLabel, setDistanceLabel] = useState(preset?.distanceLabel || '')
+  const [clockStopped, setClockStopped] = useState(false)
   const stopwatchRef = useRef(null)
   const startedRef = useRef(false)
   const resumedRef = useRef(false)
@@ -72,11 +166,11 @@ export default function HeatFlow({
         resumeRunRecord.runPayload?.race_meta?.participantIds ||
         resumeRunRecord.runPayload?.results?.map((r) => String(r.student_id)) ||
         []
-      if (ids.length) setSelectedIds(ids.map(String))
       const anchor = resumeRunRecord.runPayload?.race_meta?.timerStartedAt
-      if (anchor != null) {
-        requestAnimationFrame(() => stopwatchRef.current?.restoreTimer?.(anchor))
-      }
+      requestAnimationFrame(() => {
+        if (ids.length) setSelectedIds(ids.map(String))
+        if (anchor != null) stopwatchRef.current?.restoreTimer?.(anchor)
+      })
     }
   }, [resumeRunRecord, progression])
 
@@ -106,10 +200,6 @@ export default function HeatFlow({
       currentLap: progression.currentProgressIndex,
     })
   }, [progression.runId, progression.currentProgressIndex, onLiveUpdate])
-
-  const packEvents =
-    progression.payload?.results?.find((r) => selectedIds.includes(String(r.student_id)))
-      ?.progress_events || []
 
   const handleStart = async () => {
     const patch = initialPatch
@@ -144,13 +234,24 @@ export default function HeatFlow({
           })),
         }
     await progression.startRun(patch)
+    setClockStopped(false)
     stopwatchRef.current?.start()
   }
 
-  const handleCapture = () => {
+  const handleCapture = (studentId) => {
     const timing = stopwatchRef.current?.captureProgressEvent()
     if (!timing) return
-    progression.applyCapture(timing)
+    progression.recordParticipantFinish(studentId, timing)
+  }
+
+  const handleStopRaceClock = () => {
+    setClockStopped(true)
+  }
+
+  const handleResetRace = async () => {
+    await progression.abandonRun()
+    setSelectedIds([])
+    setClockStopped(false)
   }
 
   const buildResultsFromOrder = (order) =>
@@ -182,7 +283,16 @@ export default function HeatFlow({
   const handleRunAgain = () => {
     progression.resetAll()
     setSelectedIds([])
+    setClockStopped(false)
   }
+
+  const selectedAthletes = athletes.filter((a) => selectedIds.includes(String(a.studentId || a.id)))
+  const recordedResults = progression.payload.results || []
+  const recordedCount = selectedIds.filter((sid) => {
+    const row = recordedResults.find((r) => String(r.student_id) === String(sid))
+    return finishTimeForResult(row) != null
+  }).length
+  const allFinishTimesRecorded = selectedIds.length > 0 && recordedCount >= selectedIds.length
 
   if (progression.isCompleted && !skipReadySetup) {
     return (
@@ -199,21 +309,18 @@ export default function HeatFlow({
     return (
       <div className="heat-flow">
         <p className="fw-semibold mb-2 text-white">
-          {skipReadySetup ? 'Finish order' : 'Capture finish order'}
+          {skipReadySetup ? 'Finish order' : 'Confirm finish order'}
         </p>
-        {!skipReadySetup ? (
-          <RunResultsCard
-            results={(progression.payload.results || []).map((r) => {
-              const a = athletes.find((x) => String(x.studentId || x.id) === String(r.student_id))
-              return { ...r, student_name: a?.fullName || a?.full_name }
-            })}
-          />
-        ) : null}
+        <RunResultsCard
+          results={(progression.payload.results || []).map((r) => {
+            const a = athletes.find((x) => String(x.studentId || x.id) === String(r.student_id))
+            return { ...r, student_name: a?.fullName || a?.full_name }
+          })}
+        />
         {definition.capabilities.ranking ? (
-          <RankingPrimitive
-            athletes={athletes.filter((a) =>
-              selectedIds.includes(String(a.studentId || a.id)),
-            )}
+          <FinishOrderEditor
+            athletes={selectedAthletes}
+            results={recordedResults}
             disabled={disabled}
             busy={busy || progression.saving}
             onSubmitOrder={handleFinishOrder}
@@ -285,26 +392,65 @@ export default function HeatFlow({
   if (progression.isActive || progression.resumed) {
     return (
       <div className="heat-flow">
-        {!skipReadySetup ? (
-          <p className="fw-semibold mb-2 text-white">Race {heatNumber}</p>
-        ) : null}
-        <ProgressionStagePrimitive
-          experience={experience}
-          state={RUN_STATES.ACTIVE}
-          targetCount={progression.targetCount}
-          currentIndex={progression.currentProgressIndex}
-          distanceLabel={distanceLabel || preset?.distanceLabel}
-          metrics={progression.metrics}
-          progressEvents={packEvents}
-          disabled={disabled}
-          busy={busy || progression.saving}
-          stopwatchRef={stopwatchRef}
-          onCapture={handleCapture}
-          onFinishProgress={progression.finishProgress}
-          hideFinishEarly={hideFinishEarly}
-          operationalMode={operationalMode}
-          timerStartedAt={timerStartedAt}
-        />
+        {!skipReadySetup ? <p className="fw-semibold mb-2 text-white">Race {heatNumber}</p> : null}
+        <div className="race-finish-capture">
+          <p className="progression-stage__heading h4 fw-bold mb-1">Record finishers</p>
+          <p className="small text-body-secondary mb-2">
+            Tap Record as each student finishes. Stop the clock after the final finisher.
+          </p>
+          <StopwatchPrimitive
+            ref={stopwatchRef}
+            disabled={disabled}
+            autoStart={!timerStartedAt}
+            timerStartedAt={timerStartedAt}
+            raceControls
+            onStopMs={handleStopRaceClock}
+            onResetRace={() => void handleResetRace()}
+            className="mb-3"
+          />
+          <div className="race-finish-capture__summary small text-body-secondary mb-2">
+            {recordedCount} / {selectedIds.length} finish times recorded
+          </div>
+          <div className="race-finish-capture__grid">
+            {selectedAthletes.map((athlete) => {
+              const sid = String(athlete.studentId || athlete.id)
+              const row = recordedResults.find((r) => String(r.student_id) === sid)
+              const time = finishTimeForResult(row)
+              const recorded = time != null
+              return (
+                <button
+                  key={sid}
+                  type="button"
+                  className={`race-finish-card${recorded ? ' race-finish-card--recorded' : ''}`}
+                  disabled={disabled || busy || progression.saving || recorded || clockStopped}
+                  onClick={() => handleCapture(sid)}
+                >
+                  <span className="race-finish-card__name">{athleteName(athlete)}</span>
+                  <span className="race-finish-card__meta">
+                    {recorded ? formatMs(time) : 'Record'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <CButton
+            type="button"
+            color="primary"
+            size="lg"
+            className="w-100 mt-3 fw-bold"
+            disabled={
+              disabled || busy || progression.saving || !allFinishTimesRecorded || !clockStopped
+            }
+            onClick={progression.finishProgress}
+          >
+            Review finish order →
+          </CButton>
+          {allFinishTimesRecorded && !clockStopped ? (
+            <p className="small text-body-secondary text-center mt-2 mb-0">
+              Press Stop to unlock finish order review.
+            </p>
+          ) : null}
+        </div>
         {progression.error ? (
           <CAlert color="danger" className="small py-2 mt-2">
             {progression.error}

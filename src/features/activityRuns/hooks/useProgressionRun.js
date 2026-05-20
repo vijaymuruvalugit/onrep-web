@@ -47,7 +47,9 @@ export function useProgressionRun({
   teamId = null,
   heatNumber = 1,
 }) {
-  const [payload, setPayload] = useState(() => buildRunPayload(runType, { heat_number: heatNumber }))
+  const [payload, setPayload] = useState(() =>
+    buildRunPayload(runType, { heat_number: heatNumber }),
+  )
   const [runId, setRunId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -131,9 +133,7 @@ export function useProgressionRun({
           participantIds: participantIds.map(String),
           raceSequence: initialPatch.heat_number ?? heatNumber,
           currentLap: 0,
-          targetLaps:
-            initialPatch.progression_config?.target_progress_count ??
-            targetCount,
+          targetLaps: initialPatch.progression_config?.target_progress_count ?? targetCount,
         },
       })
       setSaving(true)
@@ -200,7 +200,7 @@ export function useProgressionRun({
     (timingMetrics) => {
       const metrics = coerceStopwatchTiming(timingMetrics)
       if (!metrics) {
-        setError('Could not record lap — start the timer and try again')
+        setError('Could not record — start the timer and try again')
         return payload
       }
       let next = payload
@@ -240,7 +240,7 @@ export function useProgressionRun({
     (studentId, timingMetrics) => {
       const metrics = coerceStopwatchTiming(timingMetrics)
       if (!metrics) {
-        setError('Could not record lap — start the timer and try again')
+        setError('Could not record — start the timer and try again')
         return payload
       }
       let next = appendProgressEventForParticipant(payload, studentId, metrics)
@@ -256,6 +256,41 @@ export function useProgressionRun({
       return next
     },
     [payload, targetCount, sm, schedulePatch],
+  )
+
+  const recordParticipantFinish = useCallback(
+    (studentId, timingMetrics) => {
+      const metrics = coerceStopwatchTiming(timingMetrics)
+      if (!metrics) {
+        setError('Could not record finish — start the timer and try again')
+        return payload
+      }
+
+      const sid = String(studentId)
+      const existing = (payload.results || []).find((r) => String(r.student_id) === sid)
+      if (existing?.time_ms != null || existing?.progress_events?.length) {
+        return payload
+      }
+
+      let next = appendProgressEventForParticipant(payload, sid, metrics)
+      next = {
+        ...next,
+        ...buildRaceMetaPatch(next, {
+          timerStartedAt: payload.race_meta?.timerStartedAt,
+        }),
+      }
+      const finishedCount = (next.results || []).filter(
+        (r) => r?.time_ms != null || r?.progress_events?.length,
+      ).length
+      next.race_meta = {
+        ...(next.race_meta || {}),
+        currentFinishes: finishedCount,
+      }
+      setPayload(next)
+      schedulePatch(next)
+      return next
+    },
+    [payload, schedulePatch],
   )
 
   const finalizeRun = useCallback(
@@ -289,6 +324,33 @@ export function useProgressionRun({
     [runId, payload, sm],
   )
 
+  const abandonRun = useCallback(async () => {
+    if (patchTimer.current) clearTimeout(patchTimer.current)
+    if (runId) {
+      setSaving(true)
+      try {
+        await sessionRunsApi.updateRun(runId, {
+          runPayload: {
+            race_meta: {
+              ...(payload.race_meta || {}),
+              status: 'abandoned',
+              endedAt: new Date().toISOString(),
+            },
+          },
+          partial: true,
+        })
+      } catch (e) {
+        setError(e?.message || 'Could not reset race')
+      } finally {
+        setSaving(false)
+      }
+    }
+    setRunId(null)
+    setPayload(buildRunPayload(runType, { heat_number: heatNumber }))
+    sm.resetRun()
+    setResumed(false)
+  }, [runId, payload, runType, heatNumber, sm])
+
   const resetAll = useCallback(() => {
     if (patchTimer.current) clearTimeout(patchTimer.current)
     setRunId(null)
@@ -314,7 +376,9 @@ export function useProgressionRun({
     resumeRun,
     applyCapture,
     captureForParticipant,
+    recordParticipantFinish,
     finalizeRun,
+    abandonRun,
     resetAll,
   }
 }

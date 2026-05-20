@@ -1,4 +1,11 @@
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import { CButton } from '@coreui/react'
 import { coerceTimerAnchorMs } from '../../utils/normalizeProgressionPayload'
 
@@ -11,6 +18,8 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     autoStart = false,
     operationalMode = false,
     timerStartedAt = null,
+    raceControls = false,
+    onResetRace,
   },
   ref,
 ) {
@@ -84,6 +93,11 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     return ms
   }
 
+  const handleRaceReset = () => {
+    reset()
+    onResetRace?.()
+  }
+
   useImperativeHandle(ref, () => ({
     start,
     reset,
@@ -105,7 +119,25 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
       <div className="activity-stopwatch__display font-monospace" aria-live="polite">
         {display}s
       </div>
-      {!operationalMode ? (
+      {!operationalMode && raceControls ? (
+        <div className="activity-stopwatch__actions d-flex flex-wrap gap-2 justify-content-center">
+          {running ? (
+            <CButton type="button" size="lg" color="danger" disabled={disabled} onClick={stop}>
+              Stop
+            </CButton>
+          ) : (
+            <CButton
+              type="button"
+              size="lg"
+              color="light"
+              disabled={disabled || elapsedMs <= 0}
+              onClick={handleRaceReset}
+            >
+              Reset
+            </CButton>
+          )}
+        </div>
+      ) : !operationalMode ? (
         <div className="activity-stopwatch__actions d-flex flex-wrap gap-2 justify-content-center">
           {!running ? (
             <CButton type="button" size="lg" color="primary" disabled={disabled} onClick={start}>
@@ -116,7 +148,13 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
               Stop
             </CButton>
           )}
-          <CButton type="button" size="lg" color="light" disabled={disabled || running} onClick={reset}>
+          <CButton
+            type="button"
+            size="lg"
+            color="light"
+            disabled={disabled || running}
+            onClick={reset}
+          >
             Reset
           </CButton>
         </div>

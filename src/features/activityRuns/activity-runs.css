@@ -613,6 +613,90 @@
   opacity: 0.85;
 }
 
+.race-finish-capture__grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.race-finish-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--run-live-ink);
+  text-align: left;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
+}
+
+.race-finish-card:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+.race-finish-card--recorded {
+  border-color: rgba(15, 118, 110, 0.36);
+  background: rgba(20, 184, 166, 0.09);
+}
+
+.race-finish-card__name {
+  font-weight: 700;
+}
+
+.race-finish-card__meta {
+  flex-shrink: 0;
+  font-weight: 800;
+  color: #0f766e;
+}
+
+.finish-order-editor__list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.finish-order-editor__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--run-live-ink);
+}
+
+.finish-order-editor__rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+  font-weight: 800;
+}
+
+.finish-order-editor__name {
+  min-width: 0;
+  font-weight: 700;
+}
+
+.finish-order-editor__time {
+  font-size: 0.85rem;
+  color: var(--run-live-muted);
+}
+
+.finish-order-editor__actions {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
 /* Race picker — workout-style selection */
 .race-picker-sheet__list {
   display: flex;
