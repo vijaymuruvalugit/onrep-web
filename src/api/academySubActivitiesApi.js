@@ -27,4 +27,9 @@ export const academySubActivitiesApi = {
     const { data } = await http.post('/academy-sub-activities/ensure-general')
     return data?.academySubActivity
   },
+
+  async resetRecommended(subActivityId) {
+    const { data } = await http.post(`/academy-sub-activities/${subActivityId}/reset-recommended`)
+    return data?.academySubActivity
+  },
 }

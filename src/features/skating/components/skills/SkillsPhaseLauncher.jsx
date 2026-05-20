@@ -12,6 +12,8 @@ import ModulePickerSheet from '../../../modules/components/ModulePickerSheet'
 import { readModulesFromConfig } from '../../../modules/phaseConfigModules'
 import { appendModuleEntry, removeModuleEntry } from '../../../modules/phaseConfigModules'
 
+const PRIMARY_RECOMMENDED_MODULE_IDS = new Set(['FLYING_LAP', 'LAP_TIMING'])
+
 export default function SkillsPhaseLauncher({
   phaseConfigJson,
   disabled = false,
@@ -105,17 +107,22 @@ export default function SkillsPhaseLauncher({
               : isOperationalModule(mod)
                 ? 'drill'
                 : 'neutral'
+            const primary = PRIMARY_RECOMMENDED_MODULE_IDS.has(String(entry.skill_id))
             return (
               <button
                 key={entry.skill_id}
                 type="button"
                 role="listitem"
-                className={`skills-module-tile skills-module-tile--${variant}`}
+                className={`skills-module-tile skills-module-tile--${variant}${
+                  primary ? ' skills-module-tile--primary' : ''
+                }`}
                 disabled={disabled || busy}
                 onClick={() => onSelectModule?.(entry.skill_id)}
                 data-testid={`skills-module-tile-${entry.skill_id}`}
               >
-                <span className="skills-module-tile__badge">{group}</span>
+                <span className="skills-module-tile__badge">
+                  {primary ? 'Recommended drill' : group}
+                </span>
                 <span className="skills-module-tile__label">{label}</span>
                 <span
                   className="skills-module-tile__remove"

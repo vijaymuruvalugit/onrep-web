@@ -101,8 +101,16 @@ export default function StartSessionModal({
           list = await academySubActivitiesApi.list({ activeOnly: true })
         }
         if (!cancelled) {
-          setAcademySubActivities(Array.isArray(list) ? list : [])
-          if (list?.length === 1) setAcademySubActivityId(String(list[0].id))
+          const items = Array.isArray(list) ? list : []
+          setAcademySubActivities(items)
+          if (items.length === 1) {
+            setAcademySubActivityId(String(items[0].id))
+          } else if (items.length > 1) {
+            const inline = items.find(
+              (s) => String(s?.name || '').trim().toLowerCase() === 'inline speed',
+            )
+            if (inline?.id) setAcademySubActivityId(String(inline.id))
+          }
         }
       } catch {
         if (!cancelled) setAcademySubActivities([])

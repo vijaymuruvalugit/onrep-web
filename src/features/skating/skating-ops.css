@@ -1629,6 +1629,14 @@
   background: linear-gradient(165deg, rgba(25, 135, 84, 0.07), transparent 55%);
 }
 
+.skills-module-tile--primary {
+  border-color: rgba(25, 135, 84, 0.55);
+  background:
+    linear-gradient(165deg, rgba(25, 135, 84, 0.13), rgba(25, 135, 84, 0.03) 62%),
+    var(--cui-body-bg, #fff);
+  box-shadow: 0 6px 18px rgba(25, 135, 84, 0.1);
+}
+
 .skills-module-tile:hover:not(:disabled) {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
