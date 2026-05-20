@@ -12,7 +12,11 @@ function bestTimeFromPayload(payload) {
   return times.length ? Math.min(...times) : null
 }
 
-export default function SessionRunTimeline({ runs = [], compact = false }) {
+export default function SessionRunTimeline({
+  runs = [],
+  compact = false,
+  headingLabel = 'Completed runs',
+}) {
   if (!runs.length) {
     if (compact) return null
     return (
@@ -25,14 +29,15 @@ export default function SessionRunTimeline({ runs = [], compact = false }) {
   return (
     <div className={`session-run-timeline${compact ? ' session-run-timeline--compact' : ''}`}>
       <h3 className="session-run-timeline__heading">
-        {compact ? 'Done' : 'Completed runs'}
+        {compact ? 'Done' : headingLabel}
         <span className="session-run-timeline__count">{runs.length}</span>
       </h3>
       <ul className="session-run-timeline__list list-unstyled mb-0">
         {runs.map((run) => {
           const def = getActivityRunDefinition(run.runType)
           const meta = getRunLaunchMeta(run.runType)
-          const label = def?.label || run.runType
+          const label =
+            run.runPayload?.race_meta?.title || def?.label || run.runType
           const best = bestTimeFromPayload(run.runPayload)
           const n = (run.runPayload?.results || []).length
           return (

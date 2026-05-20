@@ -27,6 +27,9 @@ export default function ProgressionStagePrimitive({
   onSelectParticipant,
   onCaptureParticipant,
   onFinishProgress,
+  hideFinishEarly = false,
+  operationalMode = false,
+  timerStartedAt = null,
 }) {
   const dots = Array.from({ length: targetCount }, (_, i) => i < currentIndex)
 
@@ -63,7 +66,9 @@ export default function ProgressionStagePrimitive({
         <StopwatchPrimitive
           ref={stopwatchRef}
           disabled={disabled}
-          autoStart
+          autoStart={!timerStartedAt}
+          operationalMode={operationalMode}
+          timerStartedAt={timerStartedAt}
           className="mb-3"
         />
         <ProgressMetricsStrip experience={experience} metrics={metrics} />
@@ -85,14 +90,16 @@ export default function ProgressionStagePrimitive({
             onCapture={onCapture}
           />
         )}
-        <button
-          type="button"
-          className="btn btn-link btn-sm text-white-50 mt-2 p-0"
-          disabled={disabled}
-          onClick={onFinishProgress}
-        >
-          Finish early →
-        </button>
+        {!hideFinishEarly ? (
+          <button
+            type="button"
+            className="btn btn-link btn-sm text-white-50 mt-2 p-0"
+            disabled={disabled}
+            onClick={onFinishProgress}
+          >
+            Finish early →
+          </button>
+        ) : null}
       </>
     )
   }

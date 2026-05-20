@@ -1,8 +1,16 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { CButton } from '@coreui/react'
 
 const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
-  { disabled, onStopMs, onTick, className = '', autoStart = false },
+  {
+    disabled,
+    onStopMs,
+    onTick,
+    className = '',
+    autoStart = false,
+    operationalMode = false,
+    timerStartedAt = null,
+  },
   ref,
 ) {
   const [running, setRunning] = useState(false)
@@ -11,14 +19,28 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
   const lastCaptureRef = useRef(0)
   const tickRef = useRef(null)
 
+  const restoreTimer = useCallback((anchorMs) => {
+    if (!anchorMs) return
+    startRef.current = anchorMs
+    lastCaptureRef.current = 0
+    const events = []
+    void events
+    setElapsedMs(Math.max(0, Date.now() - anchorMs))
+    setRunning(true)
+  }, [])
+
   useEffect(() => {
+    if (timerStartedAt && !disabled) {
+      restoreTimer(timerStartedAt)
+      return
+    }
     if (autoStart && !disabled) {
       startRef.current = Date.now()
       lastCaptureRef.current = 0
       setElapsedMs(0)
       setRunning(true)
     }
-  }, [autoStart, disabled])
+  }, [autoStart, disabled, timerStartedAt, restoreTimer])
 
   useEffect(() => {
     if (!running) return undefined
@@ -65,9 +87,11 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
     start,
     reset,
     stop,
+    restoreTimer,
     captureProgressEvent,
     isRunning: () => running,
     getElapsedMs: () => elapsedMs,
+    getTimerStartedAt: () => startRef.current,
   }))
 
   const display =
@@ -80,20 +104,22 @@ const StopwatchPrimitive = forwardRef(function StopwatchPrimitive(
       <div className="activity-stopwatch__display font-monospace" aria-live="polite">
         {display}s
       </div>
-      <div className="activity-stopwatch__actions d-flex flex-wrap gap-2 justify-content-center">
-        {!running ? (
-          <CButton type="button" size="lg" color="primary" disabled={disabled} onClick={start}>
-            Start
+      {!operationalMode ? (
+        <div className="activity-stopwatch__actions d-flex flex-wrap gap-2 justify-content-center">
+          {!running ? (
+            <CButton type="button" size="lg" color="primary" disabled={disabled} onClick={start}>
+              Start
+            </CButton>
+          ) : (
+            <CButton type="button" size="lg" color="danger" disabled={disabled} onClick={stop}>
+              Stop
+            </CButton>
+          )}
+          <CButton type="button" size="lg" color="light" disabled={disabled || running} onClick={reset}>
+            Reset
           </CButton>
-        ) : (
-          <CButton type="button" size="lg" color="danger" disabled={disabled} onClick={stop}>
-            Stop
-          </CButton>
-        )}
-        <CButton type="button" size="lg" color="light" disabled={disabled || running} onClick={reset}>
-          Reset
-        </CButton>
-      </div>
+        </div>
+      ) : null}
     </div>
   )
 })

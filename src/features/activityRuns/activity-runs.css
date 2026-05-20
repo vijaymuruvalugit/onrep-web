@@ -422,6 +422,74 @@
   opacity: 0.85;
 }
 
+/* Race picker — workout-style selection */
+.race-picker-sheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.race-picker-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.85rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.race-picker-card:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.race-picker-card--compact {
+  min-height: 3rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.race-picker-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.race-picker-card__subtitle {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 0.15rem;
+}
+
+.race-picker-sheet__recent {
+  margin-top: 1.25rem;
+}
+
+.race-picker-sheet__recent-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cui-secondary-color, #6c757d);
+  margin: 0 0 0.5rem;
+}
+
+.live-race-stage__status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.85);
+  text-transform: uppercase;
+}
+
+.skating-race-workspace--live .activity-stopwatch__display {
+  font-size: 3.25rem;
+}
+
 @media (max-width: 576px) {
   .activity-runs-sticky-bar {
     position: sticky;

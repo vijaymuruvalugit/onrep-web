@@ -1,6 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { CAlert, CButton } from '@coreui/react'
-import TeamBuilderPrimitive from '../components/primitives/TeamBuilderPrimitive'
 import ProgressionStagePrimitive from '../components/primitives/ProgressionStagePrimitive'
 import { resolveActivityExperience } from '../utils/activityExperience'
 import { useProgressionRun } from '../hooks/useProgressionRun'
@@ -14,11 +13,22 @@ export default function RelayFlow({
   operationalSessionId,
   phaseId,
   runType = 'RELAY_RACE',
+  preset,
+  relayTeams: relayTeamsProp,
+  skipReadySetup = false,
+  autoStart = false,
+  resumeRun: resumeRunRecord = null,
+  initialPatch = null,
+  operationalMode = false,
+  hideFinishEarly = false,
   onRunComplete,
+  onLiveUpdate,
 }) {
-  const [teams, setTeams] = useState([{ team_id: 'team-1', members: [] }])
-  const [activeTeamId, setActiveTeamId] = useState('team-1')
+  const [teams, setTeams] = useState(relayTeamsProp || [{ team_id: 'team-1', members: [] }])
+  const [activeTeamId, setActiveTeamId] = useState(teams[0]?.team_id || 'team-1')
   const stopwatchRef = useRef(null)
+  const startedRef = useRef(false)
+  const resumedRef = useRef(false)
 
   const progression = useProgressionRun({
     operationalSessionId,
@@ -38,20 +48,47 @@ export default function RelayFlow({
     [definition, progression.currentProgressIndex, progression.targetCount],
   )
 
+  const timerStartedAt =
+    progression.payload?.race_meta?.timerStartedAt ?? initialPatch?.race_meta?.timerStartedAt
+
+  useEffect(() => {
+    if (relayTeamsProp?.length) setTeams(relayTeamsProp)
+  }, [relayTeamsProp])
+
+  useEffect(() => {
+    if (resumeRunRecord && !resumedRef.current) {
+      resumedRef.current = true
+      progression.resumeRun(resumeRunRecord)
+      const anchor = resumeRunRecord.runPayload?.race_meta?.timerStartedAt
+      if (anchor) requestAnimationFrame(() => stopwatchRef.current?.restoreTimer?.(anchor))
+    }
+  }, [resumeRunRecord, progression])
+
+  useEffect(() => {
+    if (!autoStart || !skipReadySetup || startedRef.current || resumeRunRecord) return
+    startedRef.current = true
+    void (async () => {
+      const patch = initialPatch || {
+        teams: teams.map((t) => ({
+          team_id: t.team_id,
+          members: t.members || [],
+          progress_events: [],
+        })),
+      }
+      await progression.startRun(patch)
+      const anchor = progression.payload?.race_meta?.timerStartedAt
+      if (anchor) stopwatchRef.current?.restoreTimer?.(anchor)
+      else stopwatchRef.current?.start()
+    })()
+  }, [autoStart, skipReadySetup, resumeRunRecord, initialPatch, teams, progression])
+
+  useEffect(() => {
+    onLiveUpdate?.({ runId: progression.runId })
+  }, [progression.runId, onLiveUpdate])
+
   const teamEvents =
     progression.payload?.teams?.find((t) => String(t.team_id) === String(activeTeamId))
       ?.progress_events || []
-
-  const handleStart = async () => {
-    await progression.startRun({
-      teams: teams.map((t) => ({
-        team_id: t.team_id,
-        members: t.members || [],
-        progress_events: [],
-      })),
-    })
-    stopwatchRef.current?.start()
-  }
 
   const handleCapture = () => {
     const timing = stopwatchRef.current?.captureProgressEvent()
@@ -68,46 +105,27 @@ export default function RelayFlow({
         return { ...t, ...(saved || {}), members: t.members }
       }),
     })
-    if (run) {
-      await onRunComplete?.()
-      progression.resetAll()
-      setTeams([{ team_id: 'team-1', members: [] }])
-    }
+    if (run) await onRunComplete?.()
   }
 
-  if (progression.isReady) {
+  if (skipReadySetup && progression.isReview) {
     return (
       <div className="relay-flow">
-        <TeamBuilderPrimitive
-          athletes={athletes}
-          disabled={disabled}
-          onTeamsChange={(next) => {
-            setTeams(next)
-            if (next[0]?.team_id) setActiveTeamId(next[0].team_id)
-          }}
-        />
-        <ProgressionStagePrimitive
-          experience={experience}
-          state={RUN_STATES.READY}
-          targetCount={progression.targetCount}
-          disabled={disabled}
-          onTargetChange={progression.setTargetProgressCount}
-        />
         <CButton
           type="button"
           color="primary"
           size="lg"
-          className="w-100 mt-3"
+          className="w-100 fw-bold"
           disabled={disabled || progression.saving}
-          onClick={() => void handleStart()}
+          onClick={() => void handleFinish()}
         >
-          {experience.startActionLabel} →
+          Save race
         </CButton>
       </div>
     )
   }
 
-  if (progression.isActive) {
+  if (skipReadySetup && (progression.isActive || progression.resumed)) {
     return (
       <div className="relay-flow">
         <div className="d-flex gap-2 mb-2 flex-wrap">
@@ -119,7 +137,7 @@ export default function RelayFlow({
               color={activeTeamId === t.team_id ? 'warning' : 'light'}
               onClick={() => setActiveTeamId(t.team_id)}
             >
-              {t.team_id}
+              Team {t.team_id.replace('team-', '')}
             </CButton>
           ))}
         </div>
@@ -135,29 +153,15 @@ export default function RelayFlow({
           stopwatchRef={stopwatchRef}
           onCapture={handleCapture}
           onFinishProgress={progression.finishProgress}
+          hideFinishEarly={hideFinishEarly}
+          operationalMode={operationalMode}
+          timerStartedAt={timerStartedAt}
         />
         {progression.error ? (
           <CAlert color="danger" className="small py-2 mt-2">
             {progression.error}
           </CAlert>
         ) : null}
-      </div>
-    )
-  }
-
-  if (progression.isReview) {
-    return (
-      <div className="relay-flow">
-        <CButton
-          type="button"
-          color="primary"
-          size="lg"
-          className="w-100"
-          disabled={disabled || progression.saving}
-          onClick={() => void handleFinish()}
-        >
-          {experience.completeActionLabel}
-        </CButton>
       </div>
     )
   }

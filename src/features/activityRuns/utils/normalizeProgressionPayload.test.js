@@ -33,5 +33,6 @@ describe('activityExperience', () => {
       target: 5,
     })
     expect(exp.captureProgressLabel).toBe('Capture Lap')
+    expect(exp.startActionLabel).toBe('Start Race')
   })
 })

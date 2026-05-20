@@ -4,7 +4,7 @@ import PhaseModeStrip from './PhaseModeStrip'
 import AthleteCardStrip from './AthleteCardStrip'
 import ActiveAthleteWorkspace from './ActiveAthleteWorkspace'
 import RaceTimingWorkspace from './RaceTimingWorkspace'
-import { ActivityRunWorkspace } from '../../activityRuns'
+import SkatingRaceWorkspace from './SkatingRaceWorkspace'
 import CaptureModeToggle from './phaseCapture/CaptureModeToggle'
 import AthleteSessionPanel from './sessionWorkspace/AthleteSessionPanel'
 import { getLiveUiProfile, liveLabel } from '../constants/coachLiveLabels'
@@ -164,16 +164,14 @@ function CoachLiveSessionView({
         {isRaceMode && uiProfile.showRaceTiming ? (
           <div className="coach-live-race-zone">
             {activityRunSectionProps?.enabled ? (
-              <ActivityRunWorkspace
+              <SkatingRaceWorkspace
                 operationalSessionId={activityRunSectionProps.operationalSessionId}
                 phaseId={activityRunSectionProps.phaseId}
                 athletes={activityRunSectionProps.athletes || rosterForSession}
-                activitySlug={activityRunSectionProps.activitySlug || 'skating'}
                 heatNumber={activityRunSectionProps.heatNumber}
                 phaseTitle={activeBlockTitle}
                 disabled={uiPaused || opsState === 'ended'}
                 busy={activityRunSectionProps.busy}
-                leaderboard={syncDomains?.leaderboard}
                 onRefresh={activityRunSectionProps.onRefresh}
               />
             ) : (

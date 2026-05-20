@@ -1,3 +1,5 @@
 export { default as ActivityRunWorkspace } from './pages/ActivityRunWorkspace'
+export { default as LiveRaceStage } from './components/LiveRaceStage'
+export { default as RacePickerSheet } from './components/RacePickerSheet'
 export { getActivityRunDefinition, ACTIVITY_RUN_TYPES } from './activityRunDefinitions'
 export { default as sessionRunsApi } from './api/sessionRunsApi'
