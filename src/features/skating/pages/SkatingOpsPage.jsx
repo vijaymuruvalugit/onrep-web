@@ -1103,11 +1103,16 @@ const SkatingOpsPage = () => {
       if (!phaseId) return
       setPhaseLifecycleBusy(true)
       try {
+        const orderedPhases = [...(phaseCaptureState.phases || [])].sort(
+          (a, b) => Number(a.sequenceNo ?? 0) - Number(b.sequenceNo ?? 0),
+        )
+        const currentIndex = orderedPhases.findIndex((p) => String(p.id) === String(phaseId))
         const result = await phaseCaptureApi.completePhase(phaseId, { autoAdvance: true })
         if (result?.phase) phaseCaptureState.updatePhaseInList(result.phase)
-        if (result?.nextPhase?.id) {
-          shellWriteActiveBlockId(selectedSessionId, result.nextPhase.id)
-          shellSelectBlock(result.nextPhase.id)
+        const nextPhaseId = result?.nextPhase?.id || orderedPhases[currentIndex + 1]?.id
+        if (nextPhaseId) {
+          shellWriteActiveBlockId(selectedSessionId, nextPhaseId)
+          shellSelectBlock(nextPhaseId)
         }
         await phaseCaptureState.reload()
       } finally {
@@ -1122,11 +1127,16 @@ const SkatingOpsPage = () => {
       if (!phaseId) return
       setPhaseLifecycleBusy(true)
       try {
+        const orderedPhases = [...(phaseCaptureState.phases || [])].sort(
+          (a, b) => Number(a.sequenceNo ?? 0) - Number(b.sequenceNo ?? 0),
+        )
+        const currentIndex = orderedPhases.findIndex((p) => String(p.id) === String(phaseId))
         const result = await phaseCaptureApi.skipPhase(phaseId)
         if (result?.phase) phaseCaptureState.updatePhaseInList(result.phase)
-        if (result?.nextPhase?.id) {
-          shellWriteActiveBlockId(selectedSessionId, result.nextPhase.id)
-          shellSelectBlock(result.nextPhase.id)
+        const nextPhaseId = result?.nextPhase?.id || orderedPhases[currentIndex + 1]?.id
+        if (nextPhaseId) {
+          shellWriteActiveBlockId(selectedSessionId, nextPhaseId)
+          shellSelectBlock(nextPhaseId)
         }
         await phaseCaptureState.reload()
       } finally {
