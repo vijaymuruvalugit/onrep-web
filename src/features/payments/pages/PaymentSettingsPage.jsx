@@ -22,6 +22,17 @@ function defaultGenerateMonth() {
   return monthStr(new Date())
 }
 
+function normalizePaymentModule(raw) {
+  return String(raw || 'MANUAL').toUpperCase() === 'AUTOMATED' ? 'AUTOMATED' : 'MANUAL'
+}
+
+function readinessFromApi(data) {
+  return {
+    checkout_ready_ok: data.checkout_ready_ok,
+    checkout_ready_reasons: data.checkout_ready_reasons,
+  }
+}
+
 function ReadinessPanel({ readiness }) {
   if (!readiness) return null
   const ok = readiness.checkout_ready_ok === true
@@ -190,35 +201,47 @@ export default function PaymentSettingsPage() {
   const [generating, setGenerating] = useState(false)
   const [generateResult, setGenerateResult] = useState(null)
 
+  /** Keeps `accepts_online_payments` aligned with How parents pay (payment_module). */
+  const syncAcceptsOnlinePayments = useCallback(async (module) => {
+    const out = await paymentSettingsApi.updateSettings({
+      accepts_online_payments: module === 'AUTOMATED',
+    })
+    if (out?.readiness) {
+      setReadiness(out.readiness)
+      return
+    }
+    const r = await paymentSettingsApi.refreshReadiness()
+    if (r) setReadiness(r)
+  }, [])
+
   useEffect(() => {
     let cancelled = false
-    paymentSettingsApi
-      .getSettings()
-      .then((data) => {
+    const load = async () => {
+      try {
+        const data = await paymentSettingsApi.getSettings()
         if (cancelled || !data) return
+        const module = normalizePaymentModule(data.payment_module)
         setForm({
           default_fee_due_day: Number(data.default_fee_due_day || 31),
         })
-        setPaymentModule(
-          String(data.payment_module || 'MANUAL').toUpperCase() === 'AUTOMATED'
-            ? 'AUTOMATED'
-            : 'MANUAL',
-        )
-        setReadiness({
-          checkout_ready_ok: data.checkout_ready_ok,
-          checkout_ready_reasons: data.checkout_ready_reasons,
-        })
-      })
-      .catch((e) => {
+        setPaymentModule(module)
+        setReadiness(readinessFromApi(data))
+        const acceptsOnline = data.accepts_online_payments !== false
+        const wantsOnline = module === 'AUTOMATED'
+        if (wantsOnline !== acceptsOnline) {
+          await syncAcceptsOnlinePayments(module)
+        }
+      } catch (e) {
         if (!cancelled) setError(e?.message || 'Failed to load settings')
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    }
+    void load()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [syncAcceptsOnlinePayments])
 
   const handleSave = async () => {
     setSaving(true)
@@ -265,15 +288,19 @@ export default function PaymentSettingsPage() {
     }
   }
 
-  const handlePaymentModuleChange = useCallback((nextModule) => {
-    setPaymentModule(nextModule === 'AUTOMATED' ? 'AUTOMATED' : 'MANUAL')
-    paymentSettingsApi
-      .refreshReadiness()
-      .then((r) => {
-        if (r) setReadiness(r)
-      })
-      .catch(() => {})
-  }, [])
+  const handlePaymentModuleChange = useCallback(
+    async (nextModule) => {
+      const module = normalizePaymentModule(nextModule)
+      setPaymentModule(module)
+      setError(null)
+      try {
+        await syncAcceptsOnlinePayments(module)
+      } catch (e) {
+        setError(e?.message || 'Failed to update online payment settings')
+      }
+    },
+    [syncAcceptsOnlinePayments],
+  )
 
   if (loading) return <CSpinner />
 
