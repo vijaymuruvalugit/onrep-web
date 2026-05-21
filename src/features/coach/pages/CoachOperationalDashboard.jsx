@@ -11,13 +11,11 @@ import { formatLocalYmd } from '../../dashboard/utils/calendarDate'
 import DashboardStatCard from '../../dashboard/components/DashboardStatCard'
 
 const quickLinks = [
-  { to: '/coach/batches', label: 'Batches' },
+  { to: '/coach/skating', label: 'Live sessions' },
   { to: '/coach/schedule', label: 'Schedule' },
-  { to: '/coach/classes/upcoming', label: 'Upcoming classes' },
-  { to: '/coach/skating', label: 'Skating ops' },
   { to: '/coach/students', label: 'Students' },
-  { to: '/coach/parents', label: 'Parents' },
   { to: '/coach/attendance', label: 'Attendance' },
+  { to: '/coach/payments', label: 'Payments' },
 ]
 
 /**

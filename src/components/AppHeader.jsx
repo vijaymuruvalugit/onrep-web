@@ -36,6 +36,7 @@ import { setSidebarShow, setTheme } from '../features/ui/uiSlice'
 import { useOnrepColorModes, ONREP_COLOR_MODE_STORAGE_KEY } from '../hooks/useOnrepColorModes'
 import ActivityWorkspaceSwitcher from '../features/workspace/components/ActivityWorkspaceSwitcher'
 import { useCoachLikeRole } from '../features/workspace/hooks/useCoachLikeRole'
+import PerspectiveSwitcher from '../features/auth/components/PerspectiveSwitcher'
 
 const AppHeader = () => {
   const headerRef = useRef()
@@ -74,8 +75,8 @@ const AppHeader = () => {
               Home
             </CNavLink>
           </CNavItem>
-          <CNavItem className="ms-2 text-body-secondary small d-flex align-items-center">
-            Role: {activeRole}
+          <CNavItem className="ms-2 d-flex align-items-center">
+            <PerspectiveSwitcher />
           </CNavItem>
           {coachLike ? (
             <CNavItem className="ms-3 d-flex align-items-center">

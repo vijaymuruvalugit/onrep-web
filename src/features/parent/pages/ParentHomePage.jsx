@@ -48,9 +48,9 @@ const ParentHomePage = () => {
     <>
       <CRow className="mb-3 align-items-center">
         <CCol>
-          <h2 className="mb-0">Home</h2>
+          <h2 className="mb-0">Overview</h2>
           <p className="text-body-secondary small mb-0">
-            Participation, schedule, and fee status for your linked athletes.
+            Calm visibility into schedule, attendance, and coaching highlights for your athletes.
           </p>
         </CCol>
         <CCol xs="auto">

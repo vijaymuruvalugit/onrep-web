@@ -16,9 +16,9 @@ import {
 
 /** @type {ReadonlyArray<{ name: string, to: string, icon: string[] | Record<string, unknown> }>} */
 export const COACH_NAV_REGISTRATION = Object.freeze([
-  { name: 'Dashboard', to: '/coach/dashboard', icon: cilSpeedometer },
+  { name: 'Home', to: '/coach/dashboard', icon: cilSpeedometer },
   /** Plain path (no ?session=) — day board overview; open a session from a card. */
-  { name: 'Skating ops', to: { pathname: '/coach/skating', search: '' }, icon: cilMediaPlay },
+  { name: 'Live sessions', to: { pathname: '/coach/skating', search: '' }, icon: cilMediaPlay },
   { name: 'Batches', to: '/coach/batches', icon: cilLayers },
   { name: 'Schedule', to: '/coach/schedule', icon: cilCalendar },
   { name: 'Attendance', to: '/coach/attendance', icon: cilCheckCircle },

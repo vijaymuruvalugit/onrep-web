@@ -11,7 +11,9 @@ import { studentNav } from './studentNav'
 export { VALID_APP_ROLES } from './roles'
 
 export function normalizeAppRole(role) {
-  return String(role || 'coach').toLowerCase()
+  const r = String(role || 'coach').toLowerCase()
+  if (r === 'academy_admin') return 'academy_owner'
+  return r
 }
 
 export function getNavigationForRole(role) {

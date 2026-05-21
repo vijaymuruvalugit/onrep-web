@@ -39,7 +39,9 @@ export const ONREP_ROUTE_DEFS = [
   { path: '/onboarding/setup', name: 'Payment setup', exact: true },
   { path: '/onboarding/complete', name: 'Setup complete', exact: true },
 
-  { path: '/parent/home', name: 'Home', exact: true },
+  { path: '/parent/home', name: 'Overview', exact: true },
+  { path: '/parent/progress', name: 'Progress', exact: true },
+  { path: '/parent/payments', name: 'Payments', exact: true },
   { path: '/parent/schedule', name: 'Schedule', exact: true },
   { path: '/parent/attendance', name: 'Attendance', exact: true },
   { path: '/parent/fees', name: 'Fees', exact: true },
@@ -49,7 +51,8 @@ export const ONREP_ROUTE_DEFS = [
   { path: '/parent/payments/history', name: 'Payment History', exact: true },
   { path: '/parent/profile', name: 'Profile', exact: true },
 
-  { path: '/student/home', name: 'Home', exact: true },
+  { path: '/student/home', name: 'My progress', exact: true },
+  { path: '/student/payments', name: 'Payments', exact: true },
   { path: '/student/schedule', name: 'Schedule', exact: true },
   { path: '/student/attendance', name: 'Attendance', exact: true },
   { path: '/student/progress', name: 'Progress', exact: true },

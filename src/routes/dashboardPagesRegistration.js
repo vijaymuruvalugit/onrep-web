@@ -15,6 +15,7 @@ const ParentFeesPage = React.lazy(() => import('../features/parent/pages/ParentF
 const ParentPaymentHistoryPage = React.lazy(
   () => import('../features/payments/pages/ParentPaymentHistoryPage'),
 )
+const PaymentsHubPage = React.lazy(() => import('../features/payments/pages/PaymentsHubPage'))
 const CoachPaymentsPage = React.lazy(() => import('../features/payments/pages/CoachPaymentsPage'))
 const BillingPage = React.lazy(() => import('../features/payments/pages/BillingPage'))
 const PaywallPage = React.lazy(() => import('../features/payments/pages/PaywallPage'))
@@ -42,6 +43,11 @@ const ParentCompetitionLeaderboardPage = React.lazy(
   () => import('../features/parent/pages/ParentCompetitionLeaderboardPage'),
 )
 const StudentDashboard = React.lazy(() => import('../views/dashboard/onrep/StudentDashboard'))
+const StudentSchedulePage = React.lazy(() => import('../features/student/pages/StudentSchedulePage'))
+const StudentAttendancePage = React.lazy(
+  () => import('../features/student/pages/StudentAttendancePage'),
+)
+const ParentProgressPage = React.lazy(() => import('../features/parent/pages/ParentProgressPage'))
 const StudentsListPage = React.lazy(() => import('../features/students/pages/StudentsListPage'))
 const StudentCreatePage = React.lazy(() => import('../features/students/pages/StudentCreatePage'))
 const StudentImportPage = React.lazy(() => import('../features/students/pages/StudentImportPage'))
@@ -105,7 +111,7 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/coach/places/:placeId/edit', component: PlaceEditPage },
   { path: '/coach/parents', component: ParentsOverviewPage },
   { path: '/coach/activities', component: ManageActivitiesPage },
-  { path: '/coach/payments', component: CoachPaymentsPage },
+  { path: '/coach/payments', component: PaymentsHubPage },
   { path: '/coach/payments/settings', component: PaymentSettingsPage },
   { path: '/coach/payments/payout-details', component: PayoutDetailsPage },
   { path: '/coach/billing', component: BillingPage },
@@ -117,6 +123,8 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/onboarding/setup', component: OnboardingSetupPage },
   { path: '/onboarding/complete', component: OnboardingCompletePage },
   { path: '/parent/home', component: ParentHomePage },
+  { path: '/parent/progress', component: ParentProgressPage },
+  { path: '/parent/payments', component: PaymentsHubPage },
   { path: '/parent/schedule', component: ParentSchedulePage },
   { path: '/parent/attendance', component: ParentAttendancePage },
   { path: '/parent/fees', component: ParentFeesPage },
@@ -129,6 +137,9 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
     component: ParentCompetitionLeaderboardPage,
   },
   { path: '/student/home', component: StudentDashboard },
+  { path: '/student/schedule', component: StudentSchedulePage },
+  { path: '/student/attendance', component: StudentAttendancePage },
+  { path: '/student/payments', component: PaymentsHubPage },
 ])
 
 export const DASHBOARD_PAGES = Object.freeze(
