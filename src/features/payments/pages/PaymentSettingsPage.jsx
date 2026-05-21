@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   CAlert,
   CButton,
@@ -14,7 +15,6 @@ import {
 import { paymentSettingsApi } from '../api/paymentSettingsApi'
 import paymentsApi from '../api/paymentsApi'
 import FeeCollectionModeCard from '../components/coach/FeeCollectionModeCard'
-import PayoutDetailsCard from '../components/coach/PayoutDetailsCard'
 import { copyForReason } from '../constants/checkoutReadiness'
 import { monthStr } from '../utils/formatDueShort'
 
@@ -28,6 +28,9 @@ function ReadinessPanel({ readiness }) {
   const reasons = Array.isArray(readiness.checkout_ready_reasons)
     ? readiness.checkout_ready_reasons
     : []
+  const visibleReasons = reasons.filter(
+    (code) => !(code === 'PAYMENTS_DISABLED' && reasons.length > 1),
+  )
   return (
     <CCard className="mb-4">
       <CCardHeader>
@@ -43,8 +46,8 @@ function ReadinessPanel({ readiness }) {
               Complete these items before parents can use online checkout.
             </p>
             <ul className="mb-0">
-              {reasons.length === 0 ? <li>Online checkout is turned off.</li> : null}
-              {reasons.map((code) => {
+              {visibleReasons.length === 0 ? <li>Online checkout is turned off.</li> : null}
+              {visibleReasons.map((code) => {
                 const copy = copyForReason(code)
                 return (
                   <li key={code} className="mb-2">
@@ -61,7 +64,7 @@ function ReadinessPanel({ readiness }) {
   )
 }
 
-function AcademyUpiCard() {
+function AcademyUpiCard({ paymentModule = 'MANUAL', onSaved }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [upiVpa, setUpiVpa] = useState('')
@@ -102,6 +105,7 @@ function AcademyUpiCard() {
       setUpiVpa(saved)
       setDraft(saved)
       setMessage({ color: 'success', text: 'UPI ID saved.' })
+      if (onSaved) await onSaved()
     } catch (e) {
       setMessage({ color: 'danger', text: e?.message || 'Unable to save UPI ID.' })
     } finally {
@@ -112,12 +116,15 @@ function AcademyUpiCard() {
   return (
     <CCard className="mb-4">
       <CCardHeader>
-        <strong>Offline payment UPI ID</strong>
+        <strong>
+          {paymentModule === 'AUTOMATED' ? 'UPI payout details' : 'Manual payment UPI ID'}
+        </strong>
       </CCardHeader>
       <CCardBody>
         <p className="text-body-secondary small">
-          Parents use this UPI ID when they pay outside online checkout and report the payment in
-          OnRep. This is the same manual-payment UPI ID collected during signup.
+          {paymentModule === 'AUTOMATED'
+            ? 'OnRep can use this UPI ID as the payout destination for online fee collections. Bank details are optional if this UPI ID is correct.'
+            : 'Parents use this UPI ID when they pay outside online checkout and report the payment in OnRep. This is the same UPI ID collected during signup.'}
         </p>
         {loading ? (
           <CSpinner size="sm" />
@@ -151,6 +158,19 @@ function AcademyUpiCard() {
           <CAlert color={message.color} className="mt-3 mb-0 py-2">
             {message.text}
           </CAlert>
+        ) : null}
+        {paymentModule === 'AUTOMATED' ? (
+          <div className="mt-3">
+            <CButton
+              color="secondary"
+              variant="outline"
+              size="sm"
+              as={Link}
+              to="/coach/payments/payout-details"
+            >
+              Use bank account instead
+            </CButton>
+          </div>
         ) : null}
       </CCardBody>
     </CCard>
@@ -268,11 +288,11 @@ export default function PaymentSettingsPage() {
       />
       {paymentModule === 'AUTOMATED' ? (
         <>
-          <PayoutDetailsCard onSaved={handleRefreshReadiness} />
+          <AcademyUpiCard paymentModule={paymentModule} onSaved={handleRefreshReadiness} />
           <ReadinessPanel readiness={readiness} />
         </>
       ) : (
-        <AcademyUpiCard />
+        <AcademyUpiCard paymentModule={paymentModule} />
       )}
 
       <CCard className="mb-4">

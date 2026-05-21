@@ -6,8 +6,8 @@ export default function PayoutDetailsPage() {
     <div className="p-4" style={{ maxWidth: 720 }}>
       <h2 className="mb-2">Payout details</h2>
       <p className="text-body-secondary small mb-3">
-        Choose how OnRep should pay out your academy. These same details also appear in Payment
-        settings.
+        Choose a bank account payout destination. If your academy UPI ID is already correct, you can
+        use that from Payment settings instead.
       </p>
       <PayoutDetailsCard />
     </div>
