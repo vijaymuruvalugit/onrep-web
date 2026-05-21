@@ -1,5 +1,7 @@
 import { getDefaultRouteForRole } from '../../../navigation'
 
+export { getDefaultRouteForRole }
+
 /** Maps API membership_role to app nav role. */
 export function membershipToNavRole(membershipRole) {
   const m = String(membershipRole || '').toLowerCase()
