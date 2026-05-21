@@ -14,6 +14,7 @@ import {
 import { paymentSettingsApi } from '../api/paymentSettingsApi'
 import paymentsApi from '../api/paymentsApi'
 import FeeCollectionModeCard from '../components/coach/FeeCollectionModeCard'
+import PayoutDetailsCard from '../components/coach/PayoutDetailsCard'
 import { copyForReason } from '../constants/checkoutReadiness'
 import { monthStr } from '../utils/formatDueShort'
 
@@ -111,12 +112,12 @@ function AcademyUpiCard() {
   return (
     <CCard className="mb-4">
       <CCardHeader>
-        <strong>Academy UPI ID</strong>
+        <strong>Offline payment UPI ID</strong>
       </CCardHeader>
       <CCardBody>
         <p className="text-body-secondary small">
           Parents use this UPI ID when they pay outside online checkout and report the payment in
-          OnRep. This is the same UPI ID collected during signup.
+          OnRep. This is the same manual-payment UPI ID collected during signup.
         </p>
         {loading ? (
           <CSpinner size="sm" />
@@ -247,6 +248,7 @@ export default function PaymentSettingsPage() {
 
       <FeeCollectionModeCard />
       <AcademyUpiCard />
+      <PayoutDetailsCard onSaved={handleRefreshReadiness} />
       <ReadinessPanel readiness={readiness} />
 
       <CCard className="mb-4">

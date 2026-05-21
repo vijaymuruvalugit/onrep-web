@@ -172,16 +172,16 @@ function OnboardingSetupContent() {
                   <div className="fw-semibold mb-1">Next: add your payout details</div>
                   <div className="small mb-2">
                     OnRep collects fees from parents on your behalf. Add your bank account or UPI ID
-                    so we can settle collected fees to your academy.
+                    in Payment settings so we can settle collected fees to your academy.
                   </div>
                   <CButton
                     color="primary"
                     variant="outline"
                     size="sm"
                     as={Link}
-                    to="/coach/payments/payout-details"
+                    to="/coach/payments/settings"
                   >
-                    Add bank / UPI details
+                    Open Payment settings
                   </CButton>
                 </CAlert>
               ) : null}
@@ -260,8 +260,8 @@ function OnboardingSetupContent() {
                     account.
                   </p>
                   <p className="small text-body-secondary mb-3">
-                    After enabling, add your <strong>bank account or UPI ID</strong> so we can
-                    transfer collected fees to your academy.
+                    After enabling, add your <strong>bank account or UPI ID</strong> in Payment
+                    settings so we can transfer collected fees to your academy.
                   </p>
                   <CButton color="primary" onClick={() => void onAutomatedSetup()} disabled={busy}>
                     {busy ? <CSpinner size="sm" /> : null}
