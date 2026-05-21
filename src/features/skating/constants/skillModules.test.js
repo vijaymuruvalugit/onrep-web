@@ -16,7 +16,7 @@ describe('skillModules', () => {
     expect(getCoachGroupLabel(edge)).toBe('Coach Assessments')
     const flying = getSkillModule('FLYING_LAP')
     expect(isOperationalModule(flying)).toBe(true)
-    expect(getCoachGroupLabel(flying)).toBe('Skill Drills')
+    expect(getCoachGroupLabel(flying)).toBe('Drills')
   })
 
   it('maps lap presets to per-participant endurance', () => {

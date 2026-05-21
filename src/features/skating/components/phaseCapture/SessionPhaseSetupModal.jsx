@@ -69,7 +69,7 @@ export default function SessionPhaseSetupModal({
       <CModalHeader>Configure phases</CModalHeader>
       <CModalBody>
         <p className="small text-body-secondary">
-          Each phase tracks what matters for that part of practice. Add skills, metrics, or
+          Each phase tracks what matters for that part of practice. Add tools, metrics, or
           observations — not more than a few on athlete cards.
         </p>
         {error ? <CAlert color="warning">{error}</CAlert> : null}

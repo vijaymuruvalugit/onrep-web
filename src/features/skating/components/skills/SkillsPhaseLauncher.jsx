@@ -20,7 +20,7 @@ export default function SkillsPhaseLauncher({
   busy = false,
   title = 'Skills',
   hint = 'Tap a tool to coach. Add or remove anytime.',
-  emptyMessage = 'No skills on this phase yet. Add Coach Assessments or Skill Drills.',
+  emptyMessage = 'No tools on this phase yet. Add Coach Assessments or Drills.',
   filterModule = null,
   onSelectModule,
   onSkillsChange,
@@ -79,9 +79,7 @@ export default function SkillsPhaseLauncher({
       <div className="skills-phase-launcher__header">
         <div>
           <h2 className="skills-phase-launcher__title">{title}</h2>
-          <p className="skills-phase-launcher__hint small text-body-secondary mb-0">
-            {hint}
-          </p>
+          <p className="skills-phase-launcher__hint small text-body-secondary mb-0">{hint}</p>
         </div>
         <CButton
           color="secondary"
@@ -90,7 +88,7 @@ export default function SkillsPhaseLauncher({
           disabled={disabled || busy}
           onClick={() => setPickerOpen(true)}
         >
-          + Add Module
+          + Add tool
         </CButton>
       </div>
 

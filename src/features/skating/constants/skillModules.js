@@ -1,7 +1,7 @@
 /**
  * Skill module registry for Skills phase launcher.
  * Internal categories: assessment | operational (engineering only).
- * Coach-facing: Coach Assessments | Skill Drills
+ * Coach-facing: Coach Assessments | Drills
  */
 
 import {
@@ -37,7 +37,7 @@ export const OPERATIONAL_SKILL_MODULES = Object.freeze([
   {
     skillId: 'FLYING_LAP',
     internalCategory: SKILL_MODULE_CATEGORIES.OPERATIONAL,
-    coachGroup: 'Skill Drills',
+    coachGroup: 'Drills',
     runType: 'FLYING_LAP',
     defaultPresetId: 'FLYING_LAP',
     defaultTargetCount: 1,
@@ -48,7 +48,7 @@ export const OPERATIONAL_SKILL_MODULES = Object.freeze([
   {
     skillId: 'LAP_TIMING',
     internalCategory: SKILL_MODULE_CATEGORIES.OPERATIONAL,
-    coachGroup: 'Skill Drills',
+    coachGroup: 'Drills',
     runType: 'ENDURANCE_LAPS',
     defaultPresetId: '5_LAP',
     defaultTargetCount: 5,
@@ -89,8 +89,8 @@ export function getSkillModule(skillId) {
 }
 
 export function getCoachGroupLabel(module) {
-  if (!module) return 'Skill'
-  return module.coachGroup === 'Skill Drills' ? 'Skill Drills' : 'Coach Assessments'
+  if (!module) return 'Tool'
+  return module.coachGroup === 'Drills' ? 'Drills' : 'Coach Assessments'
 }
 
 export function isAssessmentModule(module) {
@@ -130,9 +130,7 @@ export function toLapTimingPreset(preset) {
   if (!preset) return null
   const laps = preset.targetProgressCount ?? 5
   const useEndurance =
-    preset.id === '10_LAP' ||
-    preset.runType === 'ENDURANCE_LAPS' ||
-    preset.id === 'FLYING_LAP'
+    preset.id === '10_LAP' || preset.runType === 'ENDURANCE_LAPS' || preset.id === 'FLYING_LAP'
   return {
     ...preset,
     runType: preset.id === 'FLYING_LAP' ? 'FLYING_LAP' : 'ENDURANCE_LAPS',
@@ -155,10 +153,7 @@ export function resolveModuleFromCatalog(skillId, catalogSkill) {
     ...mod,
     catalogSkillId: catalogSkill?.id,
     displayName:
-      catalogSkill?.displayName ||
-      catalogSkill?.canonicalName ||
-      mod.displayName ||
-      platformCode,
+      catalogSkill?.displayName || catalogSkill?.canonicalName || mod.displayName || platformCode,
   }
 }
 

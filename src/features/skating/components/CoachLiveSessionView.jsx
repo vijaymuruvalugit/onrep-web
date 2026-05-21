@@ -1,11 +1,12 @@
-import React, { memo, useMemo, useState } from 'react'
+import React, { memo, useMemo } from 'react'
 import SessionLiveHeader from './SessionLiveHeader'
 import PhaseModeStrip from './PhaseModeStrip'
 import AthleteCardStrip from './AthleteCardStrip'
 import RaceTimingWorkspace from './RaceTimingWorkspace'
 import SkatingRaceWorkspace from './SkatingRaceWorkspace'
-import PhaseAthleteCaptureList from './phaseCapture/PhaseAthleteCaptureList'
 import SkillsPhaseWorkspace from './SkillsPhaseWorkspace'
+import PhaseInteractionRenderer from './PhaseInteractionRenderer'
+import { resolveInteractionMode } from '../utils/phaseInteractionMode'
 import { getLiveUiProfile, liveLabel, isSkillsPhaseBlock } from '../constants/coachLiveLabels'
 import LiveSessionSyncDot from './LiveSessionSyncDot'
 import {
@@ -58,9 +59,9 @@ function CoachLiveSessionView({
   recentLapsSection,
   sessionHeaderProps,
   phaseCapture,
+  onExerciseToggle,
+  onSessionObservationChange,
 }) {
-  const [expandedAthleteId, setExpandedAthleteId] = useState(null)
-
   const uiProfile = getLiveUiProfile(
     sessionMode,
     isRaceMode,
@@ -75,7 +76,9 @@ function CoachLiveSessionView({
   const isSkillsPhase = isSkillsPhaseBlock(activeBlockMeta)
   const activePhase =
     phaseCapture?.phases?.find((p) => String(p.id) === String(activeBlockId)) || activeBlockMeta
-  const captureItems = activePhase?.captureItems || []
+  const interactionMode = activePhase ? resolveInteractionMode(activePhase) : 'observation'
+  const showAthleteStrip =
+    usePhaseCapture && !isRaceMode && interactionMode === 'observation'
   const reviewOnly =
     activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped'
 
@@ -145,7 +148,7 @@ function CoachLiveSessionView({
           />
         </section>
 
-        {!isRaceMode ? (
+        {showAthleteStrip ? (
           <section
             className="coach-live-nav-section coach-live-nav-section--students"
             aria-labelledby="coach-live-students-heading"
@@ -199,47 +202,38 @@ function CoachLiveSessionView({
           </div>
         ) : null}
 
-        {usePhaseCapture && isSkillsPhase ? (
-          <SkillsPhaseWorkspace
-            studentId={lapStudentId}
-            athleteName={selectedAthlete?.full_name || selectedAthlete?.fullName}
+        {usePhaseCapture && activePhase ? (
+          <PhaseInteractionRenderer
+            activePhase={activePhase}
+            phaseRoster={phaseRoster}
+            phaseCapture={{
+              ...phaseCapture,
+              onSelectAthlete: handleSelectAthlete,
+            }}
+            lapStudentId={lapStudentId}
             disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
-            busy={phaseCapture.busy}
-            phaseConfigJson={activePhase?.configJson}
-            phaseSkills={phaseCapture.skillsForActivePhase}
-            onSkillsChange={phaseCapture.onUpdatePhaseSkills}
-            operationalSessionId={phaseCapture.operationalSessionId}
-            phaseId={activeBlockId}
-            athletes={rosterForSession}
-            activityRunEngineEnabled={phaseCapture.activityRunEngineEnabled}
+            reviewOnly={reviewOnly}
+            isRaceMode={isRaceMode}
+            skillsWorkspace={
+              isSkillsPhase ? (
+                <SkillsPhaseWorkspace
+                  studentId={lapStudentId}
+                  athleteName={selectedAthlete?.full_name || selectedAthlete?.fullName}
+                  disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
+                  busy={phaseCapture.busy}
+                  phaseConfigJson={activePhase?.configJson}
+                  phaseSkills={phaseCapture.skillsForActivePhase}
+                  onSkillsChange={phaseCapture.onUpdatePhaseSkills}
+                  operationalSessionId={phaseCapture.operationalSessionId}
+                  phaseId={activeBlockId}
+                  athletes={rosterForSession}
+                  activityRunEngineEnabled={phaseCapture.activityRunEngineEnabled}
+                />
+              ) : null
+            }
+            onExerciseToggle={onExerciseToggle}
+            onSessionObservationChange={onSessionObservationChange}
           />
-        ) : null}
-
-        {usePhaseCapture && !isSkillsPhase ? (
-          <section className="coach-live-phase-capture mb-3" aria-label="Phase capture">
-            <PhaseAthleteCaptureList
-              roster={phaseRoster}
-              captureItems={captureItems}
-              entries={phaseCapture.entries}
-              captureMode="full"
-              participationByStudentId={{}}
-              expandedAthleteId={expandedAthleteId}
-              selectedAthleteId={lapStudentId}
-              disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
-              reviewOnly={reviewOnly}
-              onValueChange={phaseCapture.onEntryChange}
-              onSelectAthlete={handleSelectAthlete}
-              onToggleExpand={(id) => {
-                setExpandedAthleteId(id)
-                if (id) handleSelectAthlete(id)
-              }}
-            />
-            {!lapStudentId && phaseRoster.length ? (
-              <p className="small text-body-secondary mb-0 mt-2">
-                Tap a student to expand quick observations.
-              </p>
-            ) : null}
-          </section>
         ) : null}
 
         {showTiming ? (

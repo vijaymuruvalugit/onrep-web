@@ -19,7 +19,7 @@ export default function SkillModulePickerModal({
   onClose,
   selectedSkillIds = [],
   onAdd,
-  title = 'Add skill',
+  title = 'Add tool',
 }) {
   const [catalog, setCatalog] = useState([])
   const [loading, setLoading] = useState(false)
@@ -30,19 +30,19 @@ export default function SkillModulePickerModal({
   useEffect(() => {
     if (!visible) return
     let cancelled = false
-    setLoading(true)
-    setErr('')
-    skatingIntelligenceApi
-      .getSkillCatalog({})
-      .then((data) => {
+    const loadCatalog = async () => {
+      setLoading(true)
+      setErr('')
+      try {
+        const data = await skatingIntelligenceApi.getSkillCatalog({})
         if (!cancelled) setCatalog(data?.skills || data?.catalog || [])
-      })
-      .catch((e) => {
-        if (!cancelled) setErr(e?.response?.data?.error || e?.message || 'Could not load skills')
-      })
-      .finally(() => {
+      } catch (e) {
+        if (!cancelled) setErr(e?.response?.data?.error || e?.message || 'Could not load tools')
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    }
+    void loadCatalog()
     return () => {
       cancelled = true
     }
@@ -104,8 +104,8 @@ export default function SkillModulePickerModal({
             })}
           </div>
         </section>
-        <section className="skill-module-picker__group mt-3" aria-label="Skill Drills">
-          <h3 className="skill-module-picker__heading">Skill Drills</h3>
+        <section className="skill-module-picker__group mt-3" aria-label="Drills">
+          <h3 className="skill-module-picker__heading">Drills</h3>
           <div className="skill-module-picker__list">
             {drillOptions.map((mod) => (
               <button

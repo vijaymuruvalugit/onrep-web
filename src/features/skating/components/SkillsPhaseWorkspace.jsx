@@ -45,14 +45,11 @@ export default function SkillsPhaseWorkspace({
     [skillsList],
   )
 
-  const handleSelectModule = useCallback(
-    (skillId) => {
-      const mod = getSkillModule(skillId)
-      if (!mod) return
-      setActiveModuleId(skillId)
-    },
-    [],
-  )
+  const handleSelectModule = useCallback((skillId) => {
+    const mod = getSkillModule(skillId)
+    if (!mod) return
+    setActiveModuleId(skillId)
+  }, [])
 
   const handleBack = useCallback(() => {
     setActiveModuleId(null)
@@ -90,9 +87,9 @@ export default function SkillsPhaseWorkspace({
         <section className="skills-phase-section skills-phase-section--drills">
           <SkillsPhaseLauncher
             phaseConfigJson={{ skills: skillsList }}
-            title="Skill Drills"
-            hint="Tap a drill to open timing. Add or remove skills anytime."
-            emptyMessage="No Skill Drills configured yet. Add Flying Lap or Lap Timing."
+            title="Drills"
+            hint="Tap a drill to open timing. Add or remove tools anytime."
+            emptyMessage="No drills configured yet. Add Flying Lap or Lap Timing."
             filterModule={isOperationalModule}
             disabled={disabled}
             busy={busy}
@@ -129,8 +126,8 @@ export default function SkillsPhaseWorkspace({
             ← Back to Skills
           </button>
           <CAlert color="warning" className="small">
-            Skill drills require the activity run engine. Set{' '}
-            <code>VITE_ACTIVITY_RUN_ENGINE=true</code> and reload.
+            Drills require the activity run engine. Set <code>VITE_ACTIVITY_RUN_ENGINE=true</code>{' '}
+            and reload.
           </CAlert>
         </div>
       )
@@ -172,7 +169,7 @@ export default function SkillsPhaseWorkspace({
       <button type="button" className="btn btn-link btn-sm px-0 mb-2" onClick={handleBack}>
         ← Back to Skills
       </button>
-      <p className="small text-body-secondary">Unknown skill module.</p>
+      <p className="small text-body-secondary">Unknown tool.</p>
     </div>
   )
 }

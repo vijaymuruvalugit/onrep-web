@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { CButton, CModal, CModalBody, CModalFooter, CModalHeader } from '@coreui/react'
-import { listModulesByPickerGroup } from '../moduleRegistry.js'
+import { listModulesByPickerGroup, MODULE_PICKER_GROUPS } from '../moduleRegistry.js'
 
 /**
  * Coach-facing module picker for strong operational capabilities only.
@@ -10,7 +10,7 @@ export default function ModulePickerSheet({
   onClose,
   selectedModuleIds = [],
   onAdd,
-  title = 'Add module',
+  title = 'Add tool',
 }) {
   const selectedSet = useMemo(() => new Set(selectedModuleIds.map(String)), [selectedModuleIds])
   const { drills, assessments } = useMemo(() => listModulesByPickerGroup(), [])
@@ -43,8 +43,8 @@ export default function ModulePickerSheet({
     <CModal visible={visible} onClose={onClose} alignment="center">
       <CModalHeader>{title}</CModalHeader>
       <CModalBody className="skill-module-picker">
-        {renderGroup('Operational Drills', drills)}
-        {renderGroup('Coach Assessments', assessments)}
+        {renderGroup(MODULE_PICKER_GROUPS.OPERATIONAL_DRILLS, drills)}
+        {renderGroup(MODULE_PICKER_GROUPS.COACH_ASSESSMENTS, assessments)}
       </CModalBody>
       <CModalFooter>
         <CButton color="secondary" onClick={onClose}>

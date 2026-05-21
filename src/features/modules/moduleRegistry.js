@@ -4,7 +4,7 @@
  */
 
 export const MODULE_PICKER_GROUPS = Object.freeze({
-  OPERATIONAL_DRILLS: 'Operational Drills',
+  OPERATIONAL_DRILLS: 'Drills',
   COACH_ASSESSMENTS: 'Coach Assessments',
 })
 
@@ -113,7 +113,7 @@ export function listModulesByPickerGroup() {
 
 export function getModuleDisplayName(moduleId, catalogByCode = {}) {
   const mod = getModule(moduleId)
-  if (!mod) return String(moduleId || 'Module')
+  if (!mod) return String(moduleId || 'Tool')
   const code = mod.platformCode || mod.platformSkillId
   if (code && catalogByCode[code]?.name) return catalogByCode[code].name
   return mod.displayName || mod.title
@@ -129,6 +129,6 @@ export function isOperationalModule(module) {
 }
 
 export function getCoachGroupLabel(module) {
-  if (!module) return 'Module'
+  if (!module) return 'Tool'
   return module.picker_group || MODULE_PICKER_GROUPS.OPERATIONAL_DRILLS
 }

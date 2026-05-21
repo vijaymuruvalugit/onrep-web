@@ -50,7 +50,7 @@ function FinishAssignmentEditor({
   const assignedIds = rows.map((row) => row.studentId).filter(Boolean)
   const uniqueAssignedIds = new Set(assignedIds)
   const hasDuplicateStudents = assignedIds.length !== uniqueAssignedIds.size
-  const canSave = rows.length > 0 && assignedIds.length === rows.length && !hasDuplicateStudents
+  const canSave = rows.length > 0 && !hasDuplicateStudents
 
   const usedByOtherRows = (studentId, markId) =>
     rows.some((row) => row.markId !== markId && row.studentId === String(studentId))
@@ -58,7 +58,8 @@ function FinishAssignmentEditor({
   return (
     <div className="finish-assignment-editor">
       <p className="small text-body-secondary mb-2">
-        Assign each recorded place to a student. Edit a time if a tap was late or early.
+        Assign students only if you want named results. You can save the race with the recorded
+        finish times as-is.
       </p>
       <div className="finish-assignment-editor__list">
         {rows.map((row) => (
@@ -298,37 +299,59 @@ export default function HeatFlow({
     setClockStopped(false)
   }
 
-  const buildResultsFromAssignments = (assignments) =>
-    assignments.map((assignment) => ({
-      student_id: assignment.studentId,
-      finish_order: assignment.finishOrder,
-      time_ms: assignment.timeMs,
-      progress_events: [
-        {
-          sequence: 1,
-          captured_at: assignment.capturedAt || new Date().toISOString(),
-          metrics: {
-            split_time_ms: assignment.timeMs,
-            cumulative_time_ms: assignment.timeMs,
+  const buildResultsFromAssignments = (assignments) => {
+    const assignmentsByStudentId = new Map(
+      assignments
+        .filter((assignment) => assignment.studentId)
+        .map((assignment) => [String(assignment.studentId), assignment]),
+    )
+
+    return selectedIds.map((sid) => {
+      const assignment = assignmentsByStudentId.get(String(sid))
+      if (!assignment) {
+        return {
+          student_id: String(sid),
+          progress_events: [],
+          ...participationMeta(),
+        }
+      }
+
+      return {
+        student_id: String(sid),
+        finish_order: assignment.finishOrder,
+        time_ms: assignment.timeMs,
+        progress_events: [
+          {
+            sequence: 1,
+            captured_at: assignment.capturedAt || new Date().toISOString(),
+            metrics: {
+              split_time_ms: assignment.timeMs,
+              cumulative_time_ms: assignment.timeMs,
+            },
           },
-        },
-      ],
-      ...participationMeta(),
-    }))
+        ],
+        ...participationMeta(),
+      }
+    })
+  }
 
   const handleFinishAssignments = async (assignments) => {
     const results = buildResultsFromAssignments(assignments)
     const finishMarks = assignments.map((assignment) => ({
       id: assignment.markId,
       finish_order: assignment.finishOrder,
-      student_id: assignment.studentId,
+      ...(assignment.studentId ? { student_id: assignment.studentId } : {}),
       time_ms: assignment.timeMs,
       captured_at: assignment.capturedAt,
     }))
     const run = await progression.finalizeRun({
       results,
       heat_number: heatNumber,
-      race_meta: { finish_marks: finishMarks },
+      race_meta: {
+        currentFinishes: finishMarks.length,
+        finish_marks: finishMarks,
+        endedAt: new Date().toISOString(),
+      },
     })
     if (run) {
       await onRunComplete?.()
@@ -354,7 +377,8 @@ export default function HeatFlow({
   }, [finishMarks.length])
   const recordedCount = finishMarks.length
   const canRecordMoreFinishes = selectedIds.length < 1 || recordedCount < selectedIds.length
-  const canReviewFinishes = recordedCount > 0 && clockStopped
+  const allFinishTimesRecorded = selectedIds.length > 0 && recordedCount >= selectedIds.length
+  const canSaveRace = clockStopped || allFinishTimesRecorded
 
   if (progression.isCompleted && !skipReadySetup) {
     return (
@@ -370,10 +394,8 @@ export default function HeatFlow({
   if (progression.isReview) {
     return (
       <div className="heat-flow">
-        <p className="fw-semibold mb-2 text-white">
-          {skipReadySetup ? 'Assign finishers' : 'Confirm finishers'}
-        </p>
-        {definition.capabilities.ranking ? (
+        <p className="fw-semibold mb-2 text-white">Review finish times</p>
+        {definition.capabilities.ranking && finishMarks.length > 0 ? (
           <FinishAssignmentEditor
             athletes={selectedAthletes}
             marks={finishMarks}
@@ -422,7 +444,7 @@ export default function HeatFlow({
               ? 'Race reset. Press Start to restart with these students.'
               : waitingToStart
                 ? 'Select students, then press Start when the race begins.'
-                : 'Tap Record as each student finishes. Stop the clock after the final finisher.'}
+                : 'Tap Record as each student finishes. Save when the clock is stopped or every time is recorded.'}
           </p>
           {waitingToStart ? (
             <div className="race-finish-capture__selection mb-3">
@@ -457,7 +479,7 @@ export default function HeatFlow({
             <p className="small text-body-secondary text-center mb-0">
               Select at least 2 students to enable Start.
             </p>
-          ) : !canReviewFinishes ? (
+          ) : !canSaveRace ? (
             <>
               <CButton
                 type="button"
@@ -479,9 +501,23 @@ export default function HeatFlow({
               <FinishMarksList marks={finishMarks} />
               {recordedCount > 0 && !clockStopped ? (
                 <p className="small text-body-secondary text-center mt-2 mb-0">
-                  Press Stop to assign students and save results.
+                  Press Stop when you are ready to save this race.
                 </p>
               ) : null}
+            </>
+          ) : recordedCount < 1 ? (
+            <>
+              <FinishMarksList marks={finishMarks} />
+              <CButton
+                type="button"
+                color="primary"
+                size="lg"
+                className="w-100 mt-3 fw-bold"
+                disabled={disabled || busy || progression.saving}
+                onClick={() => void handleFinishAssignments([])}
+              >
+                Save race
+              </CButton>
             </>
           ) : (
             <FinishAssignmentEditor

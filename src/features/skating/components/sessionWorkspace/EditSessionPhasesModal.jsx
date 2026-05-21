@@ -15,6 +15,8 @@ import { livePhaseLabel } from '../../constants/coachLiveLabels'
 import { addablePhaseTypeOptions } from '../../utils/sessionPhaseOptions'
 import { getDefaultTechnicalSkillsConfig } from '../../utils/phaseConfigSkills'
 import SessionPhaseSkillsPicker from './SessionPhaseSkillsPicker'
+import SessionPhaseActivitiesEditor from './SessionPhaseActivitiesEditor'
+import { phaseSupportsActivityEditing } from '../../utils/phaseInteractionMode'
 
 export default function EditSessionPhasesModal({
   visible,
@@ -169,6 +171,7 @@ export default function EditSessionPhasesModal({
             const label = livePhaseLabel(phase.blockType, phase.title)
             const isEditing = editingId === id
             const isTechnical = String(phase.blockType || phase.block_type) === 'technical'
+            const showActivities = phaseSupportsActivityEditing(phase)
             return (
               <li key={id} className="list-group-item flex-column align-items-stretch gap-2">
                 <div className="d-flex flex-wrap align-items-center gap-2 w-100">
@@ -248,6 +251,14 @@ export default function EditSessionPhasesModal({
                     phase={phase}
                     disabled={busy}
                     onConfigChange={(configJson) => handleSkillsConfigChange(id, configJson)}
+                  />
+                ) : null}
+                {showActivities && !isEditing ? (
+                  <SessionPhaseActivitiesEditor
+                    operationalSessionId={operationalSessionId}
+                    phase={phase}
+                    disabled={busy}
+                    onUpdated={reload}
                   />
                 ) : null}
               </li>

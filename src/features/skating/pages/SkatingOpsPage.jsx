@@ -1100,6 +1100,67 @@ const SkatingOpsPage = () => {
     [activeBlockId, selectedSessionId, phaseCaptureState, queuePhaseEntry]
   )
 
+  const handleExerciseToggle = useCallback(
+    async (exerciseId, patch) => {
+      if (!selectedSessionId || !activeBlockId) return
+      const phase = phaseCaptureState.phases?.find((p) => String(p.id) === String(activeBlockId))
+      const ex = phase?.exercises?.find((e) => String(e.id) === String(exerciseId))
+      if (!ex) return
+      const configurationJson = {
+        ...(ex.configurationJson || {}),
+        ...patch,
+      }
+      phaseCaptureState.updatePhaseExercisesInList(
+        activeBlockId,
+        (phase?.exercises || []).map((e) =>
+          String(e.id) === String(exerciseId) ? { ...e, configurationJson } : e,
+        ),
+      )
+      try {
+        await phaseCaptureApi.patchPhaseExercise(
+          selectedSessionId,
+          activeBlockId,
+          exerciseId,
+          { configurationJson },
+        )
+      } catch {
+        await phaseCaptureState.reload()
+      }
+    },
+    [selectedSessionId, activeBlockId, phaseCaptureState],
+  )
+
+  const sessionObsSaveRef = useRef(null)
+  const handleSessionObservationChange = useCallback(
+    (observationKey, valueJson) => {
+      if (!selectedSessionId || !activeBlockId) return
+      phaseCaptureState.mergeSessionObservations([
+        {
+          phaseId: activeBlockId,
+          observationKey,
+          valueJson,
+          sessionId: selectedSessionId,
+        },
+      ])
+      if (sessionObsSaveRef.current) clearTimeout(sessionObsSaveRef.current)
+      sessionObsSaveRef.current = setTimeout(async () => {
+        try {
+          const result = await phaseCaptureApi.saveSessionObservations(
+            selectedSessionId,
+            activeBlockId,
+            [{ observationKey, valueJson }],
+          )
+          if (result?.sessionObservations) {
+            phaseCaptureState.mergeSessionObservations(result.sessionObservations)
+          }
+        } catch {
+          /* optimistic */
+        }
+      }, 400)
+    },
+    [selectedSessionId, activeBlockId, phaseCaptureState],
+  )
+
   const handleCompletePhase = useCallback(
     async (phaseId) => {
       if (!phaseId) return
@@ -1202,6 +1263,7 @@ const SkatingOpsPage = () => {
       skillsForActivePhase: readSkillsFromConfig(activePhaseCapture?.configJson),
       onUpdatePhaseSkills: handleUpdatePhaseSkills,
       onEntryChange: handlePhaseEntryChange,
+      sessionObsByPhaseKey: phaseCaptureState.sessionObsByPhaseKey,
       onSelectAthlete: (athleteId) => {
         if (athleteId) setLapStudentId(String(athleteId))
       },
@@ -1211,6 +1273,7 @@ const SkatingOpsPage = () => {
     [
       phaseCaptureState.phases,
       phaseCaptureState.entries,
+      phaseCaptureState.sessionObsByPhaseKey,
       phaseCaptureState.coachDefaults,
       phaseCaptureState.loading,
       phaseLifecycleBusy,
@@ -2051,6 +2114,8 @@ const SkatingOpsPage = () => {
                   />
                 }
                 phaseCapture={unifiedLiveCoaching ? phaseCaptureProps : null}
+                onExerciseToggle={handleExerciseToggle}
+                onSessionObservationChange={handleSessionObservationChange}
                 recentLapsSection={
                   <CoachLiveRecentLaps
                     recentLaps={syncDomains?.recentLaps}

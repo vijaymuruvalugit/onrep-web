@@ -1,0 +1,94 @@
+/* Shared phase surfaces — calm guided modes vs dense observation */
+
+.coach-live-phase-surface {
+  margin-bottom: 1rem;
+}
+
+.coach-live-phase-surface--guided,
+.coach-live-phase-surface--recovery,
+.coach-live-phase-surface--timing {
+  padding: 1.25rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--cui-tertiary-bg, rgba(0, 0, 0, 0.02));
+}
+
+.coach-live-phase-surface--recovery {
+  background: var(--cui-tertiary-bg, rgba(0, 0, 0, 0.015));
+}
+
+.phase-exercise-list {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.phase-exercise-list__item {
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.08));
+  background: var(--cui-body-bg, #fff);
+}
+
+.phase-exercise-list__item--done {
+  opacity: 0.72;
+}
+
+.phase-exercise-list__item--done .phase-exercise-list__name {
+  text-decoration: line-through;
+}
+
+.phase-exercise-list__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.phase-exercise-list__name {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.phase-exercise-list__desc {
+  margin: 0.35rem 0 0 1.75rem;
+}
+
+.phase-exercise-list__skip {
+  margin: 0.25rem 0 0 1.75rem;
+  font-size: 0.8rem;
+}
+
+.phase-session-obs {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.phase-session-obs__fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+}
+
+.phase-session-obs__field {
+  min-width: 8rem;
+}
+
+.phase-session-obs__field-label {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.phase-timing-placeholder {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.phase-timing-placeholder__title {
+  font-weight: 600;
+  font-size: 1.05rem;
+}

@@ -77,6 +77,30 @@ export const phaseCaptureApi = {
     const { data } = await http.patch('/coach/capture-defaults', patch)
     return data?.defaults ?? {}
   },
+
+  async saveSessionObservations(operationalSessionId, phaseId, observations) {
+    const { data } = await http.post(
+      `/operational-sessions/${encodeURIComponent(operationalSessionId)}/phases/${encodeURIComponent(phaseId)}/session-observations`,
+      { observations }
+    )
+    return data
+  },
+
+  async replacePhaseExercises(operationalSessionId, phaseId, exercises) {
+    const { data } = await http.put(
+      `/operational-sessions/${encodeURIComponent(operationalSessionId)}/phases/${encodeURIComponent(phaseId)}/exercises`,
+      { exercises }
+    )
+    return data
+  },
+
+  async patchPhaseExercise(operationalSessionId, phaseId, exerciseId, body) {
+    const { data } = await http.patch(
+      `/operational-sessions/${encodeURIComponent(operationalSessionId)}/phases/${encodeURIComponent(phaseId)}/exercises/${encodeURIComponent(exerciseId)}`,
+      body
+    )
+    return data
+  },
 }
 
 export default phaseCaptureApi

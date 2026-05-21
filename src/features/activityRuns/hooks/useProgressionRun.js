@@ -332,6 +332,10 @@ export function useProgressionRun({
   const finalizeRun = useCallback(
     async (patch = {}) => {
       if (!runId) return null
+      if (patchTimer.current) {
+        clearTimeout(patchTimer.current)
+        patchTimer.current = null
+      }
       setSaving(true)
       setError('')
       try {
@@ -348,6 +352,7 @@ export function useProgressionRun({
           runPayload: merged,
           partial: false,
         })
+        setPayload(merged)
         sm.completeRun()
         return run
       } catch (e) {
