@@ -6,7 +6,6 @@ import {
   CCardBody,
   CCardHeader,
   CForm,
-  CFormCheck,
   CFormInput,
   CFormLabel,
   CSpinner,
@@ -14,6 +13,7 @@ import {
 } from '@coreui/react'
 import { paymentSettingsApi } from '../api/paymentSettingsApi'
 import paymentsApi from '../api/paymentsApi'
+import FeeCollectionModeCard from '../components/coach/FeeCollectionModeCard'
 import { copyForReason } from '../constants/checkoutReadiness'
 import { monthStr } from '../utils/formatDueShort'
 
@@ -21,18 +21,6 @@ function defaultGenerateMonth() {
   return monthStr(new Date())
 }
 
-/**
- * Owner-only Payment Settings (Phase 1.4 + 1.5).
- *
- * Surfaces:
- *   - `accepts_online_payments` toggle  (owner intent)
- *   - `allow_partial_payments`  + `minimum_partial_amount_paise` controls
- *   - System readiness panel — typed reason codes from the backend, never
- *     freestyle strings.
- *
- * Saving any field triggers a backend `refreshCheckoutReadiness` so the panel
- * shows the latest state.
- */
 function ReadinessPanel({ readiness }) {
   if (!readiness) return null
   const ok = readiness.checkout_ready_ok === true
@@ -42,30 +30,127 @@ function ReadinessPanel({ readiness }) {
   return (
     <CCard className="mb-4">
       <CCardHeader>
-        <strong>Checkout readiness</strong>{' '}
-        {ok ? (
-          <CBadge color="success">Ready</CBadge>
-        ) : (
-          <CBadge color="warning">Action required</CBadge>
-        )}
+        <strong>Online payment status</strong>{' '}
+        {ok ? <CBadge color="success">Ready</CBadge> : <CBadge color="warning">Needs setup</CBadge>}
       </CCardHeader>
       <CCardBody>
         {ok ? (
-          <p className="text-success mb-0">All checks passed — parents can pay online.</p>
+          <p className="text-success mb-0">Parents can pay online.</p>
         ) : (
-          <ul className="mb-0">
-            {reasons.length === 0 ? <li>Online payments disabled.</li> : null}
-            {reasons.map((code) => {
-              const copy = copyForReason(code)
-              return (
-                <li key={code} className="mb-2">
-                  <strong>{copy.title}</strong>
-                  <div className="small text-muted">{copy.detail}</div>
-                </li>
-              )
-            })}
-          </ul>
+          <>
+            <p className="text-body-secondary small">
+              Complete these items before parents can use online checkout.
+            </p>
+            <ul className="mb-0">
+              {reasons.length === 0 ? <li>Online checkout is turned off.</li> : null}
+              {reasons.map((code) => {
+                const copy = copyForReason(code)
+                return (
+                  <li key={code} className="mb-2">
+                    <strong>{copy.title}</strong>
+                    <div className="small text-muted">{copy.detail}</div>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
         )}
+      </CCardBody>
+    </CCard>
+  )
+}
+
+function AcademyUpiCard() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [upiVpa, setUpiVpa] = useState('')
+  const [draft, setDraft] = useState('')
+  const [message, setMessage] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    paymentsApi
+      .getCoachFeeUpi()
+      .then((value) => {
+        if (cancelled) return
+        const next = value || ''
+        setUpiVpa(next)
+        setDraft(next)
+      })
+      .catch((e) => {
+        if (!cancelled)
+          setMessage({ color: 'danger', text: e?.message || 'Unable to load UPI ID.' })
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleSave = async (event) => {
+    event.preventDefault()
+    const trimmed = draft.trim()
+    if (!trimmed || saving) return
+    setSaving(true)
+    setMessage(null)
+    try {
+      const out = await paymentsApi.patchCoachFeeUpi({ upiVpa: trimmed })
+      const saved = out?.upiVpa || trimmed
+      setUpiVpa(saved)
+      setDraft(saved)
+      setMessage({ color: 'success', text: 'UPI ID saved.' })
+    } catch (e) {
+      setMessage({ color: 'danger', text: e?.message || 'Unable to save UPI ID.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <CCard className="mb-4">
+      <CCardHeader>
+        <strong>Academy UPI ID</strong>
+      </CCardHeader>
+      <CCardBody>
+        <p className="text-body-secondary small">
+          Parents use this UPI ID when they pay outside online checkout and report the payment in
+          OnRep. This is the same UPI ID collected during signup.
+        </p>
+        {loading ? (
+          <CSpinner size="sm" />
+        ) : (
+          <CForm onSubmit={handleSave}>
+            <div className="mb-3">
+              <CFormLabel htmlFor="academyUpi">UPI ID</CFormLabel>
+              <CFormInput
+                id="academyUpi"
+                placeholder="your-academy@upi"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                autoComplete="off"
+                autoCapitalize="none"
+                inputMode="email"
+                spellCheck={false}
+                disabled={saving}
+              />
+              {upiVpa ? (
+                <div className="form-text">
+                  Current UPI ID: <strong>{upiVpa}</strong>
+                </div>
+              ) : null}
+            </div>
+            <CButton color="primary" type="submit" disabled={saving || !draft.trim()}>
+              {saving ? <CSpinner size="sm" /> : 'Save UPI ID'}
+            </CButton>
+          </CForm>
+        )}
+        {message ? (
+          <CAlert color={message.color} className="mt-3 mb-0 py-2">
+            {message.text}
+          </CAlert>
+        ) : null}
       </CCardBody>
     </CCard>
   )
@@ -76,9 +161,6 @@ export default function PaymentSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [form, setForm] = useState({
-    accepts_online_payments: true,
-    allow_partial_payments: false,
-    minimum_partial_amount_paise: 50000,
     default_fee_due_day: 31,
   })
   const [readiness, setReadiness] = useState(null)
@@ -93,9 +175,6 @@ export default function PaymentSettingsPage() {
       .then((data) => {
         if (cancelled || !data) return
         setForm({
-          accepts_online_payments: data.accepts_online_payments !== false,
-          allow_partial_payments: data.allow_partial_payments === true,
-          minimum_partial_amount_paise: Number(data.minimum_partial_amount_paise || 0),
           default_fee_due_day: Number(data.default_fee_due_day || 31),
         })
         setReadiness({
@@ -119,9 +198,6 @@ export default function PaymentSettingsPage() {
     setError(null)
     try {
       const out = await paymentSettingsApi.updateSettings({
-        accepts_online_payments: form.accepts_online_payments,
-        allow_partial_payments: form.allow_partial_payments,
-        minimum_partial_amount_paise: Number(form.minimum_partial_amount_paise) || 0,
         default_fee_due_day: Number(form.default_fee_due_day) || 31,
       })
       if (out?.readiness) setReadiness(out.readiness)
@@ -168,6 +244,9 @@ export default function PaymentSettingsPage() {
     <div className="p-4" style={{ maxWidth: 720 }}>
       <h2 className="mb-3">Payment settings</h2>
       {error ? <CAlert color="danger">{error}</CAlert> : null}
+
+      <FeeCollectionModeCard />
+      <AcademyUpiCard />
       <ReadinessPanel readiness={readiness} />
 
       <CCard className="mb-4">
@@ -226,8 +305,8 @@ export default function PaymentSettingsPage() {
                 }
               />
               <div className="form-text">
-                Used for every student unless their profile has its own due day. For shorter months,
-                day 31 becomes the last day of that month.
+                Used for every student unless their profile has its own payment due day. If you pick
+                31, shorter months use the last day of the month.
               </div>
             </div>
             <CButton color="primary" onClick={handleSave} disabled={saving}>
@@ -237,72 +316,16 @@ export default function PaymentSettingsPage() {
         </CCardBody>
       </CCard>
 
-      <CCard className="mb-4">
-        <CCardHeader>
-          <strong>Online payments</strong>
-        </CCardHeader>
-        <CCardBody>
-          <CForm>
-            <div className="mb-3">
-              <CFormCheck
-                id="acceptsOnlinePayments"
-                label="Accept online payments from parents"
-                checked={form.accepts_online_payments}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, accepts_online_payments: e.target.checked }))
-                }
-              />
-              <div className="form-text">
-                Owner intent only — the actual readiness is shown above. Toggling this off
-                immediately stops new Razorpay links from being created for parents.
-              </div>
-            </div>
-            <div className="mb-3">
-              <CFormCheck
-                id="allowPartialPayments"
-                label="Allow partial payments (Phase A: still 1 link per obligation)"
-                checked={form.allow_partial_payments}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, allow_partial_payments: e.target.checked }))
-                }
-              />
-            </div>
-            <div className="mb-3">
-              <CFormLabel htmlFor="minPartial">Minimum partial payment (paise)</CFormLabel>
-              <CFormInput
-                id="minPartial"
-                type="number"
-                min={0}
-                step={100}
-                disabled={!form.allow_partial_payments}
-                value={form.minimum_partial_amount_paise}
-                onChange={(e) =>
-                  setForm((p) => ({
-                    ...p,
-                    minimum_partial_amount_paise: Math.max(0, Number(e.target.value) || 0),
-                  }))
-                }
-              />
-              <div className="form-text">
-                e.g. <code>50000</code> = ₹500 minimum.
-              </div>
-            </div>
-            <div className="d-flex gap-2">
-              <CButton color="primary" onClick={handleSave} disabled={saving}>
-                {saving ? <CSpinner size="sm" /> : 'Save'}
-              </CButton>
-              <CButton
-                color="secondary"
-                variant="outline"
-                onClick={handleRefreshReadiness}
-                disabled={saving}
-              >
-                Re-check readiness
-              </CButton>
-            </div>
-          </CForm>
-        </CCardBody>
-      </CCard>
+      <div className="mb-4">
+        <CButton
+          color="secondary"
+          variant="outline"
+          onClick={handleRefreshReadiness}
+          disabled={saving}
+        >
+          {saving ? <CSpinner size="sm" /> : 'Check online payment status'}
+        </CButton>
+      </div>
     </div>
   )
 }

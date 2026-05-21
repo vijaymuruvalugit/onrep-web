@@ -1,18 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { useAuth } from '../../auth/hooks/useAuth'
 import { useSearchParams } from 'react-router-dom'
 import { CAlert, CToast, CToastBody, CToaster } from '@coreui/react'
 import usePayments from '../hooks/usePayments'
 import {
   bulkMarkObligationsPaid,
   confirmParentReport,
-  fetchCoachFeeUpi,
   fetchObligations,
   fetchPendingParentReports,
   recordObligationPayment,
   rejectParentReport,
-  saveCoachFeeUpi,
   sendObligationReminder,
 } from '../slices/paymentsSlice'
 import CoachPaymentsHeader from '../components/coach/CoachPaymentsHeader'
@@ -20,7 +17,6 @@ import ObligationsTable from '../components/coach/ObligationsTable'
 import PendingReportsPanel from '../components/coach/PendingReportsPanel'
 import PayModal from '../components/PayModal'
 import BulkMarkPaidModal from '../components/BulkMarkPaidModal'
-import FeeCollectionModeCard from '../components/coach/FeeCollectionModeCard'
 
 /**
  * Operational payments — fees are generated automatically from academy due-day
@@ -28,9 +24,6 @@ import FeeCollectionModeCard from '../components/coach/FeeCollectionModeCard'
  */
 const CoachPaymentsPage = () => {
   const dispatch = useDispatch()
-  const { user } = useAuth()
-  const isAcademyOwner =
-    String(user?.role || user?.userRole || '').toLowerCase() === 'academy_owner'
   const [searchParams] = useSearchParams()
   const studentId = searchParams.get('studentId') || null
   const studentName = searchParams.get('studentName') || null
@@ -52,7 +45,6 @@ const CoachPaymentsPage = () => {
 
   const reload = useCallback(() => {
     dispatch(fetchObligations({ studentId }))
-    dispatch(fetchCoachFeeUpi())
     dispatch(fetchPendingParentReports())
   }, [dispatch, studentId])
 
@@ -88,18 +80,6 @@ const CoachPaymentsPage = () => {
   const handleClearSelection = useCallback(() => {
     setSelectedIds([])
   }, [])
-
-  const handleSaveUpi = useCallback(
-    async (upiVpa) => {
-      const action = await dispatch(saveCoachFeeUpi(upiVpa))
-      if (action?.error) {
-        return { error: action.payload || { message: 'Unable to save UPI.' } }
-      }
-      pushToast('UPI saved.', 'success')
-      return { ok: true }
-    },
-    [dispatch, pushToast],
-  )
 
   const handleRemind = useCallback(
     async (obligationId) => {
@@ -187,19 +167,9 @@ const CoachPaymentsPage = () => {
     [dispatch, pushToast],
   )
 
-  const showUpiEditor = !studentId
-
   return (
     <>
-      <CoachPaymentsHeader
-        studentName={studentName}
-        showUpiEditor={showUpiEditor}
-        feeUpi={coach.feeUpi}
-        feeUpiLoading={coach.feeUpiLoading}
-        feeUpiSaving={coach.feeUpiSaving}
-        feeUpiError={coach.feeUpiError}
-        onSaveUpi={handleSaveUpi}
-      />
+      <CoachPaymentsHeader studentName={studentName} />
 
       {!studentId ? (
         <CAlert color="info" className="py-2 mb-3">
@@ -207,10 +177,6 @@ const CoachPaymentsPage = () => {
           your academy due date. Adjust amounts on the batch or student profile, and due dates under{' '}
           <strong>Payment settings</strong>.
         </CAlert>
-      ) : null}
-
-      {isAcademyOwner ? (
-        <FeeCollectionModeCard initialPaymentModule={user?.payment_module} />
       ) : null}
 
       {coach.remindError ? (

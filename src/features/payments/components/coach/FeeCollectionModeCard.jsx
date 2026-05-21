@@ -8,8 +8,8 @@ import onboardingApi from '../../../onboarding/api/onboardingApi'
 import normalizeApiError from '../../../../api/normalizeApiError'
 
 /**
- * Academy owner: switch how fee collection is presented (manual vs online checkout).
- * Backend: `POST /onboarding/payment-module`. Manual and online flows can coexist either way.
+ * Academy owner: choose how parents pay. Uses the same onboarding endpoint
+ * so signup and Payment Settings stay in sync.
  */
 const FeeCollectionModeCard = ({ initialPaymentModule }) => {
   const dispatch = useDispatch()
@@ -78,10 +78,9 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
     <CCard className="mb-3">
       <CCardHeader className="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
-          <strong>Fee collection mode</strong>
+          <strong>How parents pay</strong>
           <div className="text-body-secondary small fw-normal">
-            How your academy prefers to collect fees — you can still record payments manually either
-            way.
+            Choose the payment flow parents see. You can still record offline payments anytime.
           </div>
         </div>
         <CButton
@@ -92,7 +91,7 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
           disabled={loading || saving}
         >
           {loading ? <CSpinner size="sm" /> : <CIcon icon={cilLoopCircular} className="me-1" />}
-          Sync
+          Refresh
         </CButton>
       </CCardHeader>
       <CCardBody>
@@ -114,9 +113,9 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
                 onClick={() => selectMode('MANUAL')}
                 disabled={saving}
               >
-                <div className="fw-semibold">Manual tracking</div>
+                <div className="fw-semibold">Manual payments</div>
                 <div className="small opacity-75">
-                  Record cash, bank transfers, and parent-reported UPI in the app.
+                  Parents pay by cash, bank transfer, or UPI. You record or confirm the payment.
                 </div>
               </CButton>
               <CButton
@@ -128,15 +127,14 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
               >
                 <div className="fw-semibold">Online checkout</div>
                 <div className="small opacity-75">
-                  Parents pay through OnRep&apos;s hosted checkout (UPI / cards / netbanking). We
-                  settle collected fees to your bank or UPI.
+                  Parents pay online through OnRep. Money is sent to your payout details.
                 </div>
               </CButton>
             </div>
 
             {!automatedAvailable ? (
               <CAlert color="light" className="mb-0 py-2 text-body border">
-                Online checkout is currently unavailable. Manual tracking always works — contact
+                Online checkout is currently unavailable. Manual payments always work — contact
                 OnRep support if you&apos;d like to enable online checkout for your academy.
               </CAlert>
             ) : (
@@ -149,7 +147,7 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
                   <>
                     Current:{' '}
                     <strong>
-                      {paymentModule === 'AUTOMATED' ? 'Online checkout' : 'Manual tracking'}
+                      {paymentModule === 'AUTOMATED' ? 'Online checkout' : 'Manual payments'}
                     </strong>
                     .
                   </>

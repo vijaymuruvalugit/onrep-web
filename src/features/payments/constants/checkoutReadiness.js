@@ -20,7 +20,7 @@ export const CHECKOUT_READINESS_REASONS = Object.freeze({
 const COPY = {
   [CHECKOUT_READINESS_REASONS.PAYMENTS_DISABLED]: {
     title: 'Online payments are turned off',
-    detail: 'Toggle "Accept online payments" in Payment settings to allow parents to pay online.',
+    detail: 'Choose Online checkout under How parents pay to allow parents to pay online.',
   },
   [CHECKOUT_READINESS_REASONS.NO_BANK_ACCOUNT]: {
     title: 'Bank account not added',

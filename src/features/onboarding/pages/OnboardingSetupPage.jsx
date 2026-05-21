@@ -171,8 +171,8 @@ function OnboardingSetupContent() {
                 <CAlert color="info" className="py-2 mb-3">
                   <div className="fw-semibold mb-1">Next: add your payout details</div>
                   <div className="small mb-2">
-                    OnRep collects fees from parents on your behalf. Add your bank account or UPI
-                    ID so we can settle collected fees to your academy.
+                    OnRep collects fees from parents on your behalf. Add your bank account or UPI ID
+                    so we can settle collected fees to your academy.
                   </div>
                   <CButton
                     color="primary"
@@ -204,7 +204,7 @@ function OnboardingSetupContent() {
               >
                 Manual payments
                 <div className="small fw-normal text-body-secondary">
-                  Offline · UPI / bank · No payment gateway fee
+                  Parents pay by cash, bank transfer, or UPI. You record or confirm the payment.
                 </div>
               </CButton>
               <CButton
@@ -213,10 +213,10 @@ function OnboardingSetupContent() {
                 disabled={busy || !automatedAvailable}
                 onClick={() => pickModule('AUTOMATED')}
               >
-                Automated payments
+                Online checkout
                 <div className="small fw-normal text-body-secondary">
                   {automatedAvailable
-                    ? 'Hosted online checkout for parents — handled by OnRep'
+                    ? 'Parents pay online through OnRep. Money is sent to your payout details.'
                     : 'Online checkout is currently unavailable. Contact OnRep support.'}
                 </div>
               </CButton>
@@ -256,8 +256,8 @@ function OnboardingSetupContent() {
               ) : (
                 <>
                   <p className="small text-body-secondary mb-2">
-                    Online checkout is powered by OnRep — parents pay through a hosted page using
-                    UPI, cards, or netbanking. You don&apos;t need a payment gateway account.
+                    Parents pay online through OnRep. You don&apos;t need your own payment gateway
+                    account.
                   </p>
                   <p className="small text-body-secondary mb-3">
                     After enabling, add your <strong>bank account or UPI ID</strong> so we can
