@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
-import { CFormInput } from '@coreui/react'
+import { CFormInput, CFormSelect } from '@coreui/react'
+import { PARTICIPATION_STATUS_OPTIONS } from '../../../../domain/phaseAthletes/phaseAthletesApi'
 import ObservationSummary from './ObservationSummary'
 import PhaseCaptureRenderer from './PhaseCaptureRenderer'
 import PhaseSemanticRating from './PhaseSemanticRating'
@@ -23,6 +24,7 @@ export default function ExpandableAthleteCard({
   disabled = false,
   reviewOnly = false,
   onSelectAthlete,
+  onParticipationStatusChange,
   onToggleExpand,
   onValueChange,
 }) {
@@ -67,6 +69,22 @@ export default function ExpandableAthleteCard({
           {showInactive ? <span className="expandable-athlete-card__status-dot" aria-hidden /> : null}
           {firstName}
         </button>
+        {onParticipationStatusChange ? (
+          <CFormSelect
+            size="sm"
+            className="expandable-athlete-card__attendance"
+            value={participationStatus || 'active'}
+            disabled={disabled || reviewOnly}
+            aria-label={`Attendance for ${name}`}
+            onChange={(e) => onParticipationStatusChange?.(athleteId, e.target.value)}
+          >
+            {PARTICIPATION_STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </CFormSelect>
+        ) : null}
         {!expanded ? (
           <>
             <ObservationSummary text={summary} className="expandable-athlete-card__summary" />

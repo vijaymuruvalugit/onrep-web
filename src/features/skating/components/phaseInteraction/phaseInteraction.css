@@ -83,6 +83,16 @@
   margin-bottom: 0.35rem;
 }
 
+.phase-student-capture {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.phase-student-capture .phase-capture-list {
+  max-height: min(36vh, 320px);
+}
+
 .phase-timing-placeholder {
   text-align: center;
   padding: 2rem 1rem;

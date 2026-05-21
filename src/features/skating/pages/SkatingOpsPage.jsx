@@ -55,6 +55,7 @@ import SkatingOpsWorkspaceChrome from '../components/SkatingOpsWorkspaceChrome'
 import ActiveSessionWorkspaceShell from '../components/ActiveSessionWorkspaceShell'
 import SessionBlockAddModal from '../components/SessionBlockAddModal'
 import { sessionBlocksApi } from '../../../domain/sessionBlocks/sessionBlocksApi'
+import { phaseAthletesApi } from '../../../domain/phaseAthletes/phaseAthletesApi'
 import { usePhaseCapture } from '../hooks/usePhaseCapture'
 import { usePhaseEntryAutosave } from '../hooks/usePhaseEntryAutosave'
 import { phaseCaptureApi } from '../../../domain/phaseCapture/phaseCaptureApi'
@@ -429,6 +430,8 @@ const SkatingOpsPage = () => {
     setBlocksBusy,
     setSessionBlocks,
     loadPhaseAthletes,
+    phaseAthletesByPhaseId,
+    patchPhaseAthleteLocal,
     rosterForSession,
     refreshShell,
     handleSelectBlock: shellSelectBlock,
@@ -1212,6 +1215,42 @@ const SkatingOpsPage = () => {
   const activePhaseCapture = useMemo(
     () => phaseCaptureState.phases?.find((p) => String(p.id) === String(activeBlockId)) || null,
     [phaseCaptureState.phases, activeBlockId],
+  )
+
+  const activePhaseAthletes = useMemo(
+    () => phaseAthletesByPhaseId?.[String(activeBlockId)] || [],
+    [phaseAthletesByPhaseId, activeBlockId],
+  )
+
+  const handleParticipationStatusChange = useCallback(
+    async (studentId, participationStatus) => {
+      if (!activeBlockId || !studentId) return
+      const current =
+        activePhaseAthletes.find((a) => String(a.studentId) === String(studentId)) || null
+      if (current) {
+        patchPhaseAthleteLocal(activeBlockId, {
+          ...current,
+          participationStatus,
+        })
+      }
+      try {
+        const athlete = await phaseAthletesApi.setParticipationStatus(
+          activeBlockId,
+          studentId,
+          participationStatus,
+        )
+        if (athlete) patchPhaseAthleteLocal(activeBlockId, athlete)
+      } catch {
+        if (selectedSessionId) await loadPhaseAthletes(selectedSessionId, { silent: true })
+      }
+    },
+    [
+      activeBlockId,
+      activePhaseAthletes,
+      patchPhaseAthleteLocal,
+      selectedSessionId,
+      loadPhaseAthletes,
+    ],
   )
 
   const handleUpdatePhaseSkills = useCallback(
@@ -2114,6 +2153,8 @@ const SkatingOpsPage = () => {
                   />
                 }
                 phaseCapture={unifiedLiveCoaching ? phaseCaptureProps : null}
+                activePhaseAthletes={activePhaseAthletes}
+                onParticipationStatusChange={handleParticipationStatusChange}
                 onExerciseToggle={handleExerciseToggle}
                 onSessionObservationChange={handleSessionObservationChange}
                 recentLapsSection={

@@ -14,6 +14,7 @@ export default function PhaseAthleteCaptureList({
   reviewOnly = false,
   onValueChange,
   onSelectAthlete,
+  onParticipationStatusChange,
   onToggleExpand,
 }) {
   if (!roster.length) {
@@ -42,6 +43,7 @@ export default function PhaseAthleteCaptureList({
             reviewOnly={reviewOnly}
             onValueChange={onValueChange}
             onSelectAthlete={onSelectAthlete}
+            onParticipationStatusChange={onParticipationStatusChange}
             onToggleExpand={onToggleExpand}
           />
         )

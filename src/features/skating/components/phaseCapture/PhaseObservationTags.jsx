@@ -1,7 +1,5 @@
 import React from 'react'
 
-const MAX_VISIBLE = 3
-
 /**
  * Compact horizontal tag chips for athlete cards.
  */
@@ -13,12 +11,10 @@ export default function PhaseObservationTags({
   compact = true,
 }) {
   const selectedSet = new Set((selected || []).map(String))
-  const visible = options.slice(0, MAX_VISIBLE)
-  const overflow = Math.max(0, options.length - MAX_VISIBLE)
 
   return (
     <div className={`phase-tags${compact ? ' phase-tags--compact' : ''}`} role="group" aria-label="Observations">
-      {visible.map((opt) => {
+      {options.map((opt) => {
         const on = selectedSet.has(String(opt))
         return (
           <button
@@ -32,9 +28,6 @@ export default function PhaseObservationTags({
           </button>
         )
       })}
-      {overflow > 0 ? (
-        <span className="phase-tags__overflow">+{overflow} more</span>
-      ) : null}
     </div>
   )
 }

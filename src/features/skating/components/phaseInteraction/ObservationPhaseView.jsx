@@ -8,11 +8,13 @@ export default function ObservationPhaseView({
   roster = [],
   captureItems = [],
   entries = [],
+  participationByStudentId = {},
   lapStudentId,
   disabled = false,
   reviewOnly = false,
   onEntryChange,
   onSelectAthlete,
+  onParticipationStatusChange,
   useSkillsWorkspace = false,
   skillsWorkspace = null,
 }) {
@@ -33,13 +35,14 @@ export default function ObservationPhaseView({
         captureItems={captureItems}
         entries={entries}
         captureMode="full"
-        participationByStudentId={{}}
+        participationByStudentId={participationByStudentId}
         expandedAthleteId={expandedAthleteId}
         selectedAthleteId={lapStudentId}
         disabled={disabled}
         reviewOnly={reviewOnly}
         onValueChange={onEntryChange}
         onSelectAthlete={onSelectAthlete}
+        onParticipationStatusChange={onParticipationStatusChange}
         onToggleExpand={(id) => {
           setExpandedAthleteId(id)
           if (id) onSelectAthlete?.(id)

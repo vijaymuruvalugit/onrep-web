@@ -59,6 +59,8 @@ function CoachLiveSessionView({
   recentLapsSection,
   sessionHeaderProps,
   phaseCapture,
+  activePhaseAthletes = [],
+  onParticipationStatusChange,
   onExerciseToggle,
   onSessionObservationChange,
 }) {
@@ -86,6 +88,15 @@ function CoachLiveSessionView({
     () => rosterFromPhaseAthletes(rosterForSession, rosterForSession),
     [rosterForSession],
   )
+
+  const participationByStudentId = useMemo(() => {
+    const out = {}
+    for (const athlete of activePhaseAthletes || []) {
+      const sid = String(athlete.studentId || athlete.id || '')
+      if (sid) out[sid] = athlete.participationStatus || 'active'
+    }
+    return out
+  }, [activePhaseAthletes])
 
   const selectedAthlete = lapStudentId
     ? rosterForSession.find((r) => String(r.id) === String(lapStudentId)) ||
@@ -206,6 +217,7 @@ function CoachLiveSessionView({
           <PhaseInteractionRenderer
             activePhase={activePhase}
             phaseRoster={phaseRoster}
+            participationByStudentId={participationByStudentId}
             phaseCapture={{
               ...phaseCapture,
               onSelectAthlete: handleSelectAthlete,
@@ -231,6 +243,7 @@ function CoachLiveSessionView({
                 />
               ) : null
             }
+            onParticipationStatusChange={onParticipationStatusChange}
             onExerciseToggle={onExerciseToggle}
             onSessionObservationChange={onSessionObservationChange}
           />

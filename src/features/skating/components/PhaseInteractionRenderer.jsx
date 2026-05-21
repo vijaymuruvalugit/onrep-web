@@ -14,10 +14,12 @@ export default function PhaseInteractionRenderer({
   phaseRoster = [],
   phaseCapture,
   lapStudentId,
+  participationByStudentId = {},
   disabled = false,
   reviewOnly = false,
   isRaceMode = false,
   skillsWorkspace = null,
+  onParticipationStatusChange,
   onExerciseToggle,
   onSessionObservationChange,
 }) {
@@ -39,9 +41,16 @@ export default function PhaseInteractionRenderer({
     return (
       <ExerciseListPhaseView
         activePhase={activePhase}
+        roster={phaseRoster}
+        entries={phaseCapture?.entries || []}
+        participationByStudentId={participationByStudentId}
         sessionObsByPhaseKey={sessionObsByPhaseKey}
+        selectedAthleteId={lapStudentId}
         disabled={disabled}
         reviewOnly={reviewOnly}
+        onEntryChange={phaseCapture?.onEntryChange}
+        onSelectAthlete={phaseCapture?.onSelectAthlete}
+        onParticipationStatusChange={onParticipationStatusChange}
         onExerciseToggle={onExerciseToggle}
         onSessionObservationChange={onSessionObservationChange}
       />
@@ -52,9 +61,16 @@ export default function PhaseInteractionRenderer({
     return (
       <RecoveryPhaseView
         activePhase={activePhase}
+        roster={phaseRoster}
+        entries={phaseCapture?.entries || []}
+        participationByStudentId={participationByStudentId}
         sessionObsByPhaseKey={sessionObsByPhaseKey}
+        selectedAthleteId={lapStudentId}
         disabled={disabled}
         reviewOnly={reviewOnly}
+        onEntryChange={phaseCapture?.onEntryChange}
+        onSelectAthlete={phaseCapture?.onSelectAthlete}
+        onParticipationStatusChange={onParticipationStatusChange}
         onExerciseToggle={onExerciseToggle}
         onSessionObservationChange={onSessionObservationChange}
       />
@@ -71,6 +87,8 @@ export default function PhaseInteractionRenderer({
       reviewOnly={reviewOnly}
       onEntryChange={phaseCapture?.onEntryChange}
       onSelectAthlete={phaseCapture?.onSelectAthlete}
+      participationByStudentId={participationByStudentId}
+      onParticipationStatusChange={onParticipationStatusChange}
       useSkillsWorkspace={isTechnical}
       skillsWorkspace={skillsWorkspace}
     />
