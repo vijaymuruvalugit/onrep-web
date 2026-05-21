@@ -87,7 +87,7 @@ export default function PayoutDetailsPage() {
         upi_id: out?.upi_id || '',
       }))
       setPayoutMethod(inferPayoutMethodFromServer(out))
-      setSuccess('Saved. Verification by OnRep ops is required before settlements.')
+      setSuccess('Saved. Please double-check these payout details before collecting payments.')
     } catch (e) {
       const msg =
         e?.response?.data?.message ||
@@ -117,16 +117,18 @@ export default function PayoutDetailsPage() {
       <p className="text-body-secondary small mb-3">
         Choose how OnRep should pay out your academy — bank transfer or UPI. You only need one method.
       </p>
+      <CAlert color="warning">
+        Enter these details carefully. OnRep uses them for settlements, and incorrect bank or UPI
+        details can delay payouts or prevent customer payments from reaching your academy.
+      </CAlert>
       {error ? <CAlert color="danger">{error}</CAlert> : null}
       {success ? <CAlert color="success">{success}</CAlert> : null}
 
       <CCard className="mb-4">
         <CCardHeader>
           <strong>Current payout method</strong>{' '}
-          {server?.is_verified ? (
-            <CBadge color="success">Verified</CBadge>
-          ) : server ? (
-            <CBadge color="warning">Awaiting verification</CBadge>
+          {server ? (
+            <CBadge color="success">Added</CBadge>
           ) : (
             <CBadge color="secondary">Not added</CBadge>
           )}
@@ -265,9 +267,9 @@ export default function PayoutDetailsPage() {
               </>
             )}
 
-            <CAlert color="info">
-              Editing any field will mark the account as unverified. OnRep ops will re-verify before
-              the next settlement.
+            <CAlert color="warning">
+              Please verify the account holder name, bank account number, IFSC, or UPI ID before
+              saving. If these details are wrong, payouts from customer payments may not reach you.
             </CAlert>
             <CButton color="primary" onClick={handleSave} disabled={saving}>
               {saving ? <CSpinner size="sm" /> : 'Save'}

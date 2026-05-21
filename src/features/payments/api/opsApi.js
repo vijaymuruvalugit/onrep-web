@@ -42,12 +42,6 @@ export const opsApi = {
     const { data } = await http.get(`/ops/academies/${academyId}/bank-account`)
     return data?.bank_account || null
   },
-  async verifyBankAccount(academyId, isVerified) {
-    const { data } = await http.post(`/ops/academies/${academyId}/bank-account/verify`, {
-      is_verified: isVerified,
-    })
-    return data || null
-  },
   async listSettlements(academyId, { limit = 50 } = {}) {
     const { data } = await http.get(`/ops/academies/${academyId}/settlements`, {
       params: { limit },

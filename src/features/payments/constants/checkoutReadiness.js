@@ -10,7 +10,6 @@
 export const CHECKOUT_READINESS_REASONS = Object.freeze({
   PAYMENTS_DISABLED: 'PAYMENTS_DISABLED',
   NO_BANK_ACCOUNT: 'NO_BANK_ACCOUNT',
-  BANK_ACCOUNT_UNVERIFIED: 'BANK_ACCOUNT_UNVERIFIED',
   NO_LIVE_KEYS: 'NO_LIVE_KEYS',
   SUBSCRIPTION_INACTIVE: 'SUBSCRIPTION_INACTIVE',
   MISSING_UPI_OR_VPA: 'MISSING_UPI_OR_VPA',
@@ -25,11 +24,7 @@ const COPY = {
   },
   [CHECKOUT_READINESS_REASONS.NO_BANK_ACCOUNT]: {
     title: 'Bank account not added',
-    detail: 'Add your payout details. Settlement requires a verified bank account or UPI ID.',
-  },
-  [CHECKOUT_READINESS_REASONS.BANK_ACCOUNT_UNVERIFIED]: {
-    title: 'Bank account not yet verified',
-    detail: 'Our team will verify your payout details soon. You will be notified once verified.',
+    detail: 'Add payout details carefully so settlements can reach your academy.',
   },
   [CHECKOUT_READINESS_REASONS.NO_LIVE_KEYS]: {
     title: 'Online checkout temporarily unavailable',
