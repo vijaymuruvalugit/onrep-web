@@ -457,12 +457,14 @@ export default function CreateOneTimeSessionDrawer({
               </option>
             ))}
           </CFormSelect>
-          <SessionPresetSetup
-            onChange={handlePresetPayload}
-            disabled={busy}
-            compact
-            collapsible
-          />
+          {visible ? (
+            <SessionPresetSetup
+              onChange={handlePresetPayload}
+              disabled={busy}
+              compact
+              collapsible
+            />
+          ) : null}
           <div className="onrep-type-label mb-2">Session type</div>
           <CFormSelect value={sessionType} onChange={(e) => setSessionType(e.target.value)}>
             {SESSION_TYPE_OPTIONS.map((o) => (

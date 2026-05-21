@@ -64,6 +64,8 @@ const EMPTY_PATTERN = Object.freeze({
   sessionMode: 'practice',
 })
 
+const EMPTY_PHASE_OVERRIDES = Object.freeze([])
+
 /**
  * Create/edit drawer for a recurring session pattern.
  *
@@ -102,10 +104,17 @@ export default function PatternEditorDrawer({
         sessionFocus: pattern.sessionFocus || '',
         sessionMode: pattern.sessionMode || 'practice',
         sessionPresetId: pattern.sessionPresetId || DEFAULT_SESSION_PRESET_ID,
-        phaseOverrides: pattern.phaseOverrides || [],
+        phaseOverrides:
+          Array.isArray(pattern.phaseOverrides) && pattern.phaseOverrides.length > 0
+            ? pattern.phaseOverrides
+            : EMPTY_PHASE_OVERRIDES,
       }
     }
-    return { ...EMPTY_PATTERN, sessionPresetId: DEFAULT_SESSION_PRESET_ID, phaseOverrides: [] }
+    return {
+      ...EMPTY_PATTERN,
+      sessionPresetId: DEFAULT_SESSION_PRESET_ID,
+      phaseOverrides: EMPTY_PHASE_OVERRIDES,
+    }
   }, [isEdit, pattern])
 
   const [name, setName] = useState(seed.name)
@@ -189,7 +198,7 @@ export default function PatternEditorDrawer({
           }
         : {
             sessionPresetId: seed.sessionPresetId || DEFAULT_SESSION_PRESET_ID,
-            phaseOverrides: seed.phaseOverrides || [],
+            phaseOverrides: seed.phaseOverrides,
           }),
     }
     await onSubmit({
@@ -322,12 +331,14 @@ export default function PatternEditorDrawer({
               ))}
             </CFormSelect>
           </div>
-          <SessionPresetSetup
-            initialPresetId={seed.sessionPresetId || DEFAULT_SESSION_PRESET_ID}
-            initialPhaseOverrides={seed.phaseOverrides || []}
-            onChange={handlePresetPayload}
-            disabled={saving}
-          />
+          {visible ? (
+            <SessionPresetSetup
+              initialPresetId={seed.sessionPresetId || DEFAULT_SESSION_PRESET_ID}
+              initialPhaseOverrides={seed.phaseOverrides}
+              onChange={handlePresetPayload}
+              disabled={saving}
+            />
+          ) : null}
           <div>
             <CFormLabel className="small mb-1">
               Focus <span className="fw-normal text-body-secondary">(optional)</span>

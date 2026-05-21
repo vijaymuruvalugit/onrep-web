@@ -12,6 +12,14 @@ import {
   SESSION_PRESETS_CATALOG,
 } from '../constants/sessionPresets'
 
+/** Stable default — never use `= []` in props (new reference every render). */
+const EMPTY_PHASE_OVERRIDES = Object.freeze([])
+
+function overridesDependencyKey(overrides) {
+  if (!Array.isArray(overrides) || overrides.length === 0) return ''
+  return JSON.stringify(overrides)
+}
+
 /**
  * Shared preset selector + tiny phase preview for schedule drawers.
  * @param {{
@@ -25,25 +33,27 @@ import {
  */
 export default function SessionPresetSetup({
   initialPresetId = DEFAULT_SESSION_PRESET_ID,
-  initialPhaseOverrides = [],
+  initialPhaseOverrides,
   onChange,
   disabled = false,
   compact = false,
   collapsible = false,
 }) {
-  const [sessionPresetId, setSessionPresetId] = useState(initialPresetId)
+  const resolvedPresetId = initialPresetId || DEFAULT_SESSION_PRESET_ID
+  const resolvedOverrides = initialPhaseOverrides ?? EMPTY_PHASE_OVERRIDES
+  const overridesKey = overridesDependencyKey(resolvedOverrides)
+
+  const [sessionPresetId, setSessionPresetId] = useState(resolvedPresetId)
   const [previewPhases, setPreviewPhases] = useState(() =>
-    previewPhasesFromOverrides(initialPhaseOverrides, initialPresetId),
+    previewPhasesFromOverrides(resolvedOverrides, resolvedPresetId),
   )
   const [adjustOpen, setAdjustOpen] = useState(false)
 
   useEffect(() => {
-    setSessionPresetId(initialPresetId || DEFAULT_SESSION_PRESET_ID)
-    setPreviewPhases(
-      previewPhasesFromOverrides(initialPhaseOverrides, initialPresetId || DEFAULT_SESSION_PRESET_ID),
-    )
+    setSessionPresetId(resolvedPresetId)
+    setPreviewPhases(previewPhasesFromOverrides(resolvedOverrides, resolvedPresetId))
     setAdjustOpen(false)
-  }, [initialPresetId, initialPhaseOverrides])
+  }, [resolvedPresetId, overridesKey])
 
   const customized = useMemo(
     () => isPresetCustomized(sessionPresetId, previewPhases),
