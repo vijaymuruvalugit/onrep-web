@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CAlert,
   CBadge,
@@ -21,6 +21,8 @@ import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { SESSION_TYPE_OPTIONS } from '../constants/sessionTypes'
 import { SESSION_MODE_OPTIONS } from '../../../domain/operationalSessions/constants/sessionModes'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
+import SessionPresetSetup from './SessionPresetSetup'
+import { DEFAULT_SESSION_PRESET_ID } from '../constants/sessionPresets'
 
 function CoachSelect({ coaches = [], value, onChange, disabled }) {
   return (
@@ -89,6 +91,8 @@ export default function CreateOneTimeSessionDrawer({
   const [visibilityEnabled, setVisibilityEnabled] = useState(true)
   const [attendanceEnabled, setAttendanceEnabled] = useState(true)
   const [recurringPatternId, setRecurringPatternId] = useState('')
+  const [presetPayload, setPresetPayload] = useState(null)
+  const handlePresetPayload = useCallback((payload) => setPresetPayload(payload), [])
 
   /** Map studentId -> { guest } */
   const [roster, setRoster] = useState(() => new Map())
@@ -234,6 +238,9 @@ export default function CreateOneTimeSessionDrawer({
         visibilityEnabled,
         attendanceEnabled,
         recurringPatternId: recurringPatternId || undefined,
+        sessionPresetId: presetPayload?.sessionPresetId || DEFAULT_SESSION_PRESET_ID,
+        phaseOverrides: presetPayload?.phaseOverrides || [],
+        presetVersion: presetPayload?.presetVersion,
       })
       onCreated?.()
       onClose?.()
@@ -443,13 +450,19 @@ export default function CreateOneTimeSessionDrawer({
 
         <section>
           <div className="onrep-type-label mb-2">Session mode</div>
-          <CFormSelect value={sessionMode} onChange={(e) => setSessionMode(e.target.value)} className="mb-3">
+          <CFormSelect value={sessionMode} onChange={(e) => setSessionMode(e.target.value)} className="mb-2">
             {SESSION_MODE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
           </CFormSelect>
+          <SessionPresetSetup
+            onChange={handlePresetPayload}
+            disabled={busy}
+            compact
+            collapsible
+          />
           <div className="onrep-type-label mb-2">Session type</div>
           <CFormSelect value={sessionType} onChange={(e) => setSessionType(e.target.value)}>
             {SESSION_TYPE_OPTIONS.map((o) => (

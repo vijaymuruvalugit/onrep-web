@@ -25,7 +25,6 @@ import '../operational-sessions-board.css'
  *   selectedSessionId?: string,
  *   cardActionBusyId?: string|null,
  *   onRefresh: () => void,
- *   onAdHoc: () => void,
  *   onCardPrimary: (session: import('../types').OperationalSession, action: string) => void,
  *   onSelectSession: (id: string) => void,
  *   emptyVariant?: 'default'|'no_workspace'|'wrong_capability',
@@ -41,7 +40,6 @@ export default function SkatingOpsDayBoard({
   selectedSessionId = '',
   cardActionBusyId = null,
   onRefresh,
-  onAdHoc,
   onCardPrimary,
   onSelectSession,
   emptyVariant = 'default',
@@ -72,9 +70,6 @@ export default function SkatingOpsDayBoard({
           <CButton color="secondary" size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
             {SKATING_OPS_COPY.refresh}
           </CButton>
-          <CButton color="light" size="sm" variant="outline" onClick={onAdHoc}>
-            {SKATING_OPS_COPY.adHocCta}
-          </CButton>
         </div>
       </header>
 
@@ -88,7 +83,6 @@ export default function SkatingOpsDayBoard({
 
       {!loading && sorted.length === 0 ? (
         <DayBoardEmptyState
-          onAdHoc={onAdHoc}
           variant={emptyVariant}
           workspaceName={workspaceName}
           dateYmd={dateYmd}

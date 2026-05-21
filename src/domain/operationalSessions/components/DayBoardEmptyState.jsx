@@ -5,14 +5,12 @@ import { SKATING_OPS_COPY } from '../../../features/skating/constants/skatingOps
 
 /**
  * @param {{
- *   onAdHoc: () => void,
  *   workspaceName?: string|null,
  *   dateYmd?: string,
  *   variant?: 'default'|'no_workspace'|'wrong_capability',
  * }} props
  */
 export default function DayBoardEmptyState({
-  onAdHoc,
   workspaceName = null,
   dateYmd = '',
   variant = 'default',
@@ -44,9 +42,6 @@ export default function DayBoardEmptyState({
         <div className="d-flex flex-wrap justify-content-center gap-2">
           <CButton as={Link} to="/coach/schedule" color="primary" size="sm">
             {SKATING_OPS_COPY.emptyCtaSchedule}
-          </CButton>
-          <CButton color="light" size="sm" variant="outline" onClick={onAdHoc}>
-            {SKATING_OPS_COPY.emptyCtaAdHoc}
           </CButton>
         </div>
       </CCardBody>

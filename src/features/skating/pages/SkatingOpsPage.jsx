@@ -42,7 +42,6 @@ import { livePhaseLabel } from '../constants/coachLiveLabels'
 import CoachLiveTimingSection from '../components/CoachLiveTimingSection'
 import RaceTimingWorkspace, { isRacePhaseBlock } from '../components/RaceTimingWorkspace'
 import { useCoachingDraftQueue } from '../hooks/useCoachingDraftQueue'
-import StartSessionModal from '../components/StartSessionModal'
 import { deriveSessionLifecycle, formatElapsedLiveLabel } from '../utils/sessionLifecycle'
 import { bumpSkatingOpsMetric } from '../utils/skatingOpsInternalMetrics'
 import { computeSessionSummary } from '../utils/sessionTodaySummary'
@@ -309,9 +308,6 @@ const SkatingOpsPage = () => {
   const [focusMode, setFocusMode] = useState(focusFromUrl)
   const [uiPaused, setUiPaused] = useState(false)
 
-  const [showStartLiveModal, setShowStartLiveModal] = useState(false)
-  const [defaultPlaceForModal, setDefaultPlaceForModal] = useState('')
-  const [defaultRinkForModal, setDefaultRinkForModal] = useState('Rink')
   const [showAddAthletesModal, setShowAddAthletesModal] = useState(false)
   const [addAthletesPick, setAddAthletesPick] = useState(() => new Set())
   const [addAthletesSaving, setAddAthletesSaving] = useState(false)
@@ -1831,23 +1827,6 @@ const SkatingOpsPage = () => {
     busy: blocksBusy || blocksLoading,
   }
 
-  const openStartLiveModal = () => {
-    try {
-      const lp = sessionStorage.getItem(SK_LAST_PLACE) || ''
-      setDefaultPlaceForModal(lp)
-      const lr = sessionStorage.getItem(SK_LAST_RINK) || 'Rink'
-      setDefaultRinkForModal(lr)
-    } catch {
-      /* ignore */
-    }
-    setShowStartLiveModal(true)
-  }
-
-  const onSessionStartedFromModal = (sid) => {
-    void loadDayBoard()
-    if (sid) selectSession(sid)
-  }
-
   const exitWorkspace = () => selectSession(null)
 
   const handleCardPrimary = async (session, action) => {
@@ -1921,7 +1900,6 @@ const SkatingOpsPage = () => {
           emptyVariant={dayBoardEmptyVariant}
           workspaceName={workspaceDisplayName}
           onRefresh={() => loadDayBoard()}
-          onAdHoc={openStartLiveModal}
           onCardPrimary={(s, a) => void handleCardPrimary(s, a)}
           onSelectSession={(id) => {
             const row = sessions.find((x) => String(x.id) === String(id))
@@ -2106,18 +2084,6 @@ const SkatingOpsPage = () => {
           onClose={closeCaptureDrawer}
         />
       ) : null}
-
-      <StartSessionModal
-        visible={showStartLiveModal}
-        onClose={() => setShowStartLiveModal(false)}
-        dateYmd={dateYmd}
-        places={places}
-        skaters={skaters}
-        defaultPlaceId={defaultPlaceForModal}
-        defaultRink={defaultRinkForModal}
-        currentUserId={currentUserId}
-        onSessionStarted={onSessionStartedFromModal}
-      />
 
       <SessionBlockAddModal
         visible={showAddBlockModal}

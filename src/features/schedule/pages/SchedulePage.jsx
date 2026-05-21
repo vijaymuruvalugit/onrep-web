@@ -413,6 +413,9 @@ const SchedulePage = () => {
             coachId: payload.coachId || undefined,
             sessionFocus: payload.sessionFocus || undefined,
             sessionMode: payload.sessionMode || undefined,
+            sessionPresetId: payload.sessionPresetId,
+            phaseOverrides: payload.phaseOverrides,
+            presetVersion: payload.presetVersion,
             effectiveFrom: effectiveFrom || undefined,
           }).unwrap()
           const generated = Number(created?.materialization?.created ?? 0)

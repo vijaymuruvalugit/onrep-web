@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CAlert,
   CButton,
@@ -19,6 +19,8 @@ import PlaceSelect from '../../places/components/PlaceSelect'
 import { SESSION_MODE_OPTIONS } from '../../../domain/operationalSessions/constants/sessionModes'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
+import SessionPresetSetup from './SessionPresetSetup'
+import { DEFAULT_SESSION_PRESET_ID } from '../constants/sessionPresets'
 
 const FOCUS_SUGGESTIONS = [
   'Technical',
@@ -99,9 +101,11 @@ export default function PatternEditorDrawer({
         coachId: pattern.coachId || '',
         sessionFocus: pattern.sessionFocus || '',
         sessionMode: pattern.sessionMode || 'practice',
+        sessionPresetId: pattern.sessionPresetId || DEFAULT_SESSION_PRESET_ID,
+        phaseOverrides: pattern.phaseOverrides || [],
       }
     }
-    return { ...EMPTY_PATTERN }
+    return { ...EMPTY_PATTERN, sessionPresetId: DEFAULT_SESSION_PRESET_ID, phaseOverrides: [] }
   }, [isEdit, pattern])
 
   const [name, setName] = useState(seed.name)
@@ -112,6 +116,8 @@ export default function PatternEditorDrawer({
   const [coachId, setCoachId] = useState(seed.coachId || '')
   const [sessionFocus, setSessionFocus] = useState(seed.sessionFocus || '')
   const [sessionMode, setSessionMode] = useState(seed.sessionMode || 'practice')
+  const [presetPayload, setPresetPayload] = useState(null)
+  const handlePresetPayload = useCallback((payload) => setPresetPayload(payload), [])
   const [editMode, setEditMode] = useState(RECURRING_PATTERN_EDIT_MODE.UPDATE_UPCOMING)
   const [effectiveFromDate, setEffectiveFromDate] = useState(() => nextMondayYmd())
   const [localError, setLocalError] = useState(null)
@@ -132,6 +138,7 @@ export default function PatternEditorDrawer({
     setCoachId(seed.coachId || '')
     setSessionFocus(seed.sessionFocus || '')
     setSessionMode(seed.sessionMode || 'practice')
+    setPresetPayload(null)
     setEditMode(RECURRING_PATTERN_EDIT_MODE.UPDATE_UPCOMING)
     setEffectiveFromDate(nextMondayYmd())
     setLocalError(null)
@@ -174,6 +181,16 @@ export default function PatternEditorDrawer({
       coachId: coachId || null,
       sessionFocus: sessionFocus.trim() || null,
       sessionMode,
+      ...(presetPayload
+        ? {
+            sessionPresetId: presetPayload.sessionPresetId,
+            phaseOverrides: presetPayload.phaseOverrides,
+            presetVersion: presetPayload.presetVersion,
+          }
+        : {
+            sessionPresetId: seed.sessionPresetId || DEFAULT_SESSION_PRESET_ID,
+            phaseOverrides: seed.phaseOverrides || [],
+          }),
     }
     await onSubmit({
       payload: basePayload,
@@ -305,6 +322,12 @@ export default function PatternEditorDrawer({
               ))}
             </CFormSelect>
           </div>
+          <SessionPresetSetup
+            initialPresetId={seed.sessionPresetId || DEFAULT_SESSION_PRESET_ID}
+            initialPhaseOverrides={seed.phaseOverrides || []}
+            onChange={handlePresetPayload}
+            disabled={saving}
+          />
           <div>
             <CFormLabel className="small mb-1">
               Focus <span className="fw-normal text-body-secondary">(optional)</span>
