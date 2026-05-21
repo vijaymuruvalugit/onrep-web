@@ -11,7 +11,7 @@ import normalizeApiError from '../../../../api/normalizeApiError'
  * Academy owner: choose how parents pay. Uses the same onboarding endpoint
  * so signup and Payment Settings stay in sync.
  */
-const FeeCollectionModeCard = ({ initialPaymentModule }) => {
+const FeeCollectionModeCard = ({ initialPaymentModule, onPaymentModuleChange }) => {
   const dispatch = useDispatch()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -26,11 +26,13 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
     try {
       const data = await onboardingApi.getStatus()
       const pm = String(data?.payment_module || 'MANUAL').toUpperCase()
-      setPaymentModule(pm === 'AUTOMATED' ? 'AUTOMATED' : 'MANUAL')
+      const normalizedModule = pm === 'AUTOMATED' ? 'AUTOMATED' : 'MANUAL'
+      setPaymentModule(normalizedModule)
       setAutomatedAvailable(data?.automated_payments_available === true)
+      if (onPaymentModuleChange) onPaymentModuleChange(normalizedModule)
       dispatch(
         patchCurrentUser({
-          payment_module: pm === 'AUTOMATED' ? 'AUTOMATED' : 'MANUAL',
+          payment_module: normalizedModule,
           payment_module_locked: !!data?.payment_module_locked,
           payment_configured: !!data?.payment_configured,
         }),
@@ -40,7 +42,7 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
     } finally {
       setLoading(false)
     }
-  }, [dispatch])
+  }, [dispatch, onPaymentModuleChange])
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- encapsulated in load()
@@ -55,6 +57,7 @@ const FeeCollectionModeCard = ({ initialPaymentModule }) => {
     try {
       await onboardingApi.setPaymentModule(mod)
       setPaymentModule(mod)
+      if (onPaymentModuleChange) onPaymentModuleChange(mod)
       dispatch(patchCurrentUser({ payment_module: mod }))
       await load()
     } catch (err) {

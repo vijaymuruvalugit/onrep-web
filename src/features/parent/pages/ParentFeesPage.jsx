@@ -39,6 +39,8 @@ const ParentFeesPage = () => {
 
   const summary = parent.summary?.summary || { total_due: 0, total_paid: 0 }
   const summaryStudents = parent.summary?.students
+  const paymentSettings = parent.summary?.payment_settings || {}
+  const manualMode = paymentSettings.payment_flow !== 'ONLINE_CHECKOUT'
 
   const upcoming = useMemo(() => {
     const rows = []
@@ -173,7 +175,7 @@ const ParentFeesPage = () => {
           {upcoming.length > 0 ? (
             <div className="mt-3 d-flex justify-content-end">
               <Link to="/parent/payments/history" className="btn btn-primary">
-                Pay or report
+                {manualMode ? 'View payment details' : 'Pay or report'}
                 <CIcon icon={cilArrowRight} className="ms-1" />
               </Link>
             </div>

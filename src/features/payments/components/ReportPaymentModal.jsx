@@ -64,6 +64,13 @@ const ReportPaymentForm = ({ row, submitting, onClose, onSubmit, onUploadScreens
           </div>
         </div>
 
+        {row.manualUpiVpa ? (
+          <CAlert color="info" className="py-2">
+            Pay to UPI ID <strong>{row.manualUpiVpa}</strong>, then submit the UTR or screenshot
+            below.
+          </CAlert>
+        ) : null}
+
         {!row.payment_ref ? (
           <CAlert color="warning" className="py-2">
             This fee has no payment reference yet. Ask your coach to refresh it before reporting.

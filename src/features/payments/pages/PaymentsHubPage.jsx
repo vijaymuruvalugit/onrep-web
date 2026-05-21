@@ -170,10 +170,13 @@ function badgeColor(label) {
 
 function ParentPaymentsView({ hub }) {
   const children = hub?.children || []
+  const manualMode = hub?.payment_settings?.payment_flow !== 'ONLINE_CHECKOUT'
   return (
     <>
       <h2 className="mb-1">{hub?.title || 'Payments'}</h2>
-      <p className="text-body-secondary small mb-3">Simple, supportive billing for your athletes.</p>
+      <p className="text-body-secondary small mb-3">
+        Simple, supportive billing for your athletes.
+      </p>
       {children.map((c) => (
         <CCard key={c.studentId} className="shadow-sm mb-3">
           <CCardHeader className="fw-semibold">{c.studentName}</CCardHeader>
@@ -198,7 +201,7 @@ function ParentPaymentsView({ hub }) {
             </div>
             {c.canPayNow ? (
               <CButton color="primary" size="sm" as={Link} to="/parent/fees">
-                Pay now
+                {manualMode ? 'View payment details' : 'Pay now'}
               </CButton>
             ) : null}
             <CButton
@@ -234,12 +237,24 @@ function SuperAdminPaymentsView({ hub }) {
       <h2 className="mb-3">{hub?.title || 'Platform payments'}</h2>
       <CRow className="g-2">
         <CCol xs={12} md={4}>
-          <CButton color="primary" variant="outline" className="w-100" as={Link} to="/ops/collections">
+          <CButton
+            color="primary"
+            variant="outline"
+            className="w-100"
+            as={Link}
+            to="/ops/collections"
+          >
             Collections
           </CButton>
         </CCol>
         <CCol xs={12} md={4}>
-          <CButton color="primary" variant="outline" className="w-100" as={Link} to="/ops/settlements">
+          <CButton
+            color="primary"
+            variant="outline"
+            className="w-100"
+            as={Link}
+            to="/ops/settlements"
+          >
             Settlements
           </CButton>
         </CCol>
@@ -249,7 +264,13 @@ function SuperAdminPaymentsView({ hub }) {
           </CButton>
         </CCol>
         <CCol xs={12} md={4}>
-          <CButton color="secondary" variant="outline" className="w-100" as={Link} to="/coach/billing">
+          <CButton
+            color="secondary"
+            variant="outline"
+            className="w-100"
+            as={Link}
+            to="/coach/billing"
+          >
             Subscriptions
           </CButton>
         </CCol>

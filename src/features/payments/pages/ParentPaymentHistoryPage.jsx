@@ -88,6 +88,11 @@ const ParentPaymentHistoryPage = () => {
   const summary = parent.summary?.summary || { total_due: 0, total_paid: 0 }
   const summaryStudents = parent.summary?.students
   const transactions = parent.summary?.transactions || []
+  const paymentSettings = parent.summary?.payment_settings || {}
+  const paymentFlow =
+    paymentSettings.payment_flow === 'ONLINE_CHECKOUT' ? 'ONLINE_CHECKOUT' : 'MANUAL'
+  const onlineCheckoutReady = paymentSettings.online_checkout_ready === true
+  const manualUpiVpa = paymentSettings.manual_upi_vpa || null
   const outstanding = useMemo(() => flattenOutstanding(summaryStudents || []), [summaryStudents])
 
   // Depend only on `dispatch` so reload doesn't get re-created when the slice
@@ -172,9 +177,9 @@ const ParentPaymentHistoryPage = () => {
         pushToast('Already reported — waiting on coach confirmation.', 'warning')
         return
       }
-      setReportRow(row)
+      setReportRow({ ...row, manualUpiVpa })
     },
-    [pushToast],
+    [manualUpiVpa, pushToast],
   )
 
   const handleSubmitReport = useCallback(
@@ -240,14 +245,27 @@ const ParentPaymentHistoryPage = () => {
       <UpcomingDueCard
         row={heroRow}
         onPayNow={handlePayNow}
+        onReportPayment={handleOpenReport}
         payNowBusy={!!parent.createLinkBusyById?.[heroRow?.obligationId]}
+        reportBusy={!!parent.reportBusyById?.[heroRow?.obligationId]}
         polling={pollingObligationId === heroRow?.obligationId}
         allPaid={allPaid && !heroRow}
+        paymentFlow={paymentFlow}
+        onlineCheckoutReady={onlineCheckoutReady}
+        manualUpiVpa={manualUpiVpa}
       />
 
-      {heroRow?.payment_link_state === 'expired' ? (
+      {paymentFlow === 'ONLINE_CHECKOUT' && heroRow?.payment_link_state === 'expired' ? (
         <CAlert color="warning" className="py-2 mb-4">
-          This pay link has expired. Tap <strong>Pay now</strong> to open a new secure checkout page.
+          This pay link has expired. Tap <strong>Pay now</strong> to open a new secure checkout
+          page.
+        </CAlert>
+      ) : null}
+
+      {paymentFlow === 'MANUAL' && manualUpiVpa ? (
+        <CAlert color="info" className="py-2 mb-4">
+          Your academy accepts manual payments. Pay to <strong>{manualUpiVpa}</strong>, then report
+          the payment with UTR or screenshot.
         </CAlert>
       ) : null}
 
@@ -291,22 +309,28 @@ const ParentPaymentHistoryPage = () => {
                     </div>
                   </div>
                   <div className="d-flex gap-2 flex-wrap">
-                    <CButton color="primary" onClick={() => handlePayNow(row)} disabled={linkBusy}>
-                      {linkBusy ? (
-                        <>
-                          <CSpinner size="sm" className="me-2" /> Opening…
-                        </>
-                      ) : (
-                        'Pay now'
-                      )}
-                    </CButton>
+                    {paymentFlow === 'ONLINE_CHECKOUT' ? (
+                      <CButton
+                        color="primary"
+                        onClick={() => handlePayNow(row)}
+                        disabled={linkBusy || !onlineCheckoutReady}
+                      >
+                        {linkBusy ? (
+                          <>
+                            <CSpinner size="sm" className="me-2" /> Opening…
+                          </>
+                        ) : (
+                          'Pay now'
+                        )}
+                      </CButton>
+                    ) : null}
                     <CButton
-                      color="secondary"
-                      variant="outline"
+                      color={paymentFlow === 'MANUAL' ? 'primary' : 'secondary'}
+                      variant={paymentFlow === 'MANUAL' ? undefined : 'outline'}
                       onClick={() => handleOpenReport(row)}
                       disabled={reportBusy || row.hasPendingReport}
                     >
-                      I&apos;ve already paid
+                      {paymentFlow === 'MANUAL' ? 'Report payment' : "I've already paid"}
                     </CButton>
                   </div>
                 </div>
@@ -316,7 +340,7 @@ const ParentPaymentHistoryPage = () => {
         </CCard>
       ) : null}
 
-      {heroRow ? (
+      {heroRow && paymentFlow === 'ONLINE_CHECKOUT' ? (
         <CCard className="mb-4">
           <CCardHeader>Already paid this fee?</CCardHeader>
           <CCardBody className="d-flex flex-wrap gap-3 justify-content-between align-items-center">
@@ -360,7 +384,9 @@ const ParentPaymentHistoryPage = () => {
                       {tx.recorded_at ? ` · ${new Date(tx.recorded_at).toLocaleString()}` : ''}
                     </div>
                     {tx.payment_source_label ? (
-                      <div className="small text-body-secondary mt-1">{tx.payment_source_label}</div>
+                      <div className="small text-body-secondary mt-1">
+                        {tx.payment_source_label}
+                      </div>
                     ) : null}
                   </div>
                   <div className="text-end">

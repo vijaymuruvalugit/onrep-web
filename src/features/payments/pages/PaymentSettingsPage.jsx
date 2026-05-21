@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   CAlert,
   CButton,
@@ -165,6 +165,7 @@ export default function PaymentSettingsPage() {
     default_fee_due_day: 31,
   })
   const [readiness, setReadiness] = useState(null)
+  const [paymentModule, setPaymentModule] = useState('MANUAL')
   const [generateMonth, setGenerateMonth] = useState(defaultGenerateMonth)
   const [generating, setGenerating] = useState(false)
   const [generateResult, setGenerateResult] = useState(null)
@@ -178,6 +179,11 @@ export default function PaymentSettingsPage() {
         setForm({
           default_fee_due_day: Number(data.default_fee_due_day || 31),
         })
+        setPaymentModule(
+          String(data.payment_module || 'MANUAL').toUpperCase() === 'AUTOMATED'
+            ? 'AUTOMATED'
+            : 'MANUAL',
+        )
         setReadiness({
           checkout_ready_ok: data.checkout_ready_ok,
           checkout_ready_reasons: data.checkout_ready_reasons,
@@ -239,6 +245,16 @@ export default function PaymentSettingsPage() {
     }
   }
 
+  const handlePaymentModuleChange = useCallback((nextModule) => {
+    setPaymentModule(nextModule === 'AUTOMATED' ? 'AUTOMATED' : 'MANUAL')
+    paymentSettingsApi
+      .refreshReadiness()
+      .then((r) => {
+        if (r) setReadiness(r)
+      })
+      .catch(() => {})
+  }, [])
+
   if (loading) return <CSpinner />
 
   return (
@@ -246,10 +262,18 @@ export default function PaymentSettingsPage() {
       <h2 className="mb-3">Payment settings</h2>
       {error ? <CAlert color="danger">{error}</CAlert> : null}
 
-      <FeeCollectionModeCard />
-      <AcademyUpiCard />
-      <PayoutDetailsCard onSaved={handleRefreshReadiness} />
-      <ReadinessPanel readiness={readiness} />
+      <FeeCollectionModeCard
+        initialPaymentModule={paymentModule}
+        onPaymentModuleChange={handlePaymentModuleChange}
+      />
+      {paymentModule === 'AUTOMATED' ? (
+        <>
+          <PayoutDetailsCard onSaved={handleRefreshReadiness} />
+          <ReadinessPanel readiness={readiness} />
+        </>
+      ) : (
+        <AcademyUpiCard />
+      )}
 
       <CCard className="mb-4">
         <CCardHeader>
