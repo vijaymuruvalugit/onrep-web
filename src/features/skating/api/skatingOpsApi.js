@@ -19,6 +19,11 @@ export const skatingOpsApi = {
     return data?.sessions ?? []
   },
 
+  async listSessionPresets() {
+    const { data } = await http.get(`${BASE}/session-presets`)
+    return data?.presets ?? []
+  },
+
   async createSession(body) {
     const { data } = await http.post(`${BASE}/sessions`, body)
     return data?.session

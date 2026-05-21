@@ -19,7 +19,7 @@ export default function SkillsPhaseLauncher({
   disabled = false,
   busy = false,
   title = 'Skills',
-  hint = 'Tap a module to coach. Add or remove skills anytime.',
+  hint = 'Tap a tool to coach. Add or remove anytime.',
   emptyMessage = 'No skills on this phase yet. Add Coach Assessments or Skill Drills.',
   filterModule = null,
   onSelectModule,
@@ -69,7 +69,7 @@ export default function SkillsPhaseLauncher({
 
   const handleRemove = (skillId, e) => {
     e?.stopPropagation?.()
-    if (!window.confirm('Remove this module from the phase?')) return
+    if (!window.confirm('Remove this tool from the phase?')) return
     const next = removeModuleEntry(modules, skillId)
     onSkillsChange?.(next.map((m) => ({ skill_id: m.module_id, order: m.order })))
   }
@@ -144,7 +144,7 @@ export default function SkillsPhaseLauncher({
         onClose={() => setPickerOpen(false)}
         selectedModuleIds={selectedIds}
         onAdd={handleAdd}
-        title="Add module"
+        title="Add tool"
       />
     </div>
   )

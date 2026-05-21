@@ -60,7 +60,7 @@ export default function SessionPhaseSkillsPicker({
   }
 
   const handleRemove = (skillId) => {
-    if (!window.confirm('Remove this skill from the phase?')) return
+    if (!window.confirm('Remove this tool from the phase?')) return
     pushSkills(removeSkillEntry(skills, skillId))
   }
 
@@ -73,7 +73,7 @@ export default function SessionPhaseSkillsPicker({
   return (
     <div className="session-phase-skills-picker" data-testid="session-phase-skills-picker">
       <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
-        <p className="fw-semibold small mb-0">Skills for this phase</p>
+        <p className="fw-semibold small mb-0">Tools for this phase</p>
         <CButton
           size="sm"
           color="primary"
@@ -81,7 +81,7 @@ export default function SessionPhaseSkillsPicker({
           disabled={disabled}
           onClick={() => setPickerOpen(true)}
         >
-          + Add skill
+          + Add tool
         </CButton>
       </div>
       {loadingCatalog ? <CSpinner size="sm" className="mb-2" /> : null}
@@ -131,14 +131,14 @@ export default function SessionPhaseSkillsPicker({
         })}
       </ul>
       {!skills.length ? (
-        <p className="small text-body-secondary mb-0">No skills configured yet.</p>
+        <p className="small text-body-secondary mb-0">No tools configured yet.</p>
       ) : null}
       <SkillModulePickerModal
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
         selectedSkillIds={selectedIds}
         onAdd={handleAdd}
-        title="Add skill to phase"
+        title="Add tool to phase"
       />
     </div>
   )

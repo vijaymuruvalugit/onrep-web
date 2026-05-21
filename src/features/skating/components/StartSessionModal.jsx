@@ -19,19 +19,19 @@ import { listStaffCoaches } from '../../directory/api/directoryApi'
 import { academySubActivitiesApi } from '../../../api/academySubActivitiesApi'
 import { skatingOpsApi } from '../api/skatingOpsApi'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
+import {
+  buildPhaseOverridesPayload,
+  DEFAULT_SESSION_PRESET_ID,
+  getSessionPresetById,
+  previewPhasesFromPreset,
+  SESSION_PRESETS_CATALOG,
+} from '../constants/sessionPresets'
+import SessionPresetPhasePreview from './SessionPresetPhasePreview'
 
 const SK_LAST_PLACE = 'onrep.skating.lastPlaceId'
 const SK_LAST_RINK = 'onrep.skating.lastRinkOrRoad'
 
 const SESSION_TYPE_CHIPS = ['Technique', 'Endurance', 'Speed', 'Recovery', 'Mixed']
-
-const SESSION_PRESET_OPTIONS = [
-  { id: '', label: 'Standard practice' },
-  { id: 'beginner_skating', label: 'Beginner skating' },
-  { id: 'advanced_edge_work', label: 'Advanced edge work' },
-  { id: 'race_prep', label: 'Race prep' },
-  { id: 'conditioning', label: 'Conditioning' },
-]
 
 /* eslint-disable react-hooks/set-state-in-effect -- reset modal fields when opened; hydrate from selected batch */
 
@@ -62,7 +62,11 @@ export default function StartSessionModal({
   const [coachUserId, setCoachUserId] = useState('')
   const [sessionFocus, setSessionFocus] = useState('')
   const [sessionType, setSessionType] = useState('')
-  const [sessionPresetId, setSessionPresetId] = useState('')
+  const [sessionPresetId, setSessionPresetId] = useState(DEFAULT_SESSION_PRESET_ID)
+  const [presetOptions, setPresetOptions] = useState(SESSION_PRESETS_CATALOG)
+  const [previewPhases, setPreviewPhases] = useState(() =>
+    previewPhasesFromPreset(getSessionPresetById(DEFAULT_SESSION_PRESET_ID).phases),
+  )
   const [academySubActivities, setAcademySubActivities] = useState([])
   const [academySubActivityId, setAcademySubActivityId] = useState('')
   const [surfaceType, setSurfaceType] = useState('')
@@ -80,7 +84,10 @@ export default function StartSessionModal({
     setCoachUserId(currentUserId ? String(currentUserId) : '')
     setSessionFocus('')
     setSessionType('')
-    setSessionPresetId('')
+    setSessionPresetId(DEFAULT_SESSION_PRESET_ID)
+    setPreviewPhases(
+      previewPhasesFromPreset(getSessionPresetById(DEFAULT_SESSION_PRESET_ID).phases),
+    )
     setAcademySubActivityId('')
     setSurfaceType('')
   }, [visible, defaultPlaceId, defaultRink, currentUserId])
@@ -122,6 +129,41 @@ export default function StartSessionModal({
       cancelled = true
     }
   }, [visible])
+
+  useEffect(() => {
+    if (!visible) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await skatingOpsApi.listSessionPresets()
+        if (!cancelled && Array.isArray(list) && list.length > 0) {
+          setPresetOptions(
+            list.map((p) => ({
+              id: p.id,
+              label: p.label || p.name,
+              description: p.description,
+              phases: (p.phases || []).map((ph) => ({
+                name: ph.name || ph.title,
+                blockType: ph.blockType || ph.block_type,
+              })),
+            })),
+          )
+        }
+      } catch {
+        if (!cancelled) setPresetOptions(SESSION_PRESETS_CATALOG)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [visible])
+
+  useEffect(() => {
+    const preset =
+      presetOptions.find((p) => p.id === sessionPresetId) || getSessionPresetById(sessionPresetId)
+    setPreviewPhases(previewPhasesFromPreset(preset.phases))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset preview only when coach changes preset
+  }, [sessionPresetId])
 
   const selectedSubActivity = useMemo(
     () => academySubActivities.find((s) => String(s.id) === String(academySubActivityId)),
@@ -233,6 +275,7 @@ export default function StartSessionModal({
         surfaceOptions.length > 0
           ? surfaceOptions.find((p) => p.type === surfaceType) || surfaceOptions[0]
           : undefined
+      const presetId = sessionPresetId || DEFAULT_SESSION_PRESET_ID
       const row = await skatingOpsApi.createSession({
         date: dateYmd,
         placeId: placeId || undefined,
@@ -244,6 +287,8 @@ export default function StartSessionModal({
         batchId: startMode === 'batch' && batchId ? batchId : undefined,
         notes: startMode === 'batch' && selectedBatch ? `batch:${selectedBatch.id}` : undefined,
         createdBy: coachUserId || undefined,
+        sessionPresetId: presetId,
+        phaseOverrides: buildPhaseOverridesPayload(previewPhases),
       })
       const sid = row?.id
       if (!sid) throw new Error('Session was not created.')
@@ -258,8 +303,7 @@ export default function StartSessionModal({
       if (sessionType) objectivesJson.push({ kind: 'session_type', label: sessionType })
       if (startMode === 'batch' && batchId)
         objectivesJson.push({ kind: 'batch_ref', batchId: String(batchId) })
-      if (sessionPresetId)
-        objectivesJson.push({ kind: 'session_preset', id: sessionPresetId })
+      objectivesJson.push({ kind: 'session_preset', id: presetId })
 
       const patch = {}
       if (sessionFocus.trim()) patch.sessionFocus = sessionFocus.trim()
@@ -336,7 +380,7 @@ export default function StartSessionModal({
           </div>
         ) : null}
 
-        <CFormLabel>Academy sub-activity</CFormLabel>
+        <CFormLabel>Specialization</CFormLabel>
         {subActivitiesLoading ? (
           <CSpinner size="sm" className="mb-2" />
         ) : (
@@ -388,18 +432,28 @@ export default function StartSessionModal({
           <option>Road</option>
         </CFormSelect>
 
-        <CFormLabel className="mt-2">Session plan</CFormLabel>
+        <CFormLabel className="mt-2">Session preset</CFormLabel>
         <CFormSelect
           value={sessionPresetId}
           onChange={(e) => setSessionPresetId(e.target.value)}
-          className="mb-2"
+          className="mb-1"
         >
-          {SESSION_PRESET_OPTIONS.map((o) => (
-            <option key={o.id || 'default'} value={o.id}>
+          {presetOptions.map((o) => (
+            <option key={o.id} value={o.id}>
               {o.label}
             </option>
           ))}
         </CFormSelect>
+        {presetOptions.find((p) => p.id === sessionPresetId)?.description ? (
+          <p className="small text-body-secondary mb-2">
+            {presetOptions.find((p) => p.id === sessionPresetId)?.description}
+          </p>
+        ) : null}
+        <SessionPresetPhasePreview
+          phases={previewPhases}
+          onPhasesChange={setPreviewPhases}
+          disabled={submitting}
+        />
 
         <div className="fw-semibold mb-1">{SESSION_OPS_COPY.startAthletesOptional}</div>
         <p className="small text-body-secondary">{SESSION_OPS_COPY.startAthletesHint}</p>
