@@ -7,8 +7,11 @@ import { coachNav } from './coachNav'
 import { adminNav } from './adminNav'
 import { parentNav } from './parentNav'
 import { studentNav } from './studentNav'
+import { superAdminNav } from './superAdminNav'
+import { isSuperAdminUser } from '../features/superAdmin/utils/superAdminAccess'
 
 export { VALID_APP_ROLES } from './roles'
+export { superAdminNav }
 
 export function normalizeAppRole(role) {
   const r = String(role || 'coach').toLowerCase()
@@ -16,7 +19,8 @@ export function normalizeAppRole(role) {
   return r
 }
 
-export function getNavigationForRole(role) {
+export function getNavigationForRole(role, user = null) {
+  if (isSuperAdminUser(user)) return superAdminNav
   const r = normalizeAppRole(role)
   if (r === 'parent') return parentNav
   if (r === 'student') return studentNav
@@ -24,7 +28,8 @@ export function getNavigationForRole(role) {
   return coachNav
 }
 
-export function getDefaultRouteForRole(role) {
+export function getDefaultRouteForRole(role, user = null) {
+  if (isSuperAdminUser(user)) return '/super-admin/overview'
   const r = normalizeAppRole(role)
   if (r === 'parent') return '/parent/home'
   if (r === 'student') return '/student/home'

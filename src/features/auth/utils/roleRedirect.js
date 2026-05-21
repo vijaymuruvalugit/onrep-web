@@ -1,4 +1,5 @@
 import { getDefaultRouteForRole } from '../../../navigation'
+import { isSuperAdminUser } from '../../superAdmin/utils/superAdminAccess'
 
 export { getDefaultRouteForRole }
 
@@ -20,7 +21,8 @@ export function resolveUserRole(user) {
 }
 
 export function getRoleRedirectPath(user) {
-  return getDefaultRouteForRole(resolveUserRole(user))
+  if (isSuperAdminUser(user)) return '/super-admin/overview'
+  return getDefaultRouteForRole(resolveUserRole(user), user)
 }
 
 export function paymentsPathForRole(user) {

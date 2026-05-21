@@ -8,6 +8,8 @@ export const ROUTE_CLASSIFICATION = Object.freeze({
     '/coach/payments',
     '/coach/parents',
     '/coach/activities',
+    '/super-admin/',
+    '/ops/',
   ]),
   scoped: Object.freeze(['/coach/']),
   bootstrap: Object.freeze(['/login', '/register']),
@@ -19,7 +21,9 @@ export const ROUTE_CLASSIFICATION = Object.freeze({
 })
 
 export function coachPathRequiresWorkspace(pathname) {
-  if (!pathname || !pathname.startsWith('/coach/')) return false
+  if (!pathname) return false
+  if (pathname.startsWith('/super-admin/') || pathname.startsWith('/ops/')) return false
+  if (!pathname.startsWith('/coach/')) return false
   if (ROUTE_CLASSIFICATION.global.includes(pathname)) return false
   return true
 }

@@ -49,6 +49,10 @@ export function mergeSessionIntoUser(user, session = {}) {
     next.payment_required_after_verification = session.payment_required_after_verification
   }
   if (session.next_action !== undefined) next.next_action = session.next_action
+  if (user.is_platform_admin === true || user.is_super_admin === true) {
+    next.is_platform_admin = true
+    next.is_super_admin = true
+  }
   return next
 }
 

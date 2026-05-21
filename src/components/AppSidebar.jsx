@@ -19,6 +19,7 @@ import { AppSidebarNav } from './AppSidebarNav'
 import primaryLogo from '../assets/brand/primary-logo.png'
 
 import { getNavigationForRole } from '../navigation'
+import { isSuperAdminUser } from '../features/superAdmin/utils/superAdminAccess'
 import { setSidebarShow, setSidebarUnfoldable } from '../features/ui/uiSlice'
 import { resolveUserRole } from '../features/auth/utils/roleRedirect'
 
@@ -26,11 +27,13 @@ const AppSidebar = () => {
   const dispatch = useDispatch()
   const unfoldable = useSelector((state) => state.ui.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.ui.sidebarShow)
-  const activeRole = useSelector((state) => resolveUserRole(state.auth.user))
+  const user = useSelector((state) => state.auth.user)
+  const activeRole = useSelector((state) => resolveUserRole(user))
 
-  const navigation = useMemo(() => getNavigationForRole(activeRole), [activeRole])
-  const brandTo =
-    activeRole === 'parent'
+  const navigation = useMemo(() => getNavigationForRole(activeRole, user), [activeRole, user])
+  const brandTo = isSuperAdminUser(user)
+    ? '/super-admin/overview'
+    : activeRole === 'parent'
       ? '/parent/home'
       : activeRole === 'student'
         ? '/student/home'
