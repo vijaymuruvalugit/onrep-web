@@ -124,7 +124,7 @@ export function computeOperationalFocus({
       kind: 'attendance_pending',
       message: 'Attendance is open for today’s session.',
       primarySession: s,
-      primaryLabel: canMarkSessionAttendance(s) ? 'Mark attendance' : 'Start session',
+      primaryLabel: canMarkSessionAttendance(s) ? 'Mark attendance' : 'Open session',
     }
   }
 

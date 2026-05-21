@@ -26,15 +26,16 @@ export default function CompactSessionRow({
   todayIso,
   placeFallback = '',
   onViewSession,
-  /** When true, show Start — calls onStartSession(row) after confirm (parent handles navigation + API). */
-  canStartToday = false,
+  /** When true, show a primary route into the ops session workspace. */
+  canOpenSessionToday = false,
   /** When true, show Mark attendance — session is active or closed; parent navigates to attendance. */
   canMarkAttendanceToday = false,
-  onStartSession,
+  onOpenSessionPage,
   onMarkAttendance,
 }) {
   const calendarYmd =
-    effectiveOperationalSessionDateYmd(row) || normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
+    effectiveOperationalSessionDateYmd(row) ||
+    normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
   const ymd = normalizeSessionDateYmd(calendarYmd)
   const isToday = Boolean(todayIso && ymd === todayIso)
   const dateLine = formatOperationalSessionRange(
@@ -92,7 +93,10 @@ export default function CompactSessionRow({
                 Recurring
               </CBadge>
             ) : null}
-            <OperationalSessionModeBadge mode={row.sessionMode} className="rounded-pill fw-normal" />
+            <OperationalSessionModeBadge
+              mode={row.sessionMode}
+              className="rounded-pill fw-normal"
+            />
             {typeLabel ? (
               <CBadge color="light" className="text-dark border rounded-pill fw-normal px-2 py-0">
                 {typeLabel}
@@ -125,15 +129,15 @@ export default function CompactSessionRow({
               Mark attendance
             </CButton>
           ) : null}
-          {canStartToday && !attendanceBlocked && typeof onStartSession === 'function' ? (
+          {canOpenSessionToday && !attendanceBlocked && typeof onOpenSessionPage === 'function' ? (
             <CButton
               type="button"
               size="sm"
               color="primary"
               className="px-3"
-              onClick={() => onStartSession(row)}
+              onClick={() => onOpenSessionPage(row)}
             >
-              Start
+              Open session
             </CButton>
           ) : null}
           {onViewSession && sid ? (

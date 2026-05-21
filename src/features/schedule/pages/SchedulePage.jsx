@@ -29,10 +29,7 @@ import {
   sliceUpcomingSessionsForDisplay,
   UPCOMING_SESSIONS_DISPLAY_CAP,
 } from '../../classes/utils/sessionDisplay'
-import {
-  isOperationalOneOff,
-  isOperationalRecurring,
-} from '../../classes/utils/sessionRow'
+import { isOperationalOneOff, isOperationalRecurring } from '../../classes/utils/sessionRow'
 import batchesApi from '../../batches/api/batchesApi'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
 import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
@@ -352,31 +349,26 @@ const SchedulePage = () => {
     await Promise.all(tasks)
   }, [effectiveBatchId, fetchSchedule, loadSessions, fetchBatches, ensurePlacesLoaded, clearErrors])
 
-  const handleStartSession = useCallback(
-    async (row) => {
+  const handleOpenSessionPage = useCallback(
+    (row) => {
+      const sid = row.sessionId || row.id
+      if (!sid) return
+      navigate(`/coach/ops/sessions/${encodeURIComponent(sid)}`)
+    },
+    [navigate],
+  )
+
+  const handleMarkAttendance = useCallback(
+    (row) => {
       const sid = row.sessionId || row.id
       if (!sid) return
       if (canMarkSessionAttendance(row)) {
         navigate(`/coach/attendance/class/${encodeURIComponent(sid)}`)
         return
       }
-      if (
-        !window.confirm(
-          'Start this session now? We will record the start time and open attendance.',
-        )
-      ) {
-        return
-      }
-      try {
-        await operationalSessionsApi.startSession(String(sid))
-        refreshAll()
-        navigate(`/coach/attendance/class/${encodeURIComponent(sid)}`)
-      } catch (e) {
-        const msg = e?.response?.data?.error || e?.message || 'Could not start session'
-        window.alert(msg)
-      }
+      navigate(`/coach/ops/sessions/${encodeURIComponent(sid)}`)
     },
-    [navigate, refreshAll],
+    [navigate],
   )
 
   // -------------------- pattern card actions --------------------
@@ -653,9 +645,9 @@ const SchedulePage = () => {
           <CCardBody className="py-3 px-3 px-md-4">
             {batchWorkspaceMismatch ? (
               <CAlert color="warning">
-                This batch belongs to <strong>{batchWorkspaceMismatch.batchActivityName}</strong>, but
-                you are working in <strong>{batchWorkspaceMismatch.activeWorkspaceName}</strong>. Switch
-                program in the header to view this batch&apos;s sessions.
+                This batch belongs to <strong>{batchWorkspaceMismatch.batchActivityName}</strong>,
+                but you are working in <strong>{batchWorkspaceMismatch.activeWorkspaceName}</strong>
+                . Switch program in the header to view this batch&apos;s sessions.
               </CAlert>
             ) : null}
             {sessionsError ? (
@@ -688,7 +680,7 @@ const SchedulePage = () => {
                 const markAllowed = canMarkSessionAttendance(row)
                 const canMarkAttendanceToday =
                   isTodayRow && !row.attendanceMarked && !row.isCancelled && markAllowed
-                const canStartToday =
+                const canOpenSessionToday =
                   isTodayRow && !row.attendanceMarked && !row.isCancelled && !markAllowed
                 return (
                   <CompactSessionRow
@@ -696,10 +688,10 @@ const SchedulePage = () => {
                     row={row}
                     todayIso={todayIso}
                     placeFallback={primaryPlaceFallback}
-                    canStartToday={canStartToday}
+                    canOpenSessionToday={canOpenSessionToday}
                     canMarkAttendanceToday={canMarkAttendanceToday}
-                    onStartSession={handleStartSession}
-                    onMarkAttendance={handleStartSession}
+                    onOpenSessionPage={handleOpenSessionPage}
+                    onMarkAttendance={handleMarkAttendance}
                     onViewSession={(id, r) => {
                       setDrawerSessionId(id)
                       setDrawerSeedRow(r)

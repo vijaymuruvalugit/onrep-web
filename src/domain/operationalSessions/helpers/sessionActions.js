@@ -17,9 +17,9 @@ export function primaryActionForSession(session) {
   if (isOperationalSessionCancelled(session)) return 'view'
   const s = String(session?.state || '').toLowerCase()
   if (s === 'active') return 'view'
-  if (s === 'paused') return 'resume'
+  if (s === 'paused') return 'view'
   if (s === 'completed' || s === 'archived') return 'view'
-  return 'start'
+  return 'view'
 }
 
 /** @param {'start'|'resume'|'view'} action */

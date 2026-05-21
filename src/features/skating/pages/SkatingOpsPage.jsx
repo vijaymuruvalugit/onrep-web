@@ -852,10 +852,7 @@ const SkatingOpsPage = () => {
   const ensureDefaultRace = async () => {
     if (!selectedSessionId || !syncPrimitives.hasSessionMeta) return
     const resolvedIds = syncPrimitives.resolvedAthletes.map((r) => r.student_id ?? r.studentId)
-    const ids =
-      resolvedIds.length > 0
-        ? resolvedIds
-        : syncPrimitives.sessionSkaterIds
+    const ids = resolvedIds.length > 0 ? resolvedIds : syncPrimitives.sessionSkaterIds
     await skatingOpsApi.mergeGroup(selectedSessionId, 'main', {
       name: 'Main',
       skaterIds: ids,
@@ -1083,7 +1080,7 @@ const SkatingOpsPage = () => {
         runtimeStatus: p.runtimeStatus,
         startedAt: p.startedAt,
         completedAt: p.completedAt,
-      }))
+      })),
     )
   }, [phaseCaptureState.phases, setSessionBlocks])
 
@@ -1100,7 +1097,7 @@ const SkatingOpsPage = () => {
       ])
       queuePhaseEntry(athleteId, fieldId, valueJson)
     },
-    [activeBlockId, selectedSessionId, phaseCaptureState, queuePhaseEntry]
+    [activeBlockId, selectedSessionId, phaseCaptureState, queuePhaseEntry],
   )
 
   const handleExerciseToggle = useCallback(
@@ -1120,12 +1117,9 @@ const SkatingOpsPage = () => {
         ),
       )
       try {
-        await phaseCaptureApi.patchPhaseExercise(
-          selectedSessionId,
-          activeBlockId,
-          exerciseId,
-          { configurationJson },
-        )
+        await phaseCaptureApi.patchPhaseExercise(selectedSessionId, activeBlockId, exerciseId, {
+          configurationJson,
+        })
       } catch {
         await phaseCaptureState.reload()
       }
@@ -1185,7 +1179,7 @@ const SkatingOpsPage = () => {
         setPhaseLifecycleBusy(false)
       }
     },
-    [phaseCaptureState, selectedSessionId, shellSelectBlock, shellWriteActiveBlockId]
+    [phaseCaptureState, selectedSessionId, shellSelectBlock, shellWriteActiveBlockId],
   )
 
   const handleSkipPhase = useCallback(
@@ -1209,7 +1203,7 @@ const SkatingOpsPage = () => {
         setPhaseLifecycleBusy(false)
       }
     },
-    [phaseCaptureState, selectedSessionId, shellSelectBlock, shellWriteActiveBlockId]
+    [phaseCaptureState, selectedSessionId, shellSelectBlock, shellWriteActiveBlockId],
   )
 
   const activePhaseCapture = useMemo(
@@ -1257,10 +1251,7 @@ const SkatingOpsPage = () => {
     async (skillEntries) => {
       if (!selectedSessionId || !activeBlockId) return
       const sorted = sortSkillEntries(skillEntries)
-      const configJson = mergeSkillsIntoConfigJson(
-        activePhaseCapture?.configJson || {},
-        sorted,
-      )
+      const configJson = mergeSkillsIntoConfigJson(activePhaseCapture?.configJson || {}, sorted)
       phaseCaptureState.updatePhaseInList({
         ...activePhaseCapture,
         id: activeBlockId,
@@ -1280,13 +1271,7 @@ const SkatingOpsPage = () => {
         await phaseCaptureState.reload()
       }
     },
-    [
-      selectedSessionId,
-      activeBlockId,
-      activePhaseCapture,
-      phaseCaptureState,
-      setSessionBlocks,
-    ],
+    [selectedSessionId, activeBlockId, activePhaseCapture, phaseCaptureState, setSessionBlocks],
   )
 
   const phaseCaptureProps = useMemo(
@@ -1322,7 +1307,7 @@ const SkatingOpsPage = () => {
       handlePhaseEntryChange,
       handleCompletePhase,
       handleSkipPhase,
-    ]
+    ],
   )
 
   useEffect(() => {
@@ -1488,8 +1473,7 @@ const SkatingOpsPage = () => {
     [focusLapInput, coachLive],
   )
 
-  const sessionModeForCoach =
-    syncPrimitives.sessionMode || selSession?.sessionMode || 'practice'
+  const sessionModeForCoach = syncPrimitives.sessionMode || selSession?.sessionMode || 'practice'
 
   const coachingDisabled =
     !lapStudentId || obsSaving || uiPaused || opsState === 'ended' || !selectedSessionId
@@ -1717,7 +1701,10 @@ const SkatingOpsPage = () => {
   )
 
   const sessionMode =
-    syncPrimitives.sessionMode || selSession?.sessionMode || liveShell.shellSession?.sessionMode || 'practice'
+    syncPrimitives.sessionMode ||
+    selSession?.sessionMode ||
+    liveShell.shellSession?.sessionMode ||
+    'practice'
   const isRaceMode = isRacePhaseBlock(activeBlockMeta)
 
   const handleSelectBlock = useCallback(
@@ -1755,24 +1742,21 @@ const SkatingOpsPage = () => {
     [sortedSessionBlocks, handleReorderBlocks],
   )
 
-  const handleRenameBlock = useCallback(
-    async (blockId, title, blockType) => {
-      setBlocksBusy(true)
-      try {
-        const body = { title }
-        if (blockType) body.blockType = blockType
-        const updated = await sessionBlocksApi.patchBlock(blockId, body)
-        if (updated) {
-          setSessionBlocks((prev) =>
-            prev.map((b) => (String(b.id) === String(blockId) ? updated : b)),
-          )
-        }
-      } finally {
-        setBlocksBusy(false)
+  const handleRenameBlock = useCallback(async (blockId, title, blockType) => {
+    setBlocksBusy(true)
+    try {
+      const body = { title }
+      if (blockType) body.blockType = blockType
+      const updated = await sessionBlocksApi.patchBlock(blockId, body)
+      if (updated) {
+        setSessionBlocks((prev) =>
+          prev.map((b) => (String(b.id) === String(blockId) ? updated : b)),
+        )
       }
-    },
-    [],
-  )
+    } finally {
+      setBlocksBusy(false)
+    }
+  }, [])
 
   const handleDeleteBlock = useCallback(
     async (blockId) => {
@@ -1789,9 +1773,7 @@ const SkatingOpsPage = () => {
           setSessionBlocks(blocks)
           const stored = readActiveBlockId(selectedSessionId)
           const valid =
-            stored &&
-            stored !== String(blockId) &&
-            blocks.some((b) => String(b.id) === stored)
+            stored && stored !== String(blockId) && blocks.some((b) => String(b.id) === stored)
           const first = blocks[0]?.id ? String(blocks[0].id) : ''
           const next = valid ? stored : first
           if (next) shellSelectBlock(next)
@@ -1835,18 +1817,13 @@ const SkatingOpsPage = () => {
           blockId: activeBlockId || undefined,
           heatNumber: undefined,
         })
-      await refreshLeaderboardSyncDomain()
-      await refreshRaceResultsSyncDomain()
-    } finally {
-      setRaceBusy(false)
-    }
-  },
-    [
-      selectedSessionId,
-      activeBlockId,
-      refreshLeaderboardSyncDomain,
-      refreshRaceResultsSyncDomain,
-    ],
+        await refreshLeaderboardSyncDomain()
+        await refreshRaceResultsSyncDomain()
+      } finally {
+        setRaceBusy(false)
+      }
+    },
+    [selectedSessionId, activeBlockId, refreshLeaderboardSyncDomain, refreshRaceResultsSyncDomain],
   )
 
   const handleRaceManualTime = useCallback(
@@ -1866,12 +1843,7 @@ const SkatingOpsPage = () => {
         setRaceBusy(false)
       }
     },
-    [
-      selectedSessionId,
-      activeBlockId,
-      refreshLeaderboardSyncDomain,
-      refreshRaceResultsSyncDomain,
-    ],
+    [selectedSessionId, activeBlockId, refreshLeaderboardSyncDomain, refreshRaceResultsSyncDomain],
   )
 
   useEffect(() => {
@@ -1953,17 +1925,8 @@ const SkatingOpsPage = () => {
         setSnapError('This session has been cancelled.')
         return
       }
-      setCardActionBusyId(id)
-      try {
-        await operationalSessionsApi.startSession(id)
-        selectSession(id)
-        await loadDayBoard()
-        await loadBundle(id)
-      } catch (e) {
-        setSnapError(e?.message || 'Could not start session.')
-      } finally {
-        setCardActionBusyId(null)
-      }
+      selectSession(id)
+      await loadBundle(id)
       return
     }
     selectSession(id)
@@ -2049,129 +2012,129 @@ const SkatingOpsPage = () => {
             </div>
           )}
           <ActiveSessionWorkspaceShell>
-        <CCard className={`mb-3${opsState === 'active' ? ' coach-session-live' : ''}`}>
-          <CCardBody>
-            {bundleError ? <CAlert color="danger">{bundleError}</CAlert> : null}
-            {reEntryWarmth ? (
-              <div className="small text-body-secondary skating-reentry-hint mb-2 px-1 py-1 rounded">
-                {reEntryWarmth}
-              </div>
-            ) : null}
-            {unifiedLiveCoaching && selectedSessionId ? (
-              <CoachLiveSessionView
-                shellSession={liveShell.shellSession}
-                syncDomains={syncDomains}
-                syncStatus={{ syncing: syncDomainsSyncing, error: syncDomainError }}
-                selSession={selSession}
-                sortedSessionBlocks={sortedSessionBlocks}
-                activeBlockId={activeBlockId}
-                activeBlockMeta={activeBlockMeta}
-                activeBlockTitle={activeBlockTitle}
-                blocksBusy={blocksBusy}
-                blocksLoading={blocksLoading}
-                onSelectBlock={handleSelectBlock}
-                rosterForSession={rosterForSession}
-                lapStudentId={lapStudentId}
-                observedStudentIds={observedStudentIds}
-                onPickSkater={(id) => {
-                  clearPendingObsAdvance()
-                  setLapStudentId(id)
-                }}
-                onAddAthletesRequest={() => {
-                  setAddAthletesPick(new Set())
-                  setShowAddAthletesModal(true)
-                }}
-                lifecycle={{ badgeColor: lifecycle.badgeColor, label: lifecycle.label }}
-                elapsedLabel={elapsedLabel || undefined}
-                sessionMode={sessionMode}
-                isRaceMode={isRaceMode}
-                uiPaused={uiPaused}
-                opsState={opsState}
-                raceSectionProps={{
-                  athletes: rosterForSession,
-                  busy: raceBusy,
-                  heatNumber: undefined,
-                  onFinishOrder: handleRaceFinishOrder,
-                  onManualTime: handleRaceManualTime,
-                }}
-                activityRunSectionProps={{
-                  enabled: ACTIVITY_RUN_ENGINE_ENABLED,
-                  operationalSessionId: selectedSessionId,
-                  phaseId: activeBlockId,
-                  athletes: rosterForSession,
-                  activitySlug: String(activeActivity?.type || 'skating').toLowerCase(),
-                  busy: raceBusy,
-                  heatNumber: undefined,
-                  onRefresh: async () => {
-                    await refreshLeaderboardSyncDomain()
-                    await refreshRaceResultsSyncDomain()
-                  },
-                }}
-                sessionHeaderProps={{
-                  onPauseToggle: () => setUiPaused((p) => !p),
-                  pauseLabel: uiPaused ? 'Resume' : 'Pause',
-                  onEnd: () => void endSession(),
-                  onStart: () => void startSession(),
-                  onSwitchSession: () => exitWorkspace(),
-                  canStart: !sessionCancelled && opsState === 'upcoming',
-                  canPause: !sessionCancelled && opsState === 'active',
-                  canEnd:
-                    !sessionCancelled && (opsState === 'active' || opsState === 'upcoming'),
-                }}
-                timingSection={
-                  <CoachLiveTimingSection
-                    races={syncDomains?.races || []}
-                    lapStudentId={lapStudentId}
+            <CCard className={`mb-3${opsState === 'active' ? ' coach-session-live' : ''}`}>
+              <CCardBody>
+                {bundleError ? <CAlert color="danger">{bundleError}</CAlert> : null}
+                {reEntryWarmth ? (
+                  <div className="small text-body-secondary skating-reentry-hint mb-2 px-1 py-1 rounded">
+                    {reEntryWarmth}
+                  </div>
+                ) : null}
+                {unifiedLiveCoaching && selectedSessionId ? (
+                  <CoachLiveSessionView
+                    shellSession={liveShell.shellSession}
+                    syncDomains={syncDomains}
+                    syncStatus={{ syncing: syncDomainsSyncing, error: syncDomainError }}
+                    selSession={selSession}
+                    sortedSessionBlocks={sortedSessionBlocks}
+                    activeBlockId={activeBlockId}
+                    activeBlockMeta={activeBlockMeta}
+                    activeBlockTitle={activeBlockTitle}
+                    blocksBusy={blocksBusy}
+                    blocksLoading={blocksLoading}
+                    onSelectBlock={handleSelectBlock}
                     rosterForSession={rosterForSession}
-                    lapRaceId={lapRaceId}
-                    setLapRaceId={setLapRaceId}
-                    lapSeconds={lapSeconds}
-                    setLapSeconds={setLapSeconds}
-                    lapSecondsRef={lapSecondsRef}
-                    lapSubmitting={lapSubmitting}
-                    lapError={lapError}
-                    duplicateWarn={duplicateWarn}
+                    lapStudentId={lapStudentId}
+                    observedStudentIds={observedStudentIds}
+                    onPickSkater={(id) => {
+                      clearPendingObsAdvance()
+                      setLapStudentId(id)
+                    }}
+                    onAddAthletesRequest={() => {
+                      setAddAthletesPick(new Set())
+                      setShowAddAthletesModal(true)
+                    }}
+                    lifecycle={{ badgeColor: lifecycle.badgeColor, label: lifecycle.label }}
+                    elapsedLabel={elapsedLabel || undefined}
+                    sessionMode={sessionMode}
+                    isRaceMode={isRaceMode}
                     uiPaused={uiPaused}
                     opsState={opsState}
-                    activeEffortSkillId={activeEffortSkillId}
-                    setActiveEffortSkillId={setActiveEffortSkillId}
-                    setActiveEffortName={setActiveEffortName}
-                    skillsCatalog={skillsCatalog}
-                    selectedSessionId={selectedSessionId}
-                    writeActiveEffort={writeActiveEffort}
-                    focusLapInput={focusLapInput}
-                    submitLap={submitLap}
-                    submitDuplicateAnyway={submitDuplicateAnyway}
-                    retryAfterLapFailure={retryAfterLapFailure}
-                    onFormKeyDown={onFormKeyDown}
-                    addTimingLane={addTimingLane}
-                    undoOffer={undoOffer}
-                    undoSecondsLeft={undoSecondsLeft}
-                    undoBusy={undoBusy}
-                    undoLastLap={undoLastLap}
-                    lastEffortPhrase={lastEffortPhrase}
+                    raceSectionProps={{
+                      athletes: rosterForSession,
+                      busy: raceBusy,
+                      heatNumber: undefined,
+                      onFinishOrder: handleRaceFinishOrder,
+                      onManualTime: handleRaceManualTime,
+                    }}
+                    activityRunSectionProps={{
+                      enabled: ACTIVITY_RUN_ENGINE_ENABLED,
+                      operationalSessionId: selectedSessionId,
+                      phaseId: activeBlockId,
+                      athletes: rosterForSession,
+                      activitySlug: String(activeActivity?.type || 'skating').toLowerCase(),
+                      busy: raceBusy,
+                      heatNumber: undefined,
+                      onRefresh: async () => {
+                        await refreshLeaderboardSyncDomain()
+                        await refreshRaceResultsSyncDomain()
+                      },
+                    }}
+                    sessionHeaderProps={{
+                      onPauseToggle: () => setUiPaused((p) => !p),
+                      pauseLabel: uiPaused ? 'Resume' : 'Pause',
+                      onEnd: () => void endSession(),
+                      onStart: () => void startSession(),
+                      onSwitchSession: () => exitWorkspace(),
+                      canStart: !sessionCancelled && opsState === 'upcoming',
+                      canPause: !sessionCancelled && opsState === 'active',
+                      canEnd:
+                        !sessionCancelled && (opsState === 'active' || opsState === 'upcoming'),
+                    }}
+                    timingSection={
+                      <CoachLiveTimingSection
+                        races={syncDomains?.races || []}
+                        lapStudentId={lapStudentId}
+                        rosterForSession={rosterForSession}
+                        lapRaceId={lapRaceId}
+                        setLapRaceId={setLapRaceId}
+                        lapSeconds={lapSeconds}
+                        setLapSeconds={setLapSeconds}
+                        lapSecondsRef={lapSecondsRef}
+                        lapSubmitting={lapSubmitting}
+                        lapError={lapError}
+                        duplicateWarn={duplicateWarn}
+                        uiPaused={uiPaused}
+                        opsState={opsState}
+                        activeEffortSkillId={activeEffortSkillId}
+                        setActiveEffortSkillId={setActiveEffortSkillId}
+                        setActiveEffortName={setActiveEffortName}
+                        skillsCatalog={skillsCatalog}
+                        selectedSessionId={selectedSessionId}
+                        writeActiveEffort={writeActiveEffort}
+                        focusLapInput={focusLapInput}
+                        submitLap={submitLap}
+                        submitDuplicateAnyway={submitDuplicateAnyway}
+                        retryAfterLapFailure={retryAfterLapFailure}
+                        onFormKeyDown={onFormKeyDown}
+                        addTimingLane={addTimingLane}
+                        undoOffer={undoOffer}
+                        undoSecondsLeft={undoSecondsLeft}
+                        undoBusy={undoBusy}
+                        undoLastLap={undoLastLap}
+                        lastEffortPhrase={lastEffortPhrase}
+                      />
+                    }
+                    phaseCapture={unifiedLiveCoaching ? phaseCaptureProps : null}
+                    activePhaseAthletes={activePhaseAthletes}
+                    onParticipationStatusChange={handleParticipationStatusChange}
+                    onExerciseToggle={handleExerciseToggle}
+                    onSessionObservationChange={handleSessionObservationChange}
+                    recentLapsSection={
+                      <CoachLiveRecentLaps
+                        recentLaps={syncDomains?.recentLaps}
+                        recentLapCount={syncDomains?.recentLapCount}
+                        races={syncDomains?.races}
+                        showTimingLaneColumn={showTimingLaneColumnInLapsTable}
+                        expanded={recentLapsExpanded}
+                        onToggleExpanded={() => setRecentLapsExpanded((v) => !v)}
+                        syncing={syncDomainsSyncing}
+                      />
+                    }
                   />
-                }
-                phaseCapture={unifiedLiveCoaching ? phaseCaptureProps : null}
-                activePhaseAthletes={activePhaseAthletes}
-                onParticipationStatusChange={handleParticipationStatusChange}
-                onExerciseToggle={handleExerciseToggle}
-                onSessionObservationChange={handleSessionObservationChange}
-                recentLapsSection={
-                  <CoachLiveRecentLaps
-                    recentLaps={syncDomains?.recentLaps}
-                    recentLapCount={syncDomains?.recentLapCount}
-                    races={syncDomains?.races}
-                    showTimingLaneColumn={showTimingLaneColumnInLapsTable}
-                    expanded={recentLapsExpanded}
-                    onToggleExpanded={() => setRecentLapsExpanded((v) => !v)}
-                    syncing={syncDomainsSyncing}
-                  />
-                }
-              />
-            ) : null}
-          </CCardBody>
-        </CCard>
+                ) : null}
+              </CCardBody>
+            </CCard>
           </ActiveSessionWorkspaceShell>
         </>
       )}
