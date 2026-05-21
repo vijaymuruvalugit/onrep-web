@@ -44,6 +44,7 @@ const ParentCompetitionLeaderboardPage = React.lazy(
 const StudentDashboard = React.lazy(() => import('../views/dashboard/onrep/StudentDashboard'))
 const StudentsListPage = React.lazy(() => import('../features/students/pages/StudentsListPage'))
 const StudentCreatePage = React.lazy(() => import('../features/students/pages/StudentCreatePage'))
+const StudentImportPage = React.lazy(() => import('../features/students/pages/StudentImportPage'))
 const StudentDetailPage = React.lazy(() => import('../features/students/pages/StudentDetailPage'))
 const StudentEditPage = React.lazy(() => import('../features/students/pages/StudentEditPage'))
 const BatchesListPage = React.lazy(() => import('../features/batches/pages/BatchesListPage'))
@@ -94,6 +95,7 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/coach/attendance', component: AttendanceDashboardPage },
   { path: '/coach/attendance/class/:classId', component: AttendanceEntryPage },
   { path: '/coach/students', component: StudentsListPage },
+  { path: '/coach/students/import', component: StudentImportPage },
   { path: '/coach/students/new', component: StudentCreatePage },
   { path: '/coach/students/:studentId', component: StudentDetailPage },
   { path: '/coach/students/:studentId/edit', component: StudentEditPage },

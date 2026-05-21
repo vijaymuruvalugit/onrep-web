@@ -25,7 +25,7 @@ export const API_CLASSIFICATION = Object.freeze({
     '/parents/overview',
   ]),
   // Transitional explicit exemptions: keep academy-global until contract migration completes.
-  exempt: Object.freeze(['/students', '/batches']),
+  exempt: Object.freeze(['/students', '/student-import', '/batches']),
   scoped: Object.freeze([
     '/dashboard/today',
     '/batch-schedules',
@@ -43,8 +43,13 @@ function pathHasPrefix(pathname, prefixes) {
   return prefixes.some((prefix) => pathname.includes(prefix))
 }
 
+function isStudentImportExempt(pathname) {
+  return pathname === '/student-import' || pathname.startsWith('/student-import/')
+}
+
 function isStudentsExempt(pathname) {
   return (
+    isStudentImportExempt(pathname) ||
     pathname === '/students' ||
     pathname.startsWith('/students?') ||
     (pathname.startsWith('/students/') && !pathname.includes('/attendance-percent'))

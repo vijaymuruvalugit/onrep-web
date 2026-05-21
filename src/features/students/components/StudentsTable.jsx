@@ -14,7 +14,7 @@ import {
   CTableRow,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilPeople, cilPlus } from '@coreui/icons'
+import { cilCloudUpload, cilPeople, cilPlus } from '@coreui/icons'
 import {
   getAttendanceSummary,
   getCreatedDate,
@@ -68,10 +68,16 @@ const StudentsTable = ({ students, loading, onRetry, error, canRetry = false }) 
     <CCard>
       <CCardHeader className="d-flex justify-content-between align-items-center">
         <strong>Students</strong>
-        <CButton as={Link} color="primary" size="sm" to="/coach/students/new">
-          <CIcon icon={cilPlus} className="me-1" />
-          Add Student
-        </CButton>
+        <div className="d-flex gap-2">
+          <CButton as={Link} color="primary" variant="outline" size="sm" to="/coach/students/import">
+            <CIcon icon={cilCloudUpload} className="me-1" />
+            Upload Excel
+          </CButton>
+          <CButton as={Link} color="primary" size="sm" to="/coach/students/new">
+            <CIcon icon={cilPlus} className="me-1" />
+            Add Student
+          </CButton>
+        </div>
       </CCardHeader>
       <CCardBody className="p-0">
         {error ? (

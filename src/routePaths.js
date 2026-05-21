@@ -17,6 +17,7 @@ export const ONREP_ROUTE_DEFS = [
   { path: '/coach/attendance', name: 'Attendance', exact: true },
   { path: '/coach/attendance/class/:classId', name: 'Mark Attendance', exact: true },
   { path: '/coach/students', name: 'Students', exact: true },
+  { path: '/coach/students/import', name: 'Upload Students', exact: true },
   { path: '/coach/students/new', name: 'Add Student', exact: true },
   { path: '/coach/students/:studentId', name: 'Student Profile', exact: true },
   { path: '/coach/students/:studentId/edit', name: 'Edit Student', exact: true },

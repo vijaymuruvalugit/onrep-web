@@ -28,4 +28,9 @@ describe('apiActivityContext', () => {
   it('does not require workspace for students list', () => {
     expect(requestRequiresActivityWorkspace('/students')).toBe(false)
   })
+
+  it('skips activity header for student import', () => {
+    expect(requestSkipsActivityHeader('/student-import/preview')).toBe(true)
+    expect(requestRequiresActivityWorkspace('/student-import/execute')).toBe(false)
+  })
 })
