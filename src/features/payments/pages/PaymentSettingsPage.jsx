@@ -13,7 +13,13 @@ import {
   CBadge,
 } from '@coreui/react'
 import { paymentSettingsApi } from '../api/paymentSettingsApi'
+import paymentsApi from '../api/paymentsApi'
 import { copyForReason } from '../constants/checkoutReadiness'
+import { monthStr } from '../utils/formatDueShort'
+
+function defaultGenerateMonth() {
+  return monthStr(new Date())
+}
 
 /**
  * Owner-only Payment Settings (Phase 1.4 + 1.5).
@@ -73,8 +79,12 @@ export default function PaymentSettingsPage() {
     accepts_online_payments: true,
     allow_partial_payments: false,
     minimum_partial_amount_paise: 50000,
+    default_fee_due_day: 31,
   })
   const [readiness, setReadiness] = useState(null)
+  const [generateMonth, setGenerateMonth] = useState(defaultGenerateMonth)
+  const [generating, setGenerating] = useState(false)
+  const [generateResult, setGenerateResult] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -86,6 +96,7 @@ export default function PaymentSettingsPage() {
           accepts_online_payments: data.accepts_online_payments !== false,
           allow_partial_payments: data.allow_partial_payments === true,
           minimum_partial_amount_paise: Number(data.minimum_partial_amount_paise || 0),
+          default_fee_due_day: Number(data.default_fee_due_day || 31),
         })
         setReadiness({
           checkout_ready_ok: data.checkout_ready_ok,
@@ -111,12 +122,30 @@ export default function PaymentSettingsPage() {
         accepts_online_payments: form.accepts_online_payments,
         allow_partial_payments: form.allow_partial_payments,
         minimum_partial_amount_paise: Number(form.minimum_partial_amount_paise) || 0,
+        default_fee_due_day: Number(form.default_fee_due_day) || 31,
       })
       if (out?.readiness) setReadiness(out.readiness)
     } catch (e) {
       setError(e?.message || 'Failed to save')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleGenerateMissing = async () => {
+    setGenerating(true)
+    setError(null)
+    setGenerateResult(null)
+    try {
+      const out = await paymentsApi.generateObligations({
+        periodMonth: generateMonth,
+        onlyMissing: true,
+      })
+      setGenerateResult(out)
+    } catch (e) {
+      setError(e?.message || 'Failed to generate fees')
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -140,6 +169,73 @@ export default function PaymentSettingsPage() {
       <h2 className="mb-3">Payment settings</h2>
       {error ? <CAlert color="danger">{error}</CAlert> : null}
       <ReadinessPanel readiness={readiness} />
+
+      <CCard className="mb-4">
+        <CCardHeader>
+          <strong>Automatic fees</strong>
+        </CCardHeader>
+        <CCardBody>
+          <p className="text-body-secondary small">
+            Fees are created automatically when you open Payments. Use this only if a month is
+            missing rows (for example after adding students late).
+          </p>
+          <div className="mb-3">
+            <CFormLabel htmlFor="generateFeeMonth">Month</CFormLabel>
+            <CFormInput
+              id="generateFeeMonth"
+              type="month"
+              value={generateMonth}
+              onChange={(e) => setGenerateMonth(e.target.value)}
+            />
+          </div>
+          <CButton
+            color="secondary"
+            variant="outline"
+            onClick={handleGenerateMissing}
+            disabled={generating}
+          >
+            {generating ? <CSpinner size="sm" /> : 'Generate missing fees'}
+          </CButton>
+          {generateResult ? (
+            <div className="small text-body-secondary mt-2 mb-0">
+              Created {generateResult.created ?? 0} fee(s) for {generateResult.periodMonth}.
+              {generateResult.skippedZeroAmount > 0
+                ? ` Skipped ${generateResult.skippedZeroAmount} student(s) with no batch or override fee.`
+                : null}
+            </div>
+          ) : null}
+        </CCardBody>
+      </CCard>
+
+      <CCard className="mb-4">
+        <CCardHeader>
+          <strong>Fee due dates</strong>
+        </CCardHeader>
+        <CCardBody>
+          <CForm>
+            <div className="mb-3">
+              <CFormLabel htmlFor="defaultFeeDueDay">Default due day</CFormLabel>
+              <CFormInput
+                id="defaultFeeDueDay"
+                type="number"
+                min={1}
+                max={31}
+                value={form.default_fee_due_day}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, default_fee_due_day: Number(e.target.value) || '' }))
+                }
+              />
+              <div className="form-text">
+                Used for every student unless their profile has its own due day. For shorter months,
+                day 31 becomes the last day of that month.
+              </div>
+            </div>
+            <CButton color="primary" onClick={handleSave} disabled={saving}>
+              {saving ? <CSpinner size="sm" /> : 'Save due date'}
+            </CButton>
+          </CForm>
+        </CCardBody>
+      </CCard>
 
       <CCard className="mb-4">
         <CCardHeader>
@@ -195,7 +291,12 @@ export default function PaymentSettingsPage() {
               <CButton color="primary" onClick={handleSave} disabled={saving}>
                 {saving ? <CSpinner size="sm" /> : 'Save'}
               </CButton>
-              <CButton color="secondary" variant="outline" onClick={handleRefreshReadiness} disabled={saving}>
+              <CButton
+                color="secondary"
+                variant="outline"
+                onClick={handleRefreshReadiness}
+                disabled={saving}
+              >
                 Re-check readiness
               </CButton>
             </div>

@@ -27,6 +27,7 @@ import { getWorkspaceDisplay } from '../../../core/activityWorkspace/activityDis
 const defaultValues = {
   fullName: '',
   monthlyFeeInr: 0,
+  feeDueDay: '',
   dateOfBirth: '',
   gender: '',
   activityId: '',
@@ -149,8 +150,8 @@ const StudentForm = ({ title, subtitle, submitLabel, initialValues, saving, erro
                 <small className="text-danger">{errors.activityId.message}</small>
               ) : null}
               <div className="small text-body-secondary mt-1">
-                Which enabled academy activity this student belongs to for skating and portal flows (often Skating
-                today). <code className="small">Group label</code> below is optional.
+                Which enabled academy activity this student belongs to for skating and portal flows
+                (often Skating today). <code className="small">Group label</code> below is optional.
               </div>
             </CCol>
             <CCol md={4}>
@@ -169,7 +170,7 @@ const StudentForm = ({ title, subtitle, submitLabel, initialValues, saving, erro
 
           <CRow className="g-3 mb-2">
             <CCol md={4}>
-              <CFormLabel htmlFor="monthlyFeeInr">Monthly fee (INR)</CFormLabel>
+              <CFormLabel htmlFor="monthlyFeeInr">Monthly fee override (INR)</CFormLabel>
               <CInputGroup>
                 <CInputGroupText>₹</CInputGroupText>
                 <CFormInput
@@ -182,7 +183,31 @@ const StudentForm = ({ title, subtitle, submitLabel, initialValues, saving, erro
               </CInputGroup>
               {errors.monthlyFeeInr ? (
                 <small className="text-danger">{errors.monthlyFeeInr.message}</small>
-              ) : null}
+              ) : (
+                <div className="small text-body-secondary mt-1">
+                  Set to 0 to use the batch fee. Enter an amount only when this student pays
+                  differently.
+                </div>
+              )}
+            </CCol>
+            <CCol md={4}>
+              <CFormLabel htmlFor="feeDueDay">Payment due day</CFormLabel>
+              <CFormInput
+                id="feeDueDay"
+                type="number"
+                min="1"
+                max="31"
+                placeholder="Use academy default"
+                invalid={Boolean(errors.feeDueDay)}
+                {...register('feeDueDay')}
+              />
+              {errors.feeDueDay ? (
+                <small className="text-danger">{errors.feeDueDay.message}</small>
+              ) : (
+                <div className="small text-body-secondary mt-1">
+                  Leave blank to use the academy payment setting.
+                </div>
+              )}
             </CCol>
           </CRow>
 

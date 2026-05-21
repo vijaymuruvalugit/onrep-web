@@ -5,6 +5,8 @@ export function toStudentCreatePayload(values) {
   const payload = {
     fullName: values.fullName?.trim(),
     monthlyFeeInr: Number(values.monthlyFeeInr || 0),
+    feeDueDay:
+      values.feeDueDay === '' || values.feeDueDay == null ? null : Number(values.feeDueDay),
     gender: values.gender?.trim() || undefined,
     activityId: values.activityId?.trim() || undefined,
     group: values.group?.trim() || undefined,
@@ -29,6 +31,7 @@ export function fromStudentToFormValues(student) {
   return {
     fullName: student?.full_name || '',
     monthlyFeeInr: student?.monthly_fee_inr ?? 0,
+    feeDueDay: student?.fee_due_day ?? '',
     dateOfBirth: student?.date_of_birth ? String(student.date_of_birth).slice(0, 10) : '',
     gender: student?.gender || '',
     activityId: student?.activity_id ? String(student.activity_id) : '',

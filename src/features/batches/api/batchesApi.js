@@ -120,6 +120,7 @@ function normalizeBatch(batch) {
     hasUpcomingClass,
     todaySessionSnapshot,
     nextSessionSnapshot,
+    feeInr: batch.fee_inr ?? batch.feeInr ?? null,
   }
 }
 

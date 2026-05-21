@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import CIcon from '@coreui/icons-react'
-import { cilPlus, cilReload } from '@coreui/icons'
+import { cilReload } from '@coreui/icons'
 import {
   CAlert,
   CBadge,
@@ -8,12 +8,7 @@ import {
   CCard,
   CCardBody,
   CCardHeader,
-  CCol,
-  CForm,
   CFormCheck,
-  CFormInput,
-  CFormLabel,
-  CRow,
   CSpinner,
   CTable,
   CTableBody,
@@ -24,10 +19,8 @@ import {
 } from '@coreui/react'
 import StatusBadge from '../StatusBadge'
 import { formatInr } from '../../utils/formatInr'
-import { formatDueShort, lastDayOfMonth, monthStr } from '../../utils/formatDueShort'
+import { formatDueShort } from '../../utils/formatDueShort'
 import { coachObligationBadges } from '../../utils/coachObligationBadges'
-
-const PERIOD_RE = /^\d{4}-\d{2}$/
 
 const ObligationsTable = ({
   obligations,
@@ -39,8 +32,6 @@ const ObligationsTable = ({
   onToggleSelect,
   onSelectAll,
   onClearSelection,
-  onCreateObligation,
-  createLoading,
   onRecordPayment,
   onRemind,
   onBulkClick,
@@ -48,32 +39,13 @@ const ObligationsTable = ({
   bulkLoading,
   onRefresh,
   refreshDisabled,
-  onAddFeeClick,
 }) => {
-  const today = new Date()
-  const [periodMonth, setPeriodMonth] = useState(monthStr(today))
-  const [dueDay, setDueDay] = useState(
-    String(lastDayOfMonth(today.getFullYear(), today.getMonth() + 1)),
-  )
-
   const allSelectableIds = useMemo(
     () => obligations.filter((ob) => ob.payment_status !== 'PAID').map((ob) => ob.id),
     [obligations],
   )
   const allSelected =
     allSelectableIds.length > 0 && allSelectableIds.every((id) => selectedIds.includes(id))
-
-  const periodValid = PERIOD_RE.test(periodMonth)
-  const dueDayNum = Number(dueDay)
-  const dueDayValid = Number.isInteger(dueDayNum) && dueDayNum >= 1 && dueDayNum <= 31
-
-  const handleCreate = (event) => {
-    event.preventDefault()
-    if (!studentId || !periodValid || !dueDayValid || createLoading) return
-    const [year, month] = periodMonth.split('-').map(Number)
-    const dueDate = `${year}-${String(month).padStart(2, '0')}-${String(dueDayNum).padStart(2, '0')}`
-    onCreateObligation({ studentId, periodMonth, dueDate })
-  }
 
   const selectedCount = selectedIds.length
 
@@ -94,11 +66,6 @@ const ObligationsTable = ({
               disabled={refreshDisabled}
             >
               <CIcon icon={cilReload} className="me-1" /> Refresh
-            </CButton>
-          ) : null}
-          {typeof onAddFeeClick === 'function' ? (
-            <CButton color="primary" size="sm" onClick={onAddFeeClick}>
-              <CIcon icon={cilPlus} className="me-1" /> Add fee
             </CButton>
           ) : null}
           {selectedCount > 0 ? (
@@ -130,52 +97,6 @@ const ObligationsTable = ({
       </CCardHeader>
 
       <CCardBody>
-        {studentId ? (
-          <CForm onSubmit={handleCreate} className="mb-3">
-            <CRow className="g-2 align-items-end">
-              <CCol xs={12} sm={4} md={3}>
-                <CFormLabel htmlFor="create-period">Period (YYYY-MM)</CFormLabel>
-                <CFormInput
-                  id="create-period"
-                  value={periodMonth}
-                  onChange={(event) => setPeriodMonth(event.target.value)}
-                  placeholder="2026-05"
-                  invalid={!periodValid}
-                  disabled={createLoading}
-                />
-              </CCol>
-              <CCol xs={6} sm={2} md={2}>
-                <CFormLabel htmlFor="create-day">Due day</CFormLabel>
-                <CFormInput
-                  id="create-day"
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={dueDay}
-                  onChange={(event) => setDueDay(event.target.value)}
-                  invalid={!dueDayValid}
-                  disabled={createLoading}
-                />
-              </CCol>
-              <CCol xs={6} sm="auto">
-                <CButton
-                  type="submit"
-                  color="primary"
-                  disabled={!periodValid || !dueDayValid || createLoading}
-                >
-                  {createLoading ? (
-                    <>
-                      <CSpinner size="sm" className="me-2" /> Creating…
-                    </>
-                  ) : (
-                    'Create fee'
-                  )}
-                </CButton>
-              </CCol>
-            </CRow>
-          </CForm>
-        ) : null}
-
         {error ? (
           <CAlert color="danger" className="py-2">
             {error.message || 'Unable to load fees.'}
@@ -207,7 +128,9 @@ const ObligationsTable = ({
               {obligations.length === 0 && !loading ? (
                 <CTableRow>
                   <CTableDataCell colSpan={8} className="text-center text-body-secondary py-4">
-                    No fees yet.
+                    {studentId
+                      ? 'No fees for this student yet. Fees appear automatically when the student is active and has a batch or student fee set.'
+                      : 'No fees yet. They are created automatically for active students with a batch or student fee configured.'}
                   </CTableDataCell>
                 </CTableRow>
               ) : null}

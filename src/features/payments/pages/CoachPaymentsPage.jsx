@@ -7,7 +7,6 @@ import usePayments from '../hooks/usePayments'
 import {
   bulkMarkObligationsPaid,
   confirmParentReport,
-  createObligation,
   fetchCoachFeeUpi,
   fetchObligations,
   fetchPendingParentReports,
@@ -19,23 +18,19 @@ import {
 import CoachPaymentsHeader from '../components/coach/CoachPaymentsHeader'
 import ObligationsTable from '../components/coach/ObligationsTable'
 import PendingReportsPanel from '../components/coach/PendingReportsPanel'
-import AddFeeModal from '../components/coach/AddFeeModal'
 import PayModal from '../components/PayModal'
 import BulkMarkPaidModal from '../components/BulkMarkPaidModal'
 import FeeCollectionModeCard from '../components/coach/FeeCollectionModeCard'
 
 /**
- * Operational core — ports `ezyplay-frontend` `CoachPaymentsScreen` to web.
- * Composes three sub-views (header / obligations table / pending reports)
- * and owns the two confirmation modals.
- *
- * Deep-link: `?studentId=<uuid>` filters the table to that student and
- * unlocks the create-fee form (matching RN behavior).
+ * Operational payments — fees are generated automatically from academy due-day
+ * settings, batch fees, and optional student overrides when this page loads.
  */
 const CoachPaymentsPage = () => {
   const dispatch = useDispatch()
   const { user } = useAuth()
-  const isAcademyOwner = String(user?.role || user?.userRole || '').toLowerCase() === 'academy_owner'
+  const isAcademyOwner =
+    String(user?.role || user?.userRole || '').toLowerCase() === 'academy_owner'
   const [searchParams] = useSearchParams()
   const studentId = searchParams.get('studentId') || null
   const studentName = searchParams.get('studentName') || null
@@ -45,7 +40,6 @@ const CoachPaymentsPage = () => {
   const [selectedIds, setSelectedIds] = useState([])
   const [payModal, setPayModal] = useState(null)
   const [bulkOpen, setBulkOpen] = useState(false)
-  const [addFeeOpen, setAddFeeOpen] = useState(false)
   const [toasts, setToasts] = useState([])
 
   const pushToast = useCallback((message, color = 'primary') => {
@@ -56,10 +50,6 @@ const CoachPaymentsPage = () => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
   }, [])
 
-  // Fetch only depends on `dispatch` + URL param so the effect runs once per
-  // student filter change. We dispatch raw thunks to keep `reload` referentially
-  // stable across slice updates (loading flags) — otherwise the effect retriggers
-  // forever when each pending action mutates state.
   const reload = useCallback(() => {
     dispatch(fetchObligations({ studentId }))
     dispatch(fetchCoachFeeUpi())
@@ -70,8 +60,6 @@ const CoachPaymentsPage = () => {
     reload()
   }, [reload])
 
-  // Selections may include stale ids after a refresh; derive the valid subset
-  // during render rather than mutating state from an effect (React 19 rule).
   const validSelectedIds = useMemo(() => {
     const ids = new Set(coach.obligations.map((ob) => ob.id))
     return selectedIds.filter((id) => ids.has(id))
@@ -111,33 +99,6 @@ const CoachPaymentsPage = () => {
       return { ok: true }
     },
     [dispatch, pushToast],
-  )
-
-  const handleCreateObligation = useCallback(
-    async ({ studentId: sid, periodMonth, dueDate }) => {
-      const action = await dispatch(createObligation({ studentId: sid, periodMonth, dueDate }))
-      if (action?.error) {
-        pushToast(action.payload?.message || 'Unable to create fee.', 'danger')
-        return
-      }
-      pushToast('Fee created.', 'success')
-      await dispatch(fetchObligations({ studentId }))
-    },
-    [dispatch, pushToast, studentId],
-  )
-
-  const handleSubmitAddFee = useCallback(
-    async ({ studentId: sid, periodMonth, dueDate }) => {
-      const action = await dispatch(createObligation({ studentId: sid, periodMonth, dueDate }))
-      if (action?.error) {
-        pushToast(action.payload?.message || 'Unable to create fee.', 'danger')
-        return
-      }
-      pushToast('Fee created.', 'success')
-      setAddFeeOpen(false)
-      await dispatch(fetchObligations({ studentId }))
-    },
-    [dispatch, pushToast, studentId],
   )
 
   const handleRemind = useCallback(
@@ -240,6 +201,14 @@ const CoachPaymentsPage = () => {
         onSaveUpi={handleSaveUpi}
       />
 
+      {!studentId ? (
+        <CAlert color="info" className="py-2 mb-3">
+          Monthly fees are created automatically from your batch and student fee settings, using
+          your academy due date. Adjust amounts on the batch or student profile, and due dates under{' '}
+          <strong>Payment settings</strong>.
+        </CAlert>
+      ) : null}
+
       {isAcademyOwner ? (
         <FeeCollectionModeCard initialPaymentModule={user?.payment_module} />
       ) : null}
@@ -270,8 +239,6 @@ const CoachPaymentsPage = () => {
         onToggleSelect={handleToggleSelect}
         onSelectAll={handleSelectAll}
         onClearSelection={handleClearSelection}
-        onCreateObligation={handleCreateObligation}
-        createLoading={coach.createObligationLoading}
         onRecordPayment={handleRecordPayment}
         onRemind={handleRemind}
         onBulkClick={() => setBulkOpen(true)}
@@ -279,7 +246,6 @@ const CoachPaymentsPage = () => {
         bulkLoading={coach.bulkPaidLoading}
         onRefresh={reload}
         refreshDisabled={coach.obligationsLoading || reports.pendingLoading}
-        onAddFeeClick={studentId ? undefined : () => setAddFeeOpen(true)}
       />
 
       <PayModal
@@ -296,13 +262,6 @@ const CoachPaymentsPage = () => {
         submitting={coach.bulkPaidLoading}
         onClose={() => setBulkOpen(false)}
         onConfirm={handleBulkConfirm}
-      />
-
-      <AddFeeModal
-        visible={addFeeOpen}
-        submitting={coach.createObligationLoading}
-        onClose={() => setAddFeeOpen(false)}
-        onSubmit={handleSubmitAddFee}
       />
 
       <CToaster placement="top-end">

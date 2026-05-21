@@ -10,6 +10,13 @@ export const studentSchema = yup.object({
     .transform((value, originalValue) => (originalValue === '' ? 0 : value))
     .min(0, 'Monthly fee cannot be negative')
     .required('Monthly fee is required'),
+  feeDueDay: yup
+    .number()
+    .nullable()
+    .transform((value, originalValue) => (originalValue === '' ? null : value))
+    .integer('Due day must be a whole number')
+    .min(1, 'Due day must be between 1 and 31')
+    .max(31, 'Due day must be between 1 and 31'),
   dateOfBirth: yup
     .string()
     .nullable()

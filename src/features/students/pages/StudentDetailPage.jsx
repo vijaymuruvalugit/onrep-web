@@ -102,7 +102,7 @@ const StudentDetailPage = () => {
                 )
               }
             >
-              Add fee
+              View fees
             </CButton>
             <CButton color="primary" onClick={() => navigate(`/coach/students/${studentId}/edit`)}>
               Edit

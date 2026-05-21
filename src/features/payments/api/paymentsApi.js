@@ -15,13 +15,20 @@ export const paymentsApi = {
   },
 
   async createObligation({ studentId, periodMonth, dueDate, amountDue }) {
-    const { data } = await http.post('/payments/obligations', {
-      studentId,
-      periodMonth,
-      dueDate,
-      amountDue,
-    })
+    const payload = { studentId, periodMonth }
+    if (dueDate) payload.dueDate = dueDate
+    if (amountDue != null) payload.amountDue = amountDue
+    const { data } = await http.post('/payments/obligations', payload)
     return data?.obligation || null
+  },
+
+  async generateObligations({ periodMonth, studentId, onlyMissing = true } = {}) {
+    const { data } = await http.post('/payments/obligations/generate', {
+      periodMonth,
+      studentId,
+      onlyMissing,
+    })
+    return data || {}
   },
 
   async bulkMarkPaid(obligationIds) {

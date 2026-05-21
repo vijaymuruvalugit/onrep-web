@@ -63,7 +63,7 @@ const CoachPaymentsHeader = ({
         <CCol>
           <h2 className="mb-0">{studentName ? `Payments — ${studentName}` : 'Payments'}</h2>
           <p className="text-body-secondary small mb-0">
-            Track fees, record payments, and confirm parent-reported payments.
+            Fees are generated from your settings. Record payments and confirm parent reports here.
           </p>
         </CCol>
         <CCol xs="auto" className="d-flex gap-2">

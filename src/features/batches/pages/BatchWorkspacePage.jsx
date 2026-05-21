@@ -149,7 +149,11 @@ const BatchWorkspacePage = () => {
       } catch {
         /* board still loads; materialize is best-effort */
       }
-      const { sessions, operationalToday } = await operationalSessionsApi.getBoardRange(ti, toYmd, batchId)
+      const { sessions, operationalToday } = await operationalSessionsApi.getBoardRange(
+        ti,
+        toYmd,
+        batchId,
+      )
       if (operationalToday && /^\d{4}-\d{2}-\d{2}$/.test(String(operationalToday))) {
         setBoardOperationalToday(String(operationalToday).slice(0, 10))
       }
@@ -428,11 +432,17 @@ const BatchWorkspacePage = () => {
   const handleSettingsSave = () => {
     if (!settingsFormRef.current) return
     const formData = new FormData(settingsFormRef.current)
-    saveBatchSettings(batchId, {
+    const feeRaw = String(formData.get('feeInr') ?? '').trim()
+    const payload = {
       name: String(formData.get('name') || ''),
       coachUserIds: [...selectedCoachIds],
       defaultPlaceId: defaultPlaceId ? defaultPlaceId : null,
-    })
+    }
+    if (feeRaw !== '') {
+      const n = Number(feeRaw)
+      if (Number.isFinite(n) && n >= 0) payload.feeInr = Math.round(n)
+    }
+    saveBatchSettings(batchId, payload)
   }
 
   const loading = detailLoading && !selectedBatch
@@ -481,12 +491,12 @@ const BatchWorkspacePage = () => {
             <strong>
               {formatRowScheduledWhenLine(startOutsideModal?.row, todayIso) || 'the scheduled slot'}
             </strong>
-            . You are starting more than 10 minutes before it begins, or after it has ended (with a 10
-            minute grace).
+            . You are starting more than 10 minutes before it begins, or after it has ended (with a
+            10 minute grace).
           </p>
           <p className="mb-0 text-body-secondary small">
-            If you continue, the session start time is recorded as right now. The end time is recorded when
-            you end the session from ops or when attendance is finalized.
+            If you continue, the session start time is recorded as right now. The end time is
+            recorded when you end the session from ops or when attendance is finalized.
           </p>
         </CModalBody>
         <CModalFooter>
@@ -501,7 +511,9 @@ const BatchWorkspacePage = () => {
           <CButton
             color="primary"
             disabled={startNavigating}
-            onClick={() => void handleStartAttendanceForRow(startOutsideModal?.row, { force: true })}
+            onClick={() =>
+              void handleStartAttendanceForRow(startOutsideModal?.row, { force: true })
+            }
           >
             {startNavigating ? 'Starting…' : 'Start anyway'}
           </CButton>
@@ -582,9 +594,9 @@ const BatchWorkspacePage = () => {
       ) : null}
       {batchWorkspaceMismatch ? (
         <CAlert color="warning" className="mb-3">
-          This batch belongs to <strong>{batchWorkspaceMismatch.batchActivityName}</strong>, but you are
-          working in <strong>{batchWorkspaceMismatch.activeWorkspaceName}</strong>. Switch program in the
-          header to view this batch&apos;s sessions.
+          This batch belongs to <strong>{batchWorkspaceMismatch.batchActivityName}</strong>, but you
+          are working in <strong>{batchWorkspaceMismatch.activeWorkspaceName}</strong>. Switch
+          program in the header to view this batch&apos;s sessions.
         </CAlert>
       ) : null}
       {detailError && detailError.code !== WORKSPACE_REQUIRED ? (
@@ -632,7 +644,9 @@ const BatchWorkspacePage = () => {
                 ) : null}
                 {compactTimeline.map((row) => {
                   const sid = row.sessionId || row.id
-                  const rowDate = effectiveOperationalSessionDateYmd(row) || normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
+                  const rowDate =
+                    effectiveOperationalSessionDateYmd(row) ||
+                    normalizeSessionDateYmd(row.sessionDate ?? row.session_date)
                   const isToday = rowDate === todayIso
                   const markAllowed = canMarkSessionAttendance(row)
                   const canMarkAttendanceToday =
@@ -706,6 +720,25 @@ const BatchWorkspacePage = () => {
                   <CCol md={6}>
                     <CFormLabel>Batch name</CFormLabel>
                     <CFormInput name="name" defaultValue={selectedBatch?.name || ''} />
+                  </CCol>
+                  <CCol md={6}>
+                    <CFormLabel htmlFor="batch-fee-inr">Monthly batch fee (INR)</CFormLabel>
+                    <CFormInput
+                      id="batch-fee-inr"
+                      name="feeInr"
+                      type="number"
+                      min="0"
+                      step="1"
+                      defaultValue={
+                        selectedBatch?.feeInr != null && selectedBatch?.feeInr !== ''
+                          ? String(selectedBatch.feeInr)
+                          : ''
+                      }
+                      placeholder="e.g. 3000"
+                    />
+                    <div className="small text-body-secondary mt-1">
+                      Used for students in this batch unless they have their own fee override.
+                    </div>
                   </CCol>
                   <CCol md={6}>
                     <CFormLabel htmlFor="batch-default-place">Default place</CFormLabel>
