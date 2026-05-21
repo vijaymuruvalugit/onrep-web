@@ -9,6 +9,7 @@ import { liveLabel } from '../constants/coachLiveLabels'
 export default function SessionLiveHeader({
   placeName,
   sessionTitle,
+  contextLine,
   phaseLabel,
   athleteCount = 0,
   lifecycle,
@@ -49,6 +50,11 @@ export default function SessionLiveHeader({
         <div className="session-live-header__shell">
           <div className="session-live-header__primary">
             <h1 className="session-live-header__title text-truncate mb-0">{title}</h1>
+            {contextLine ? (
+              <p className="session-live-header__context small text-body-secondary mb-0 text-truncate">
+                {contextLine}
+              </p>
+            ) : null}
           </div>
           {(canStart || canPause || canEnd || (isRaceMode && onRaceFocus)) && (
             <div

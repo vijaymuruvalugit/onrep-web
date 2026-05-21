@@ -10,6 +10,7 @@ import { getLiveUiProfile, liveLabel, isSkillsPhaseBlock } from '../constants/co
 import LiveSessionSyncDot from './LiveSessionSyncDot'
 import {
   sessionDisplayTitle,
+  sessionOperationalContextLine,
   sessionTimeRangeLabel,
 } from '../../../domain/operationalSessions/helpers/sessionDisplay'
 
@@ -68,6 +69,7 @@ function CoachLiveSessionView({
 
   const sessionForHeader = selSession || shellSession || null
   const sessionTitle = sessionForHeader ? sessionDisplayTitle(sessionForHeader) : 'Session'
+  const contextLine = sessionForHeader ? sessionOperationalContextLine(sessionForHeader) : null
   const timeRangeLabel = sessionForHeader ? sessionTimeRangeLabel(sessionForHeader) : ''
   const usePhaseCapture = Boolean(phaseCapture?.enabled && !isRaceMode)
   const isSkillsPhase = isSkillsPhaseBlock(activeBlockMeta)
@@ -104,6 +106,7 @@ function CoachLiveSessionView({
       <header className="coach-live-stack__session-header">
         <SessionLiveHeader
           sessionTitle={sessionTitle}
+          contextLine={contextLine}
           phaseLabel={activeBlockTitle}
           athleteCount={rosterForSession.length}
           lifecycle={lifecycle}

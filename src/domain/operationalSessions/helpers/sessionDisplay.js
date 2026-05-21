@@ -17,6 +17,45 @@ function formatClock(iso, timeZone) {
 }
 
 /**
+ * @param {string|null|undefined} value
+ */
+function formatSurfaceType(value) {
+  if (!value) return null
+  const s = String(value).trim()
+  if (!s) return null
+  if (s.length <= 4 && s === s.toUpperCase()) {
+    return s.charAt(0) + s.slice(1).toLowerCase()
+  }
+  return s
+}
+
+/**
+ * Compact context line: specialization • surface • session mode.
+ * @param {import('../types').OperationalSession} session
+ */
+export function sessionOperationalContextLine(session) {
+  if (!session) return null
+  const parts = []
+  const spec =
+    session.academySubActivityName?.trim() ||
+    session.academy_sub_activity_name?.trim() ||
+    null
+  if (spec) parts.push(spec)
+  const surfaceRaw =
+    session.surfaceProfile?.type ?? session.surface_profile?.type ?? null
+  const surface = formatSurfaceType(surfaceRaw)
+  if (surface) parts.push(surface)
+  const mode = session.sessionMode ?? session.session_mode
+  if (mode) {
+    const label = String(mode)
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+    parts.push(label)
+  }
+  return parts.length ? parts.join(' • ') : null
+}
+
+/**
  * @param {import('../types').OperationalSession} session
  */
 export function sessionDisplayTitle(session) {

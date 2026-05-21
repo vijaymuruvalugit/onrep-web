@@ -31,7 +31,7 @@ import {
 import { formatOperationalSessionRange } from '../../classes/utils/sessionDisplay'
 import { todayIsoLocal } from '../utils/batchWorkspaceOperations'
 import { stripDemoSuffix } from '../utils/batchDisplayUtils'
-import subActivitiesApi from '../api/subActivitiesApi'
+import { academySubActivitiesApi } from '../../../api/academySubActivitiesApi'
 import { bootstrapWorkspace, setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
 import { useCoachLikeRole } from '../../workspace/hooks/useCoachLikeRole'
 import './BatchesListPage.scss'
@@ -417,7 +417,7 @@ const BatchesListPage = () => {
       setSubActivitiesLoading(true)
       ;(async () => {
         try {
-          const { subActivities } = await subActivitiesApi.list({ activeOnly: true })
+          const subActivities = await academySubActivitiesApi.list({ activeOnly: true })
           if (cancelled) return
           setSubActivitiesRows(subActivities)
           if (subActivities.length === 1) {
@@ -635,7 +635,7 @@ const BatchesListPage = () => {
             </div>
           ) : subActivitiesRows.length > 1 ? (
             <div className="mb-3">
-              <CFormLabel htmlFor="batch-sub-activity">Stream / track</CFormLabel>
+              <CFormLabel htmlFor="batch-sub-activity">Specialization</CFormLabel>
               <CFormSelect
                 id="batch-sub-activity"
                 value={selectedSubActivityId}
@@ -652,11 +652,11 @@ const BatchesListPage = () => {
             </div>
           ) : subActivitiesRows.length === 1 ? (
             <p className="small text-body-secondary mb-3">
-              Stream: <strong>{subActivitiesRows[0]?.name}</strong>
+              Specialization: <strong>{subActivitiesRows[0]?.name}</strong>
             </p>
           ) : activeActivityId ? (
             <CAlert color="danger" className="mb-3">
-              No tracks set up for this practice yet. Ask an owner to add them, or try refreshing.
+              No specializations set up for this practice yet. Ask an owner to add them, or try refreshing.
             </CAlert>
           ) : null}
           <div className="mb-3">
