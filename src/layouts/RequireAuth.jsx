@@ -5,7 +5,7 @@ import { CSpinner } from '@coreui/react'
 
 const RequireAuth = () => {
   const location = useLocation()
-  const { isAuthenticated, isRestored } = useSelector((state) => state.auth)
+  const { isAuthenticated, isRestored, user } = useSelector((state) => state.auth)
 
   if (!isRestored) {
     return (
@@ -17,6 +17,13 @@ const RequireAuth = () => {
 
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace state={{ from: location }} />
+  }
+
+  if (
+    (user?.force_password_change === true || user?.next_action === 'FORCE_PASSWORD_CHANGE') &&
+    location.pathname !== '/auth/change-password'
+  ) {
+    return <Navigate to="/auth/change-password" replace />
   }
 
   return <Outlet />

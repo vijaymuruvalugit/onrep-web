@@ -22,6 +22,7 @@ import { CSpinner } from '@coreui/react'
 
 import { refreshSubscription } from '../subscriptionRefresh'
 import { sanitizeNext } from '../sanitizeNext'
+import { hasAcademyAdminCapability } from '../utils/academyAdminAccess'
 
 export default function SubscriptionGuard() {
   const dispatch = useDispatch()
@@ -43,9 +44,8 @@ export default function SubscriptionGuard() {
     }
   }, [dispatch])
 
-  const role = user?.role
   const subscription = user?.subscription
-  const isOwner = role === 'academy_owner'
+  const isOwner = hasAcademyAdminCapability(user)
 
   const nextQuery = useMemo(() => {
     const raw = `${location.pathname || ''}${location.search || ''}`

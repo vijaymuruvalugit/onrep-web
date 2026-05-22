@@ -1,5 +1,8 @@
 import { getDefaultRouteForRole } from '../../../navigation'
 import { isSuperAdminUser } from '../../superAdmin/utils/superAdminAccess'
+import { hasAcademyAdminCapability } from './academyAdminAccess'
+
+export { hasAcademyAdminCapability, isLegalAcademyOwner } from './academyAdminAccess'
 
 export { getDefaultRouteForRole }
 
@@ -9,7 +12,7 @@ export function membershipToNavRole(membershipRole) {
   if (m === 'academy_admin') return 'academy_owner'
   if (m === 'student') return 'student'
   if (m === 'parent') return 'parent'
-  if (m === 'super_admin') return 'admin'
+  if (m === 'super_admin') return 'super_admin'
   return 'coach'
 }
 

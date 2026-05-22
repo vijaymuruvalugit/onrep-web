@@ -24,6 +24,10 @@ import CIcon from '@coreui/icons-react'
 import { cilPeople, cilReload, cilSend } from '@coreui/icons'
 
 import useCoachInvites from '../hooks/useCoachInvites'
+import {
+  hasAcademyAdminCapability,
+  isLegalAcademyOwner,
+} from '../../auth/utils/academyAdminAccess'
 
 function statusBadgeColor(status) {
   const s = String(status || '').toLowerCase()
@@ -47,10 +51,16 @@ function formatTs(value) {
 
 const CoachInvitesPage = () => {
   const user = useSelector((state) => state.auth.user)
-  const isOwner = String(user?.role || user?.userRole || '').toLowerCase() === 'academy_owner'
+  const canManage = hasAcademyAdminCapability(user)
+  const canAssignAdmin = isLegalAcademyOwner(user)
 
   const {
     invites,
+    staff,
+    staffLoading,
+    staffError,
+    adminActionLoadingId,
+    adminActionError,
     listLoading,
     listError,
     submitLoading,
@@ -63,21 +73,26 @@ const CoachInvitesPage = () => {
     resendError,
     resendSuccess,
     loadCoachInvites,
+    loadAcademyStaff,
     sendCoachInvite,
     revokeCoachInvite,
     resendCoachInvite,
+    grantCoachAdmin,
+    revokeCoachAdmin,
     clearSubmitState,
     clearRevokeError,
     clearResendState,
+    clearAdminActionError,
   } = useCoachInvites()
 
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
 
   useEffect(() => {
-    if (!isOwner) return
+    if (!canManage) return
     loadCoachInvites()
-  }, [isOwner, loadCoachInvites])
+    loadAcademyStaff()
+  }, [canManage, loadCoachInvites, loadAcademyStaff])
 
   useEffect(() => {
     if (submitSuccess) {
@@ -120,13 +135,29 @@ const CoachInvitesPage = () => {
     }
   }
 
-  if (!isOwner) {
+  const onGrantAdmin = async (userId) => {
+    clearAdminActionError()
+    const result = await grantCoachAdmin(userId)
+    if (result.meta.requestStatus === 'fulfilled') {
+      void loadAcademyStaff()
+    }
+  }
+
+  const onRevokeAdmin = async (userId) => {
+    clearAdminActionError()
+    const result = await revokeCoachAdmin(userId)
+    if (result.meta.requestStatus === 'fulfilled') {
+      void loadAcademyStaff()
+    }
+  }
+
+  if (!canManage) {
     return (
       <>
         <h2 className="mb-3">Coaches</h2>
         <CAlert color="warning">
-          Only <strong>academy owners</strong> can invite coaches. Sign in with an owner account to
-          manage invites.
+          Only <strong>academy owners and admins</strong> can invite coaches. Sign in with an owner
+          or admin account to manage invites.
         </CAlert>
       </>
     )
@@ -186,6 +217,21 @@ const CoachInvitesPage = () => {
       {resendSuccess ? (
         <CAlert color="success" dismissible onClose={clearResendState}>
           Invite resent — a fresh sign-up link was emailed with a new 48-hour expiry.
+        </CAlert>
+      ) : null}
+
+      {adminActionError ? (
+        <CAlert color="danger" dismissible onClose={clearAdminActionError}>
+          {adminActionError.message || 'Admin role update failed.'}
+        </CAlert>
+      ) : null}
+
+      {staffError ? (
+        <CAlert color="warning" className="d-flex flex-column flex-sm-row gap-2 align-items-sm-center">
+          <span>{staffError.message || 'Could not load staff.'}</span>
+          <CButton color="warning" variant="outline" size="sm" onClick={() => loadAcademyStaff()}>
+            Retry
+          </CButton>
         </CAlert>
       ) : null}
 
@@ -258,6 +304,90 @@ const CoachInvitesPage = () => {
               </CCol>
             </CRow>
           </CForm>
+        </CCardBody>
+      </CCard>
+
+      <CCard className="mb-4">
+        <CCardHeader>Staff — admin access</CCardHeader>
+        <CCardBody className="p-0 overflow-auto">
+          <p className="px-4 pt-3 mb-2 small text-body-secondary">
+            Grant <strong>Academy admin</strong> so a coach can manage billing, invites, and settings
+            (same as owner). They keep coach access and can switch perspectives in the header.
+          </p>
+          {staffLoading && !staff.length ? (
+            <div className="text-center py-4">
+              <CSpinner />
+            </div>
+          ) : null}
+          {staff.length ? (
+            <CTable hover responsive className="mb-0">
+              <CTableHead>
+                <CTableRow>
+                  <CTableHeaderCell scope="col">Name</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Email</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Role</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Admin</CTableHeaderCell>
+                  {canAssignAdmin ? <CTableHeaderCell scope="col"> </CTableHeaderCell> : null}
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {staff
+                  .filter((row) => row.role !== 'academy_owner')
+                  .map((row) => {
+                    const busy = adminActionLoadingId === row.id
+                    return (
+                      <CTableRow key={row.id}>
+                        <CTableDataCell>{row.name || '—'}</CTableDataCell>
+                        <CTableDataCell className="small">{row.email || '—'}</CTableDataCell>
+                        <CTableDataCell className="small text-capitalize">{row.role}</CTableDataCell>
+                        <CTableDataCell>
+                          {row.isAcademyAdmin ? (
+                            <CBadge color="primary">Admin</CBadge>
+                          ) : (
+                            <span className="text-body-secondary small">Coach</span>
+                          )}
+                        </CTableDataCell>
+                        {canAssignAdmin ? (
+                          <CTableDataCell>
+                            {row.role === 'coach' || row.role === 'admin' ? (
+                              <div className="d-flex flex-wrap gap-1">
+                                {row.isAcademyAdmin ? (
+                                  <CButton
+                                    color="secondary"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={busy}
+                                    onClick={() => void onRevokeAdmin(row.id)}
+                                  >
+                                    {busy ? <CSpinner size="sm" /> : 'Remove admin'}
+                                  </CButton>
+                                ) : (
+                                  <CButton
+                                    color="primary"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={busy || !row.password_set}
+                                    onClick={() => void onGrantAdmin(row.id)}
+                                  >
+                                    {busy ? <CSpinner size="sm" /> : 'Make admin'}
+                                  </CButton>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-body-secondary small">—</span>
+                            )}
+                          </CTableDataCell>
+                        ) : null}
+                      </CTableRow>
+                    )
+                  })}
+              </CTableBody>
+            </CTable>
+          ) : (
+            !staffLoading && (
+              <p className="p-4 mb-0 text-body-secondary small">No coaches to show yet.</p>
+            )
+          )}
         </CCardBody>
       </CCard>
 

@@ -1,14 +1,14 @@
 import React from 'react'
 import { Navigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { hasAcademyAdminCapability } from '../../auth/utils/academyAdminAccess'
 
 /**
- * Limits onboarding owner flows — coaches/admins redirect to operational dashboard.
+ * Limits onboarding owner flows — coaches without admin redirect to operational dashboard.
  */
 const RequireOwner = ({ children }) => {
   const user = useSelector((state) => state.auth.user)
-  const isOwner = String(user?.role || user?.userRole || '').toLowerCase() === 'academy_owner'
-  if (!isOwner) {
+  if (!hasAcademyAdminCapability(user)) {
     return <Navigate to="/coach/dashboard" replace />
   }
   return children

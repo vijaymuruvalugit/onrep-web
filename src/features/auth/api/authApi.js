@@ -7,12 +7,14 @@ const AUTH_ENDPOINTS = {
   me: import.meta.env.VITE_AUTH_ME_ENDPOINT || '/auth/me',
   forgotPassword: import.meta.env.VITE_AUTH_FORGOT_PASSWORD_ENDPOINT || '/auth/forgot-password',
   resetPassword: import.meta.env.VITE_AUTH_RESET_PASSWORD_ENDPOINT || '/auth/reset-password',
+  changePassword: '/auth/change-password',
   verifyEmail: import.meta.env.VITE_AUTH_VERIFY_EMAIL_ENDPOINT || '/auth/verify-email',
   resendVerification:
     import.meta.env.VITE_AUTH_RESEND_VERIFICATION_ENDPOINT || '/auth/resend-verification-email',
   completeCoachInvite: '/auth/complete-coach-invite',
   completeParentInvite: '/auth/complete-parent-invite',
   parentInvitePreview: '/auth/parent-invite-preview',
+  switchPerspective: '/auth/switch-perspective',
 }
 
 export const authApi = {
@@ -36,6 +38,9 @@ export const authApi = {
   resetPassword(payload) {
     return http.post(AUTH_ENDPOINTS.resetPassword, payload)
   },
+  changePassword(payload) {
+    return http.post(AUTH_ENDPOINTS.changePassword, payload)
+  },
   verifyEmail(payload) {
     return http.post(AUTH_ENDPOINTS.verifyEmail, payload)
   },
@@ -50,6 +55,9 @@ export const authApi = {
   },
   parentInvitePreview(code) {
     return http.get(AUTH_ENDPOINTS.parentInvitePreview, { params: { code } })
+  },
+  switchPerspective(activeRole) {
+    return http.post(AUTH_ENDPOINTS.switchPerspective, { activeRole })
   },
 }
 

@@ -49,10 +49,18 @@ export function mergeSessionIntoUser(user, session = {}) {
     next.payment_required_after_verification = session.payment_required_after_verification
   }
   if (session.next_action !== undefined) next.next_action = session.next_action
-  if (user.is_platform_admin === true || user.is_super_admin === true) {
-    next.is_platform_admin = true
+  if (user.force_password_change !== undefined) {
+    next.force_password_change = user.force_password_change === true
+  }
+  if (
+    user.is_super_admin === true ||
+    user.role === 'super_admin' ||
+    user.activeRole === 'super_admin' ||
+    (Array.isArray(user.roles) && user.roles.includes('super_admin'))
+  ) {
     next.is_super_admin = true
   }
+  if (user.is_platform_admin === true) next.is_platform_admin = true
   return next
 }
 
@@ -120,6 +128,18 @@ export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValu
 })
 
 /** Refresh user + onboarding/subscription from GET /auth/me (canonical backend state). */
+export const switchPerspective = createAsyncThunk(
+  'auth/switchPerspective',
+  async (activeRole, { rejectWithValue }) => {
+    try {
+      const { data } = await authApi.switchPerspective(activeRole)
+      return extractAuthPayload(data)
+    } catch (error) {
+      return rejectWithValue(normalizeApiError(error))
+    }
+  },
+)
+
 export const refreshSession = createAsyncThunk(
   'auth/refreshSession',
   async (_, { rejectWithValue }) => {
@@ -220,6 +240,7 @@ const authSlice = createSlice({
       .addCase(login.fulfilled, applyAuthenticatedSession)
       .addCase(completeCoachInvite.fulfilled, applyAuthenticatedSession)
       .addCase(completeParentInvite.fulfilled, applyAuthenticatedSession)
+      .addCase(switchPerspective.fulfilled, applyAuthenticatedSession)
       .addCase(completeCoachInvite.pending, (state) => {
         state.loading = true
         state.error = null

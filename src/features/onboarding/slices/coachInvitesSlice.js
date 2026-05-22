@@ -1,9 +1,15 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import normalizeApiError from '../../../api/normalizeApiError'
 import coachInvitesApi from '../api/coachInvitesApi'
+import academyCoachesApi from '../api/academyCoachesApi'
 
 const initialState = {
   invites: [],
+  staff: [],
+  staffLoading: false,
+  staffError: null,
+  adminActionLoadingId: null,
+  adminActionError: null,
   listLoading: false,
   listError: null,
   submitLoading: false,
@@ -50,6 +56,39 @@ export const revokeCoachInviteThunk = createAsyncThunk(
   },
 )
 
+export const fetchAcademyStaff = createAsyncThunk('coachInvites/fetchStaff', async (_, thunkApi) => {
+  try {
+    const data = await academyCoachesApi.listCoaches()
+    return data.coaches || []
+  } catch (error) {
+    return thunkApi.rejectWithValue(normalizeApiError(error))
+  }
+})
+
+export const grantCoachAdminThunk = createAsyncThunk(
+  'coachInvites/grantAdmin',
+  async (userId, thunkApi) => {
+    try {
+      await academyCoachesApi.grantAdmin(userId)
+      return userId
+    } catch (error) {
+      return thunkApi.rejectWithValue(normalizeApiError(error))
+    }
+  },
+)
+
+export const revokeCoachAdminThunk = createAsyncThunk(
+  'coachInvites/revokeAdmin',
+  async (userId, thunkApi) => {
+    try {
+      await academyCoachesApi.revokeAdmin(userId)
+      return userId
+    } catch (error) {
+      return thunkApi.rejectWithValue(normalizeApiError(error))
+    }
+  },
+)
+
 export const resendCoachInviteThunk = createAsyncThunk(
   'coachInvites/resend',
   async (userId, thunkApi) => {
@@ -77,6 +116,9 @@ const coachInvitesSlice = createSlice({
     clearCoachInviteResendState(state) {
       state.resendError = null
       state.resendSuccess = false
+    },
+    clearCoachAdminActionError(state) {
+      state.adminActionError = null
     },
   },
   extraReducers: (builder) => {
@@ -132,9 +174,53 @@ const coachInvitesSlice = createSlice({
         state.resendLoadingId = null
         state.resendError = action.payload || { message: 'Unable to resend invite.' }
       })
+      .addCase(fetchAcademyStaff.pending, (state) => {
+        state.staffLoading = true
+        state.staffError = null
+      })
+      .addCase(fetchAcademyStaff.fulfilled, (state, action) => {
+        state.staffLoading = false
+        state.staff = action.payload
+      })
+      .addCase(fetchAcademyStaff.rejected, (state, action) => {
+        state.staffLoading = false
+        state.staffError = action.payload || { message: 'Unable to load staff.' }
+      })
+      .addCase(grantCoachAdminThunk.pending, (state, action) => {
+        state.adminActionLoadingId = action.meta.arg
+        state.adminActionError = null
+      })
+      .addCase(grantCoachAdminThunk.fulfilled, (state, action) => {
+        state.adminActionLoadingId = null
+        const id = action.payload
+        const row = state.staff.find((s) => s.id === id)
+        if (row) row.isAcademyAdmin = true
+      })
+      .addCase(grantCoachAdminThunk.rejected, (state, action) => {
+        state.adminActionLoadingId = null
+        state.adminActionError = action.payload || { message: 'Unable to grant admin.' }
+      })
+      .addCase(revokeCoachAdminThunk.pending, (state, action) => {
+        state.adminActionLoadingId = action.meta.arg
+        state.adminActionError = null
+      })
+      .addCase(revokeCoachAdminThunk.fulfilled, (state, action) => {
+        state.adminActionLoadingId = null
+        const id = action.payload
+        const row = state.staff.find((s) => s.id === id)
+        if (row) row.isAcademyAdmin = false
+      })
+      .addCase(revokeCoachAdminThunk.rejected, (state, action) => {
+        state.adminActionLoadingId = null
+        state.adminActionError = action.payload || { message: 'Unable to revoke admin.' }
+      })
   },
 })
 
-export const { clearCoachInviteSubmitState, clearCoachInviteRevokeError, clearCoachInviteResendState } =
-  coachInvitesSlice.actions
+export const {
+  clearCoachInviteSubmitState,
+  clearCoachInviteRevokeError,
+  clearCoachInviteResendState,
+  clearCoachAdminActionError,
+} = coachInvitesSlice.actions
 export default coachInvitesSlice.reducer

@@ -41,12 +41,19 @@ const LoginPage = () => {
   const onSubmit = async (values) => {
     const result = await login(values)
     if (result?.meta?.requestStatus === 'fulfilled') {
-      const target = location.state?.from?.pathname || getRoleRedirectPath(result.payload?.user)
+      const target =
+        result.payload?.user?.force_password_change === true ||
+        result.payload?.user?.next_action === 'FORCE_PASSWORD_CHANGE'
+          ? '/auth/change-password'
+          : location.state?.from?.pathname || getRoleRedirectPath(result.payload?.user)
       navigate(target, { replace: true })
     }
   }
 
   if (isAuthenticated) {
+    if (user?.force_password_change === true || user?.next_action === 'FORCE_PASSWORD_CHANGE') {
+      return <Navigate to="/auth/change-password" replace />
+    }
     return <Navigate to={redirectTo} replace />
   }
 

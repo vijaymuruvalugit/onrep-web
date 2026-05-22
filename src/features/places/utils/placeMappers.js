@@ -53,6 +53,8 @@ export function normalizeScheduleRowForUi(row) {
   const name = row.name ?? slotName ?? null
   const coachId = row.coachId ?? row.coach_id ?? null
   const coachName = row.coachName ?? row.coach_name ?? null
+  const additionalCoachIdsRaw = row.additionalCoachIds ?? row.additional_coach_ids ?? []
+  const additionalCoachesRaw = row.additionalCoaches ?? row.additional_coaches ?? []
   const sessionFocus = row.sessionFocus ?? row.session_focus ?? null
   const sessionPresetId = row.sessionPresetId ?? row.session_preset_id ?? null
   const phaseOverrides = row.phaseOverrides ?? row.phase_overrides_json ?? []
@@ -82,6 +84,10 @@ export function normalizeScheduleRowForUi(row) {
     name,
     coachId: coachId != null ? String(coachId) : null,
     coachName,
+    additionalCoachIds: Array.isArray(additionalCoachIdsRaw)
+      ? additionalCoachIdsRaw.map(String).filter(Boolean)
+      : [],
+    additionalCoaches: Array.isArray(additionalCoachesRaw) ? additionalCoachesRaw : [],
     sessionFocus,
     sessionMode,
     sessionPresetId: sessionPresetId || null,

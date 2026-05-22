@@ -1,8 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { CDropdown, CDropdownItem, CDropdownMenu, CDropdownToggle } from '@coreui/react'
-import { patchCurrentUser } from '../slices/authSlice'
+import { switchPerspective } from '../slices/authSlice'
 import { getDefaultRouteForRole, membershipToNavRole } from '../utils/roleRedirect'
 
 const LABELS = {
@@ -17,6 +17,7 @@ const PerspectiveSwitcher = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const user = useSelector((s) => s.auth.user)
+  const [switching, setSwitching] = useState(false)
   const roles = user?.roles || []
   const memberships = user?.memberships || []
 
@@ -25,25 +26,28 @@ const PerspectiveSwitcher = () => {
 
   const active = user?.activeRole || available[0]
 
-  const onSelect = (role) => {
-    const navRole = membershipToNavRole(role)
-    dispatch(
-      patchCurrentUser({
-        activeRole: role,
-        role: navRole,
-      }),
-    )
-    navigate(getDefaultRouteForRole(navRole))
+  const onSelect = async (role) => {
+    if (role === active || switching) return
+    setSwitching(true)
+    try {
+      const result = await dispatch(switchPerspective(role))
+      if (switchPerspective.fulfilled.match(result)) {
+        const navRole = membershipToNavRole(role)
+        navigate(getDefaultRouteForRole(navRole, result.payload.user))
+      }
+    } finally {
+      setSwitching(false)
+    }
   }
 
   return (
     <CDropdown variant="nav-item" placement="bottom-end">
-      <CDropdownToggle caret color="secondary" size="sm">
+      <CDropdownToggle caret color="secondary" size="sm" disabled={switching}>
         {LABELS[active] || active}
       </CDropdownToggle>
       <CDropdownMenu>
         {available.map((r) => (
-          <CDropdownItem key={r} active={r === active} onClick={() => onSelect(r)}>
+          <CDropdownItem key={r} active={r === active} disabled={switching} onClick={() => onSelect(r)}>
             {LABELS[r] || r}
           </CDropdownItem>
         ))}

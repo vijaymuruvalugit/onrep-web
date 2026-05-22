@@ -60,11 +60,32 @@ const EMPTY_PATTERN = Object.freeze({
   endTime: '19:00',
   placeId: '',
   coachId: '',
+  additionalCoachIds: [],
   sessionFocus: '',
   sessionMode: 'practice',
 })
 
 const EMPTY_PHASE_OVERRIDES = Object.freeze([])
+
+function uniqueCoachOptions(options = []) {
+  const seen = new Set()
+  const out = []
+  for (const coach of options) {
+    const id = String(coach?.id || '')
+    if (!id) continue
+    const name = String(coach?.name || '').trim()
+    if (seen.has(id)) {
+      if (name) {
+        const existing = out.find((item) => item.id === id)
+        if (existing && (!existing.name || existing.name === 'Coach')) existing.name = name
+      }
+      continue
+    }
+    seen.add(id)
+    out.push({ id, name: name || 'Coach' })
+  }
+  return out
+}
 
 /**
  * Create/edit drawer for a recurring session pattern.
@@ -101,6 +122,9 @@ export default function PatternEditorDrawer({
         endTime: pattern.endTime || '',
         placeId: pattern.placeId || '',
         coachId: pattern.coachId || '',
+        additionalCoachIds: Array.isArray(pattern.additionalCoachIds)
+          ? pattern.additionalCoachIds.map(String)
+          : [],
         sessionFocus: pattern.sessionFocus || '',
         sessionMode: pattern.sessionMode || 'practice',
         sessionPresetId: pattern.sessionPresetId || DEFAULT_SESSION_PRESET_ID,
@@ -123,6 +147,7 @@ export default function PatternEditorDrawer({
   const [endTime, setEndTime] = useState(seed.endTime || '')
   const [placeId, setPlaceId] = useState(seed.placeId || '')
   const [coachId, setCoachId] = useState(seed.coachId || '')
+  const [additionalCoachIds, setAdditionalCoachIds] = useState(seed.additionalCoachIds || [])
   const [sessionFocus, setSessionFocus] = useState(seed.sessionFocus || '')
   const [sessionMode, setSessionMode] = useState(seed.sessionMode || 'practice')
   const [presetPayload, setPresetPayload] = useState(null)
@@ -145,6 +170,7 @@ export default function PatternEditorDrawer({
     setEndTime(seed.endTime || '')
     setPlaceId(seed.placeId || '')
     setCoachId(seed.coachId || '')
+    setAdditionalCoachIds(seed.additionalCoachIds || [])
     setSessionFocus(seed.sessionFocus || '')
     setSessionMode(seed.sessionMode || 'practice')
     setPresetPayload(null)
@@ -156,6 +182,25 @@ export default function PatternEditorDrawer({
 
   const toggleDay = (day) => {
     setDays((curr) => (curr.includes(day) ? curr.filter((d) => d !== day) : [...curr, day]))
+  }
+
+  const coachOptions = useMemo(() => uniqueCoachOptions(coaches), [coaches])
+
+  const additionalCoachOptions = useMemo(
+    () => coachOptions.filter((coach) => String(coach.id) !== String(coachId || '')),
+    [coachOptions, coachId],
+  )
+
+  const toggleAdditionalCoach = (id) => {
+    const sid = String(id)
+    setAdditionalCoachIds((prev) =>
+      prev.includes(sid) ? prev.filter((coachId) => coachId !== sid) : [...prev, sid],
+    )
+  }
+
+  const handleCoachChange = (nextCoachId) => {
+    setCoachId(nextCoachId)
+    setAdditionalCoachIds((prev) => prev.filter((id) => String(id) !== String(nextCoachId || '')))
   }
 
   const validate = () => {
@@ -188,6 +233,9 @@ export default function PatternEditorDrawer({
       endTime: endTime || null,
       placeId: placeId || null,
       coachId: coachId || null,
+      additionalCoachIds: additionalCoachIds.filter(
+        (id) => id && String(id) !== String(coachId || ''),
+      ),
       sessionFocus: sessionFocus.trim() || null,
       sessionMode,
       ...(presetPayload
@@ -306,17 +354,36 @@ export default function PatternEditorDrawer({
             </CFormLabel>
             <CFormSelect
               value={coachId}
-              onChange={(e) => setCoachId(e.target.value)}
+              onChange={(e) => handleCoachChange(e.target.value)}
               disabled={saving}
             >
               <option value="">Default (batch lead)</option>
-              {coaches.map((c) => (
+              {coachOptions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name || 'Coach'}
                 </option>
               ))}
             </CFormSelect>
           </div>
+          {additionalCoachOptions.length > 0 ? (
+            <div className="mb-3">
+              <CFormLabel className="small mb-1">
+                Additional coaches <span className="fw-normal text-body-secondary">(optional)</span>
+              </CFormLabel>
+              <div className="d-flex flex-column gap-1">
+                {additionalCoachOptions.map((coach) => (
+                  <CFormCheck
+                    key={coach.id}
+                    id={`pattern-additional-coach-${coach.id}`}
+                    label={coach.name || 'Coach'}
+                    checked={additionalCoachIds.includes(String(coach.id))}
+                    onChange={() => toggleAdditionalCoach(coach.id)}
+                    disabled={saving}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="mb-3">
             <CFormLabel className="small mb-1">Session mode</CFormLabel>
             <CFormSelect

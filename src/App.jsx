@@ -38,12 +38,14 @@ const SubscriptionPaymentProcessingPage = React.lazy(
   () => import('./features/subscription/pages/SubscriptionPaymentProcessingPage'),
 )
 const SubscriptionGuard = React.lazy(() => import('./features/auth/guards/SubscriptionGuard'))
+const ChangePasswordPage = React.lazy(() => import('./features/auth/pages/ChangePasswordPage'))
 
 import { publicRoutes } from './routes/publicRoutes'
 import { restoreSession } from './features/auth/slices/authSlice'
 import { registerSubscriptionRequiredHandler } from './api/http'
 import { refreshSubscription } from './features/auth/subscriptionRefresh'
 import { sanitizeNext } from './features/auth/sanitizeNext'
+import { hasAcademyAdminCapability } from './features/auth/utils/academyAdminAccess'
 
 /**
  * Global paywall redirector — 403 SUBSCRIPTION_REQUIRED interceptor.
@@ -64,7 +66,7 @@ import { sanitizeNext } from './features/auth/sanitizeNext'
 function SubscriptionPaywallBinder() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const userRole = useSelector((s) => s.auth.user?.role)
+  const user = useSelector((s) => s.auth.user)
 
   useEffect(() => {
     registerSubscriptionRequiredHandler(() => {
@@ -74,7 +76,7 @@ function SubscriptionPaywallBinder() {
         if (window.location.hash.startsWith('#/subscription/')) return
         // Owner-only redirect. Non-owners just see the 403 surface from the
         // calling page; the backend coach gate already 403s appropriately.
-        if (userRole && userRole !== 'academy_owner') return
+        if (user && !hasAcademyAdminCapability(user)) return
 
         const currentHash = window.location.hash || ''
         const currentPath = currentHash.startsWith('#') ? currentHash.slice(1) : ''
@@ -246,6 +248,7 @@ const App = () => {
            * if it were inside the guard.
            */}
           <Route element={<RequireAuth />}>
+            <Route path="/auth/change-password" element={<ChangePasswordPage />} />
             <Route path="/subscription" element={<SubscriptionShell />}>
               <Route path="paywall" element={<SubscriptionPaywallPage />} />
               <Route path="payment-processing" element={<SubscriptionPaymentProcessingPage />} />

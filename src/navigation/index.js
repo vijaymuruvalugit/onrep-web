@@ -9,6 +9,7 @@ import { parentNav } from './parentNav'
 import { studentNav } from './studentNav'
 import { superAdminNav } from './superAdminNav'
 import { isSuperAdminUser } from '../features/superAdmin/utils/superAdminAccess'
+import { hasAcademyAdminCapability } from '../features/auth/utils/academyAdminAccess'
 
 export { VALID_APP_ROLES } from './roles'
 export { superAdminNav }
@@ -24,7 +25,12 @@ export function getNavigationForRole(role, user = null) {
   const r = normalizeAppRole(role)
   if (r === 'parent') return parentNav
   if (r === 'student') return studentNav
-  if (r === 'academy_owner') return adminNav
+  if (r === 'academy_owner' || (user && hasAcademyAdminCapability(user) && user.activeRole === 'academy_admin')) {
+    return adminNav
+  }
+  if (user && hasAcademyAdminCapability(user) && !user.activeRole) {
+    return adminNav
+  }
   return coachNav
 }
 
