@@ -60,7 +60,9 @@ function CoachLiveSessionView({
   sessionHeaderProps,
   phaseCapture,
   activePhaseAthletes = [],
+  attendanceByStudentId = {},
   onParticipationStatusChange,
+  onAttendanceToggle,
   onExerciseToggle,
   onSessionObservationChange,
 }) {
@@ -80,6 +82,11 @@ function CoachLiveSessionView({
     phaseCapture?.phases?.find((p) => String(p.id) === String(activeBlockId)) || activeBlockMeta
   const interactionMode = activePhase ? resolveInteractionMode(activePhase) : 'observation'
   const showAthleteStrip = usePhaseCapture && !isRaceMode && interactionMode !== 'timing'
+  const activeBlockType = String(
+    activePhase?.blockType || activePhase?.block_type || '',
+  ).toLowerCase()
+  const attendanceToggleEnabled =
+    opsState === 'active' && (activeBlockType === 'warmup' || activeBlockType === 'cooldown')
   const reviewOnly =
     activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped'
 
@@ -171,7 +178,11 @@ function CoachLiveSessionView({
               rows={rosterForSession}
               lapStudentId={lapStudentId}
               observedStudentIds={observedStudentIds}
+              participationByStudentId={participationByStudentId}
+              attendanceByStudentId={attendanceByStudentId}
+              attendanceToggleEnabled={attendanceToggleEnabled}
               onPickSkater={usePhaseCapture ? handleSelectAthlete : onPickSkater}
+              onAttendanceToggle={onAttendanceToggle}
               onAddAthletesRequest={onAddAthletesRequest}
               suppressPhaseSubline
             />

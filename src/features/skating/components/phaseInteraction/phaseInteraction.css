@@ -83,6 +83,27 @@
   margin-bottom: 0.35rem;
 }
 
+.phase-student-observations {
+  margin-bottom: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.phase-student-observations__fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+}
+
+.phase-student-observations__field {
+  min-width: 8rem;
+}
+
+.phase-student-observations__field-label {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
 .phase-student-capture {
   margin-bottom: 1rem;
   padding-top: 1rem;

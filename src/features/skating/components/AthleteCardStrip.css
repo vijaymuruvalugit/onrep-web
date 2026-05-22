@@ -105,6 +105,25 @@
   box-sizing: content-box;
 }
 
+.athlete-card__present-tick {
+  position: absolute;
+  right: -0.2rem;
+  top: -0.2rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--cui-body-bg, #fff);
+  background: var(--cui-success, #198754);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+  box-sizing: content-box;
+}
+
 .athlete-card__status-dot--resting {
   background: var(--cui-warning, #f9b115);
 }

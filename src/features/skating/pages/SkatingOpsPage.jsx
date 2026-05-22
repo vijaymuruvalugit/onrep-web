@@ -59,6 +59,7 @@ import { phaseAthletesApi } from '../../../domain/phaseAthletes/phaseAthletesApi
 import { usePhaseCapture } from '../hooks/usePhaseCapture'
 import { usePhaseEntryAutosave } from '../hooks/usePhaseEntryAutosave'
 import { phaseCaptureApi } from '../../../domain/phaseCapture/phaseCaptureApi'
+import attendanceApi from '../../attendance/api/attendanceApi'
 import SessionPhaseSetupModal from '../components/phaseCapture/SessionPhaseSetupModal'
 import EditSessionPhasesModal from '../components/sessionWorkspace/EditSessionPhasesModal'
 import { sessionPhasesApi } from '../../../domain/sessionPhases/sessionPhasesApi'
@@ -362,6 +363,7 @@ const SkatingOpsPage = () => {
   const [athleteFocusDraft, setAthleteFocusDraft] = useState('')
   const [athleteFocusSaving, setAthleteFocusSaving] = useState(false)
   const [athleteFocusSaveMsg, setAthleteFocusSaveMsg] = useState('')
+  const [attendanceByStudentId, setAttendanceByStudentId] = useState({})
 
   const [showAddBlockModal, setShowAddBlockModal] = useState(false)
 
@@ -1070,6 +1072,31 @@ const SkatingOpsPage = () => {
       ['active', 'paused'].includes(String(selSession?.state || '').toLowerCase()))
   const coachLive = unifiedLiveCoaching
 
+  useEffect(() => {
+    if (!selectedSessionId || !coachLive) {
+      setAttendanceByStudentId({})
+      return undefined
+    }
+    let cancelled = false
+    attendanceApi
+      .getClassRoster(selectedSessionId)
+      .then((payload) => {
+        if (cancelled) return
+        const next = {}
+        for (const student of payload?.students || []) {
+          const sid = String(student.id ?? student.studentId ?? student._id ?? '')
+          if (sid && student.attendanceStatus) next[sid] = student.attendanceStatus
+        }
+        setAttendanceByStudentId(next)
+      })
+      .catch(() => {
+        if (!cancelled) setAttendanceByStudentId({})
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSessionId, coachLive])
+
   const phaseCaptureState = usePhaseCapture(selectedSessionId, {
     enabled: Boolean(selectedSessionId && activeActivityId) && coachLive,
   })
@@ -1259,6 +1286,39 @@ const SkatingOpsPage = () => {
       selectedSessionId,
       loadPhaseAthletes,
     ],
+  )
+
+  const handleAttendanceToggle = useCallback(
+    async (studentId) => {
+      if (!selectedSessionId || !studentId || opsState !== 'active') return
+      const sid = String(studentId)
+      const currentlyPresent = attendanceByStudentId[sid] === 'present'
+      const nextStatus = currentlyPresent ? null : 'present'
+      setAttendanceByStudentId((prev) => {
+        const next = { ...prev }
+        if (nextStatus) next[sid] = nextStatus
+        else delete next[sid]
+        return next
+      })
+      try {
+        await attendanceApi.markBulkAttendance(selectedSessionId, [
+          { studentId: sid, status: nextStatus ?? 'unmarked' },
+        ])
+      } catch {
+        try {
+          const payload = await attendanceApi.getClassRoster(selectedSessionId)
+          const next = {}
+          for (const student of payload?.students || []) {
+            const id = String(student.id ?? student.studentId ?? student._id ?? '')
+            if (id && student.attendanceStatus) next[id] = student.attendanceStatus
+          }
+          setAttendanceByStudentId(next)
+        } catch {
+          /* keep optimistic state if refresh also fails */
+        }
+      }
+    },
+    [selectedSessionId, opsState, attendanceByStudentId],
   )
 
   const handleUpdatePhaseSkills = useCallback(
@@ -2135,7 +2195,9 @@ const SkatingOpsPage = () => {
                     }
                     phaseCapture={unifiedLiveCoaching ? phaseCaptureProps : null}
                     activePhaseAthletes={activePhaseAthletes}
+                    attendanceByStudentId={attendanceByStudentId}
                     onParticipationStatusChange={handleParticipationStatusChange}
+                    onAttendanceToggle={handleAttendanceToggle}
                     onExerciseToggle={handleExerciseToggle}
                     onSessionObservationChange={handleSessionObservationChange}
                     recentLapsSection={
