@@ -4,6 +4,60 @@ export const DEFAULT_SESSION_PRESET_ID = 'general_practice'
 /** Matches backend SESSION_PRESET_REGISTRY_VERSION. */
 export const PRESET_REGISTRY_VERSION = 1
 
+export const DEFAULT_EXERCISES_BY_BLOCK_TYPE = Object.freeze({
+  warmup: Object.freeze([
+    { sequence: 1, exerciseName: 'Jog' },
+    { sequence: 2, exerciseName: 'Dynamic Stretch' },
+    { sequence: 3, exerciseName: 'Mobility' },
+    { sequence: 4, exerciseName: 'Activation' },
+  ]),
+  conditioning: Object.freeze([
+    { sequence: 1, exerciseName: 'Sprint laps' },
+    { sequence: 2, exerciseName: 'Cone drills' },
+    { sequence: 3, exerciseName: 'Core circuit' },
+    { sequence: 4, exerciseName: 'Jump squats' },
+  ]),
+  cooldown: Object.freeze([
+    { sequence: 1, exerciseName: 'Breathing' },
+    { sequence: 2, exerciseName: 'Stretching' },
+    { sequence: 3, exerciseName: 'Mobility' },
+    { sequence: 4, exerciseName: 'Recovery walk' },
+  ]),
+  recovery: Object.freeze([
+    { sequence: 1, exerciseName: 'Breathing' },
+    { sequence: 2, exerciseName: 'Stretching' },
+    { sequence: 3, exerciseName: 'Mobility' },
+    { sequence: 4, exerciseName: 'Recovery walk' },
+  ]),
+})
+
+export function defaultExercisesForBlockType(blockType) {
+  const bt = blockType === 'race' ? 'race_simulation' : blockType
+  return (DEFAULT_EXERCISES_BY_BLOCK_TYPE[bt] || []).map((ex, index) => ({
+    sequence: ex.sequence ?? index + 1,
+    exerciseName: ex.exerciseName,
+    description: ex.description || '',
+  }))
+}
+
+function normalizeExercises(exercises) {
+  return (Array.isArray(exercises) ? exercises : []).map((ex, index) => ({
+    sequence: Number(ex.sequence) || index + 1,
+    exerciseName: String(ex.exerciseName || '').trim(),
+    description: ex.description != null ? String(ex.description).trim() : '',
+  }))
+}
+
+function exercisesChanged(a, b) {
+  const left = normalizeExercises(a).filter((ex) => ex.exerciseName)
+  const right = normalizeExercises(b).filter((ex) => ex.exerciseName)
+  if (left.length !== right.length) return true
+  return left.some((ex, index) => {
+    const other = right[index]
+    return ex.exerciseName !== other.exerciseName || ex.description !== other.description
+  })
+}
+
 /**
  * v1 session presets — mirror of backend registry (five only).
  */
@@ -75,6 +129,8 @@ export function previewPhasesFromPreset(presetPhases) {
     blockType: ph.blockType,
     isCustom: false,
     baselineTitle: ph.name,
+    exercises: defaultExercisesForBlockType(ph.blockType),
+    baselineExercises: defaultExercisesForBlockType(ph.blockType),
   }))
 }
 
@@ -102,6 +158,10 @@ export function previewPhasesFromOverrides(phaseOverrides, presetId) {
       isCustom: !!ov.isCustom,
       baselineTitle: baseline,
       copyObservationsFrom: ov.copyObservationsFrom,
+      exercises: Array.isArray(ov.exercises)
+        ? normalizeExercises(ov.exercises)
+        : defaultExercisesForBlockType(blockType),
+      baselineExercises: defaultExercisesForBlockType(blockType),
     }
   })
 }
@@ -116,7 +176,8 @@ export function isPresetCustomized(presetId, previewPhases) {
       !def ||
       ph.isCustom ||
       ph.title !== def.title ||
-      ph.blockType !== def.blockType
+      ph.blockType !== def.blockType ||
+      exercisesChanged(ph.exercises, def.exercises)
     )
   })
 }
@@ -136,6 +197,15 @@ export function buildPhaseOverridesPayload(previewPhases) {
     }
     if (ph.isCustom) out.isCustom = true
     if (ph.copyObservationsFrom) out.copyObservationsFrom = ph.copyObservationsFrom
+    if (Array.isArray(ph.exercises)) {
+      out.exercises = normalizeExercises(ph.exercises)
+        .filter((ex) => ex.exerciseName)
+        .map((ex, index) => ({
+          sequence: index + 1,
+          exerciseName: ex.exerciseName,
+          ...(ex.description ? { description: ex.description } : {}),
+        }))
+    }
     return out
   })
 }

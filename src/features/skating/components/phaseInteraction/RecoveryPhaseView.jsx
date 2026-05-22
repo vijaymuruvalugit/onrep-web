@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react'
 import PhaseExerciseChecklist from './PhaseExerciseChecklist'
 import SessionObservationStrip from './SessionObservationStrip'
 import PhaseAthleteCaptureList from '../phaseCapture/PhaseAthleteCaptureList'
+import SessionPhaseActivitiesEditor from '../sessionWorkspace/SessionPhaseActivitiesEditor'
 import './phaseInteraction.css'
 
 export default function RecoveryPhaseView({
@@ -18,6 +19,8 @@ export default function RecoveryPhaseView({
   onParticipationStatusChange,
   onExerciseToggle,
   onSessionObservationChange,
+  operationalSessionId,
+  onExercisesUpdated,
 }) {
   const [expandedAthleteId, setExpandedAthleteId] = useState(null)
   const exercises = useMemo(
@@ -50,12 +53,6 @@ export default function RecoveryPhaseView({
       aria-label="Recovery flow"
       data-testid="recovery-phase-view"
     >
-      <PhaseExerciseChecklist
-        exercises={exercises}
-        disabled={disabled}
-        reviewOnly={reviewOnly}
-        onToggleComplete={onExerciseToggle}
-      />
       {defs.length ? (
         <SessionObservationStrip
           defs={defs}
@@ -89,6 +86,23 @@ export default function RecoveryPhaseView({
           />
         </div>
       ) : null}
+      <div className="phase-activities-block">
+        <PhaseExerciseChecklist
+          exercises={exercises}
+          disabled={disabled}
+          reviewOnly={reviewOnly}
+          onToggleComplete={onExerciseToggle}
+        />
+        {!reviewOnly && operationalSessionId ? (
+          <SessionPhaseActivitiesEditor
+            operationalSessionId={operationalSessionId}
+            phase={activePhase}
+            disabled={disabled}
+            title="Edit activities"
+            onUpdated={(nextExercises) => onExercisesUpdated?.(activePhase?.id, nextExercises)}
+          />
+        ) : null}
+      </div>
     </section>
   )
 }

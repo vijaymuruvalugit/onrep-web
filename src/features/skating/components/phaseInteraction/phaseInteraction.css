@@ -18,7 +18,7 @@
 
 .phase-exercise-list {
   list-style: none;
-  margin: 0 0 1.25rem;
+  margin: 0 0 1rem;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -63,7 +63,7 @@
 }
 
 .phase-session-obs {
-  margin-top: 1rem;
+  margin-bottom: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.08));
 }
@@ -84,13 +84,18 @@
 }
 
 .phase-student-capture {
-  margin-top: 1rem;
+  margin-bottom: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.08));
 }
 
 .phase-student-capture .phase-capture-list {
   max-height: min(36vh, 320px);
+}
+
+.phase-activities-block {
+  padding-top: 1rem;
+  border-top: 1px solid var(--cui-border-color, rgba(0, 0, 0, 0.08));
 }
 
 .phase-timing-placeholder {

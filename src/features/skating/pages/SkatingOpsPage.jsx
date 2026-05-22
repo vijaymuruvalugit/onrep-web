@@ -391,7 +391,7 @@ const SkatingOpsPage = () => {
 
   const selectedSessionId = sessionParam || ''
 
-  const liveRefresh = useLiveSessionRefresh(selectedSessionId)
+  const liveRefresh = useLiveSessionRefresh(selectedSessionId, activeActivityId)
   const {
     syncDomains,
     syncError: syncDomainError,
@@ -417,6 +417,7 @@ const SkatingOpsPage = () => {
 
   const liveShell = useLiveSessionShell({
     sessionId: selectedSessionId,
+    activityId: activeActivityId,
     selSession,
     skaters,
     syncDomains,
@@ -492,6 +493,10 @@ const SkatingOpsPage = () => {
 
   const loadDayBoard = useCallback(
     async (opts = {}) => {
+      if (!activeActivityId) {
+        if (!opts.silent) setDayBoard(null)
+        return
+      }
       const silent = Boolean(opts.silent)
       if (!silent) {
         setSnapLoading(true)
@@ -510,12 +515,12 @@ const SkatingOpsPage = () => {
         if (!silent) setSnapLoading(false)
       }
     },
-    [dateYmd],
+    [activeActivityId, dateYmd],
   )
 
   const loadBundle = useCallback(
     async (sessionId, opts = {}) => {
-      if (!sessionId) return null
+      if (!sessionId || !activeActivityId) return null
       const result = await refreshAllSyncDomains({
         silent: Boolean(opts.silent),
         blockId: opts.blockId,
@@ -526,7 +531,7 @@ const SkatingOpsPage = () => {
       }
       return result
     },
-    [refreshAllSyncDomains],
+    [activeActivityId, refreshAllSyncDomains],
   )
 
   const onTabVisibleReEntry = useCallback(() => {
@@ -542,6 +547,7 @@ const SkatingOpsPage = () => {
 
   useLiveSessionLifecycle({
     sessionId: selectedSessionId,
+    activityId: activeActivityId,
     refreshAllSyncDomains,
     refreshShell,
     loadDayBoard,
@@ -634,6 +640,10 @@ const SkatingOpsPage = () => {
   }, [focusFromUrl])
 
   useEffect(() => {
+    if (!activeActivityId) {
+      setPlaces([])
+      return undefined
+    }
     let cancelled = false
     ;(async () => {
       try {
@@ -647,9 +657,13 @@ const SkatingOpsPage = () => {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [activeActivityId])
 
   useEffect(() => {
+    if (!activeActivityId) {
+      setSkaters([])
+      return undefined
+    }
     let cancelled = false
     ;(async () => {
       try {
@@ -662,7 +676,7 @@ const SkatingOpsPage = () => {
     return () => {
       cancelled = true
     }
-  }, [selectedSessionId])
+  }, [activeActivityId, selectedSessionId])
 
   useEffect(() => {
     try {
@@ -1057,7 +1071,7 @@ const SkatingOpsPage = () => {
   const coachLive = unifiedLiveCoaching
 
   const phaseCaptureState = usePhaseCapture(selectedSessionId, {
-    enabled: Boolean(selectedSessionId) && coachLive,
+    enabled: Boolean(selectedSessionId && activeActivityId) && coachLive,
   })
 
   const { queueEntry: queuePhaseEntry } = usePhaseEntryAutosave({
@@ -1291,6 +1305,9 @@ const SkatingOpsPage = () => {
       onSelectAthlete: (athleteId) => {
         if (athleteId) setLapStudentId(String(athleteId))
       },
+      onPhaseExercisesUpdated: (phaseId, exercises) => {
+        phaseCaptureState.updatePhaseExercisesInList(phaseId, exercises)
+      },
       onCompletePhase: handleCompletePhase,
       onSkipPhase: handleSkipPhase,
     }),
@@ -1307,6 +1324,7 @@ const SkatingOpsPage = () => {
       handlePhaseEntryChange,
       handleCompletePhase,
       handleSkipPhase,
+      phaseCaptureState,
     ],
   )
 
@@ -1847,9 +1865,9 @@ const SkatingOpsPage = () => {
   )
 
   useEffect(() => {
-    if (!selectedSessionId || !activeBlockId) return
+    if (!selectedSessionId || !activeActivityId || !activeBlockId) return
     void refreshAllSyncDomains({ silent: true, blockId: activeBlockId })
-  }, [activeBlockId, selectedSessionId, refreshAllSyncDomains])
+  }, [activeBlockId, selectedSessionId, activeActivityId, refreshAllSyncDomains])
 
   useEffect(() => {
     if (!syncDomains?.coachingEvents?.length) return

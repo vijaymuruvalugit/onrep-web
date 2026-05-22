@@ -39,6 +39,7 @@ function writeActiveBlockId(sessionId, blockId) {
  */
 export function useLiveSessionShell({
   sessionId,
+  activityId,
   selSession,
   skaters,
   syncDomains,
@@ -120,7 +121,7 @@ export function useLiveSessionShell({
   }, [])
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!sessionId || !activityId) {
       setCanonicalSession(null)
       setPhaseAthletesByPhaseId({})
       setSessionBlocks([])
@@ -130,18 +131,18 @@ export function useLiveSessionShell({
     void loadCanonicalSession(sessionId)
     void loadBlocks(sessionId)
     void loadPhaseAthletes(sessionId)
-  }, [sessionId, loadCanonicalSession, loadBlocks, loadPhaseAthletes])
+  }, [sessionId, activityId, loadCanonicalSession, loadBlocks, loadPhaseAthletes])
 
   const refreshShell = useCallback(
     async (opts = {}) => {
-      if (!sessionId) return
+      if (!sessionId || !activityId) return
       await Promise.all([
         loadCanonicalSession(sessionId, opts),
         loadBlocks(sessionId, opts),
         loadPhaseAthletes(sessionId, opts),
       ])
     },
-    [sessionId, loadCanonicalSession, loadBlocks, loadPhaseAthletes],
+    [sessionId, activityId, loadCanonicalSession, loadBlocks, loadPhaseAthletes],
   )
 
   const handleSelectBlock = useCallback(

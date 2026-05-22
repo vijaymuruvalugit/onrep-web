@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { skatingOpsApi } from '../api/skatingOpsApi'
 import {
   EMPTY_SYNC_DOMAINS,
@@ -10,19 +10,17 @@ import {
  * Background session sync — per-domain merges, fail-open, no workspace ownership.
  *
  * @param {string} sessionId
+ * @param {string} activityId
  */
-export function useLiveSessionRefresh(sessionId) {
+export function useLiveSessionRefresh(sessionId, activityId) {
   const [syncDomains, setSyncDomains] = useState(EMPTY_SYNC_DOMAINS)
   const [syncError, setSyncError] = useState(null)
   const [syncing, setSyncing] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState(null)
   const [syncAgeTick, setSyncAgeTick] = useState(0)
-  const sessionIdRef = useRef(sessionId)
-
-  sessionIdRef.current = sessionId
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!sessionId || !activityId) {
       setSyncDomains(EMPTY_SYNC_DOMAINS)
       setSyncError(null)
       setLastSyncedAt(null)
@@ -30,7 +28,7 @@ export function useLiveSessionRefresh(sessionId) {
     }
     setSyncDomains(EMPTY_SYNC_DOMAINS)
     setSyncError(null)
-  }, [sessionId])
+  }, [sessionId, activityId])
 
   useEffect(() => {
     const id = setInterval(() => setSyncAgeTick((t) => t + 1), 1000)
@@ -44,12 +42,11 @@ export function useLiveSessionRefresh(sessionId) {
 
   const refreshAllSyncDomains = useCallback(
     async (opts = {}) => {
-      const sid = sessionIdRef.current
-      if (!sid) return false
+      if (!sessionId || !activityId) return false
       const silent = Boolean(opts.silent)
       if (!silent) setSyncing(true)
       try {
-        const bundle = await skatingOpsApi.getSessionBundle(sid, {
+        const bundle = await skatingOpsApi.getSessionBundle(sessionId, {
           recentLapLimit: opts.recentLapLimit ?? 120,
           blockId: opts.blockId || undefined,
         })
@@ -65,7 +62,7 @@ export function useLiveSessionRefresh(sessionId) {
         if (!silent) setSyncing(false)
       }
     },
-    [],
+    [sessionId, activityId],
   )
 
   const refreshLapsSyncDomain = useCallback(
@@ -78,36 +75,33 @@ export function useLiveSessionRefresh(sessionId) {
   )
 
   const refreshLeaderboardSyncDomain = useCallback(async () => {
-    const sid = sessionIdRef.current
-    if (!sid) return false
+    if (!sessionId || !activityId) return false
     try {
-      const leaderboard = await skatingOpsApi.getLeaderboard(sid)
+      const leaderboard = await skatingOpsApi.getLeaderboard(sessionId)
       applyPatch({ leaderboard })
       return true
     } catch (e) {
       setSyncError(e?.message || 'Could not refresh leaderboard.')
       return false
     }
-  }, [applyPatch])
+  }, [sessionId, activityId, applyPatch])
 
   const refreshCoachingEventsSyncDomain = useCallback(async () => {
-    const sid = sessionIdRef.current
-    if (!sid) return false
+    if (!sessionId || !activityId) return false
     try {
-      const events = await skatingOpsApi.listCoachingEvents(sid, { limit: 80 })
+      const events = await skatingOpsApi.listCoachingEvents(sessionId, { limit: 80 })
       applyPatch({ coachingEvents: events })
       return true
     } catch (e) {
       setSyncError(e?.message || 'Could not refresh coaching events.')
       return false
     }
-  }, [applyPatch])
+  }, [sessionId, activityId, applyPatch])
 
   const refreshRaceResultsSyncDomain = useCallback(async () => {
-    const sid = sessionIdRef.current
-    if (!sid) return false
+    if (!sessionId || !activityId) return false
     try {
-      const races = await skatingOpsApi.listRacesAggregate(sid)
+      const races = await skatingOpsApi.listRacesAggregate(sessionId)
       applyPatch({ races })
       await refreshLeaderboardSyncDomain()
       return true
@@ -115,7 +109,7 @@ export function useLiveSessionRefresh(sessionId) {
       setSyncError(e?.message || 'Could not refresh race results.')
       return false
     }
-  }, [applyPatch, refreshLeaderboardSyncDomain])
+  }, [sessionId, activityId, applyPatch, refreshLeaderboardSyncDomain])
 
   const patchSessionMeta = useCallback((fields) => {
     applyPatch({

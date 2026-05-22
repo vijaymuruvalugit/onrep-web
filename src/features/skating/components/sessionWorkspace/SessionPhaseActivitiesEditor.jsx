@@ -11,6 +11,7 @@ export default function SessionPhaseActivitiesEditor({
   phase,
   disabled = false,
   onUpdated,
+  title = 'Activities',
 }) {
   const max = maxExercisesForPhase(phase)
   const [local, setLocal] = useState([])
@@ -33,8 +34,8 @@ export default function SessionPhaseActivitiesEditor({
     setBusy(true)
     setError('')
     try {
-      await phaseCaptureApi.replacePhaseExercises(operationalSessionId, phase.id, nextList)
-      onUpdated?.()
+      const result = await phaseCaptureApi.replacePhaseExercises(operationalSessionId, phase.id, nextList)
+      onUpdated?.(result?.exercises || [])
     } catch (e) {
       setError(e?.response?.data?.error || e?.message || 'Could not save activities')
     } finally {
@@ -74,7 +75,7 @@ export default function SessionPhaseActivitiesEditor({
 
   return (
     <div className="session-phase-activities mt-2 pt-2 border-top" data-testid="phase-activities-editor">
-      <p className="small fw-semibold mb-2">Activities</p>
+      <p className="small fw-semibold mb-2">{title}</p>
       {error ? <p className="small text-warning mb-2">{error}</p> : null}
       <ul className="list-unstyled mb-2">
         {local.map((row, index) => (

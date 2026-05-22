@@ -80,7 +80,7 @@ function CoachLiveSessionView({
     phaseCapture?.phases?.find((p) => String(p.id) === String(activeBlockId)) || activeBlockMeta
   const interactionMode = activePhase ? resolveInteractionMode(activePhase) : 'observation'
   const showAthleteStrip =
-    usePhaseCapture && !isRaceMode && interactionMode === 'observation'
+    usePhaseCapture && !isRaceMode && interactionMode !== 'timing'
   const reviewOnly =
     activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped'
 

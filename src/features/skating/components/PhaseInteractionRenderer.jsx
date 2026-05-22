@@ -53,6 +53,8 @@ export default function PhaseInteractionRenderer({
         onParticipationStatusChange={onParticipationStatusChange}
         onExerciseToggle={onExerciseToggle}
         onSessionObservationChange={onSessionObservationChange}
+        operationalSessionId={phaseCapture?.operationalSessionId}
+        onExercisesUpdated={phaseCapture?.onPhaseExercisesUpdated}
       />
     )
   }
@@ -73,6 +75,8 @@ export default function PhaseInteractionRenderer({
         onParticipationStatusChange={onParticipationStatusChange}
         onExerciseToggle={onExerciseToggle}
         onSessionObservationChange={onSessionObservationChange}
+        operationalSessionId={phaseCapture?.operationalSessionId}
+        onExercisesUpdated={phaseCapture?.onPhaseExercisesUpdated}
       />
     )
   }

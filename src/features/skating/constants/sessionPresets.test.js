@@ -24,4 +24,17 @@ describe('sessionPresets', () => {
     expect(payload[0].isCustom).toBe(true)
     expect(payload[0].title).toBe('Sprint Race')
   })
+
+  it('includes edited phase activities in payload', () => {
+    const payload = buildPhaseOverridesPayload([
+      {
+        title: 'Warmup',
+        blockType: 'warmup',
+        exercises: [{ exerciseName: 'Backward skating', description: 'Easy pace' }],
+      },
+    ])
+    expect(payload[0].exercises).toEqual([
+      { sequence: 1, exerciseName: 'Backward skating', description: 'Easy pace' },
+    ])
+  })
 })

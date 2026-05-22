@@ -5,20 +5,21 @@ import { useEffect } from 'react'
  */
 export function useLiveSessionLifecycle({
   sessionId,
+  activityId,
   refreshAllSyncDomains,
   refreshShell,
   loadDayBoard,
   onTabVisible,
 }) {
   useEffect(() => {
-    if (!sessionId) return
+    if (!sessionId || !activityId) return
     void refreshAllSyncDomains({ silent: true, recentLapLimit: 120 })
-  }, [sessionId, refreshAllSyncDomains])
+  }, [sessionId, activityId, refreshAllSyncDomains])
 
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState !== 'visible') return
-      if (sessionId) {
+      if (sessionId && activityId) {
         void refreshAllSyncDomains({ silent: true, recentLapLimit: 120 })
         void refreshShell?.({ silent: true })
       }
@@ -27,7 +28,7 @@ export function useLiveSessionLifecycle({
     }
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
-  }, [sessionId, refreshAllSyncDomains, refreshShell, loadDayBoard, onTabVisible])
+  }, [sessionId, activityId, refreshAllSyncDomains, refreshShell, loadDayBoard, onTabVisible])
 }
 
 export default useLiveSessionLifecycle
