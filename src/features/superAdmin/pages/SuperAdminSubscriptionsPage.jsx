@@ -1,7 +1,17 @@
 import React, { useEffect, useState } from 'react'
-import { CAlert, CSpinner, CTable, CTableBody, CTableDataCell, CTableHead, CTableHeaderCell, CTableRow } from '@coreui/react'
+import {
+  CAlert,
+  CSpinner,
+  CTable,
+  CTableBody,
+  CTableDataCell,
+  CTableHead,
+  CTableHeaderCell,
+  CTableRow,
+} from '@coreui/react'
 import { superAdminApi } from '../api/superAdminApi'
 import SuperAdminPageHeader from '../components/SuperAdminPageHeader'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 export default function SuperAdminSubscriptionsPage() {
   const [data, setData] = useState({ plans: [], academies: [] })
@@ -66,14 +76,8 @@ export default function SuperAdminSubscriptionsPage() {
                   <CTableDataCell>{a.name}</CTableDataCell>
                   <CTableDataCell>{a.subscription_status}</CTableDataCell>
                   <CTableDataCell>{a.subscription_plan || '—'}</CTableDataCell>
-                  <CTableDataCell>
-                    {a.trial_ends_at ? new Date(a.trial_ends_at).toLocaleDateString() : '—'}
-                  </CTableDataCell>
-                  <CTableDataCell>
-                    {a.subscription_end_date
-                      ? new Date(a.subscription_end_date).toLocaleDateString()
-                      : '—'}
-                  </CTableDataCell>
+                  <CTableDataCell>{formatDisplayDateDmy(a.trial_ends_at)}</CTableDataCell>
+                  <CTableDataCell>{formatDisplayDateDmy(a.subscription_end_date)}</CTableDataCell>
                 </CTableRow>
               ))}
             </CTableBody>

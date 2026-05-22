@@ -17,6 +17,7 @@ import StudentParentsCard from '../components/StudentParentsCard'
 import StudentSkatingSnapshotCard from '../../skating/components/StudentSkatingSnapshotCard'
 import { getStudentActivity, getStudentBatch, getStudentDisplayName } from '../utils/studentMappers'
 import { sanitizeStudentNotesForDisplay } from '../../batches/utils/batchDisplayUtils'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 const initialsFromName = (name) =>
   String(name || '')
@@ -124,9 +125,7 @@ const StudentDetailPage = () => {
               </div>
               <div className="mb-2">
                 <strong>Date of birth:</strong>{' '}
-                {selectedStudent.date_of_birth
-                  ? new Date(selectedStudent.date_of_birth).toLocaleDateString()
-                  : '—'}
+                {formatDisplayDateDmy(selectedStudent.date_of_birth)}
               </div>
               <div className="mb-2">
                 <strong>Medical notes:</strong> {selectedStudent.medical_notes || '—'}

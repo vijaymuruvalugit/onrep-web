@@ -2,6 +2,8 @@
  * Shared presentation helpers for training session rows (lists, attendance, dashboard).
  */
 
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
+
 /** Extract YYYY-MM-DD from API values (plain date or ISO datetime). */
 export function normalizeSessionDateYmd(value) {
   if (value == null || value === '') return ''
@@ -32,12 +34,10 @@ export function formatSessionCalendarDate(isoDate, opts = {}) {
   const ymd = normalizeSessionDateYmd(isoDate)
   const d = parseSessionLocalDate(ymd || isoDate)
   if (!d) return ymd || String(isoDate).slice(0, 10) || '—'
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: opts.weekday ?? 'long',
-    month: opts.month ?? 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(d)
+  const date = formatDisplayDateDmy(d)
+  if (!opts.weekday) return date
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday: opts.weekday }).format(d)
+  return `${weekday} · ${date}`
 }
 
 /**
@@ -52,11 +52,8 @@ export function formatSessionCalendarDate(isoDate, opts = {}) {
 export function formatDayStampShort(ymd) {
   const d = parseSessionLocalDate(ymd)
   if (!d) return ymd || '—'
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).format(d)
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(d)
+  return `${weekday} · ${formatDisplayDateDmy(d)}`
 }
 
 /**
@@ -101,7 +98,13 @@ export function formatOperationalSessionRange(isoDate, startTime, endTime, today
   const start = formatSessionClock(startTime)
   const end = formatSessionClock(endTime)
   const range =
-    start !== '—' && end !== '—' ? `${start} – ${end}` : start !== '—' ? start : end !== '—' ? end : '—'
+    start !== '—' && end !== '—'
+      ? `${start} – ${end}`
+      : start !== '—'
+        ? start
+        : end !== '—'
+          ? end
+          : '—'
   if (day === '—') return range === '—' ? '—' : range
   if (range === '—') return day
   return `${day} · ${range}`
@@ -138,11 +141,7 @@ export function formatSessionScheduleDateLine(isoDate) {
   const ymd = normalizeSessionDateYmd(isoDate)
   const d = parseSessionLocalDate(ymd)
   if (!d) return '—'
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  }).format(d)
+  return formatDayStampShort(ymd)
 }
 
 /** @param {string} isoDate YYYY-MM-DD */

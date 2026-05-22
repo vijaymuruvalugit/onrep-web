@@ -27,6 +27,7 @@ import classesApi from '../../classes/api/classesApi'
 import { deactivatePlace, reactivatePlace } from '../slices/placesSlice'
 import { formatDaysOfWeekList, formatTimeRange } from '../utils/formatScheduleDays'
 import { formatPlaceAddressSummary } from '../utils/placeMappers'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 export default function PlaceDetailPage() {
   const dispatch = useDispatch()
@@ -309,7 +310,7 @@ export default function PlaceDetailPage() {
                         className="py-1 border-bottom d-flex justify-content-between gap-2"
                       >
                         <span>
-                          {date} · {title}
+                          {formatDisplayDateDmy(date)} · {title}
                         </span>
                         <CBadge color="secondary">{s.startTime || s.start_time || ''}</CBadge>
                       </li>

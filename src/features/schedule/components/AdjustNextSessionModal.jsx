@@ -12,6 +12,7 @@ import {
   CModalTitle,
   CRow,
 } from '@coreui/react'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 /**
  * Lightweight modal for the per-pattern "Adjust next session time" action.
@@ -69,7 +70,7 @@ export default function AdjustNextSessionModal({
         </p>
         {session?.sessionDate ? (
           <p className="small mb-3">
-            Next session is on <strong>{session.sessionDate}</strong>.
+            Next session is on <strong>{formatDisplayDateDmy(session.sessionDate)}</strong>.
           </p>
         ) : null}
         <CRow className="g-2">

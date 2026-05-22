@@ -7,6 +7,7 @@ import { cilCopy, cilPlus, cilReload, cilUser, cilXCircle } from '@coreui/icons'
 import useStudentParents from '../hooks/useStudentParents'
 import { fetchStudentParents } from '../slices/studentParentsSlice'
 import InviteParentModal from './InviteParentModal'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 /**
  * Unified parents list. Each row represents one *person's relationship* with the
@@ -29,7 +30,7 @@ const formatTs = (value) => {
   try {
     const d = new Date(value)
     if (Number.isNaN(d.getTime())) return '—'
-    return d.toLocaleDateString()
+    return formatDisplayDateDmy(d)
   } catch {
     return '—'
   }

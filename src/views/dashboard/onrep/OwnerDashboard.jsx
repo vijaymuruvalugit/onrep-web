@@ -29,7 +29,10 @@ import {
 import roleDashboardApi from '../../../features/dashboard/api/roleDashboardApi'
 import { refreshSession } from '../../../features/auth/slices/authSlice'
 import { normalizeOnboardingDtoFromApi } from '../../../features/onboarding/utils/onboardingSteps'
-import { formatLocalYmd } from '../../../features/dashboard/utils/calendarDate'
+import {
+  formatDisplayDateDmy,
+  formatLocalYmd,
+} from '../../../features/dashboard/utils/calendarDate'
 import DashboardStatCard from '../../../features/dashboard/components/DashboardStatCard'
 import DashboardEmptyState from '../../../features/dashboard/components/DashboardEmptyState'
 import DashboardCardSkeleton from '../../../features/dashboard/components/DashboardCardSkeleton'
@@ -78,6 +81,7 @@ const OwnerDashboard = () => {
   const onboarding = normalizeOnboardingDtoFromApi(authUser?.onboarding ?? null)
 
   const dateStr = useMemo(() => formatLocalYmd(), [])
+  const displayDate = useMemo(() => formatDisplayDateDmy(dateStr), [dateStr])
   const [summary, setSummary] = useState(null)
   const [operations, setOperations] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -122,7 +126,7 @@ const OwnerDashboard = () => {
             <CIcon icon={cilBasketball} className="text-warning" />
             Academy overview
           </h2>
-          <p className="text-body-secondary small mb-0">Operational pulse · {dateStr}</p>
+          <p className="text-body-secondary small mb-0">Operational pulse · {displayDate}</p>
         </CCol>
         <CCol xs="auto">
           <CButton color="secondary" variant="outline" size="sm" onClick={load} disabled={loading}>

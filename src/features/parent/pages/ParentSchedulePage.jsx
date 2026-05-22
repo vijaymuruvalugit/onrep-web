@@ -21,6 +21,7 @@ import { cilReload } from '@coreui/icons'
 
 import useParent from '../hooks/useParent'
 import { formatSessionWhen } from '../utils/formatParentDate'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 function weekRangeIso() {
   const start = new Date()
@@ -41,8 +42,9 @@ const ParentSchedulePage = () => {
   const grouped = useMemo(() => {
     const map = new Map()
     scheduleSessions.forEach((s) => {
+      const rawDate = s.sessionDate || s.session_date
       const key =
-        s.sessionDate || s.session_date || formatSessionWhen(s).split('·')[0].trim() || 'Upcoming'
+        rawDate ? formatDisplayDateDmy(rawDate) : formatSessionWhen(s).split('·')[0].trim() || 'Upcoming'
       if (!map.has(key)) map.set(key, [])
       map.get(key).push(s)
     })

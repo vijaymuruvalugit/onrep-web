@@ -16,6 +16,7 @@ import {
 } from '@coreui/react'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { billingApi } from '../api/billingApi'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 /**
  * Owner-only billing surface (Phase 2.1).
@@ -36,7 +37,7 @@ function fmtINR(n) {
 function fmtDate(d) {
   if (!d) return '—'
   try {
-    return new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: '2-digit' })
+    return formatDisplayDateDmy(d)
   } catch {
     return String(d)
   }

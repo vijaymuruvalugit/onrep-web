@@ -11,6 +11,7 @@ import {
   CTableRow,
 } from '@coreui/react'
 import { CBadge } from '@coreui/react'
+import { formatDisplayDateDmy } from '../../../dashboard/utils/calendarDate'
 
 function rowStatus(row) {
   if (row.ready_to_import) return { label: 'Ready', color: 'success' }
@@ -24,7 +25,9 @@ const ImportPreviewTable = ({ rows, loading }) => {
     <CCard>
       <CCardHeader>
         <strong>Preview</strong>
-        <span className="small text-body-secondary ms-2">Read-only — fix your file and re-upload if needed</span>
+        <span className="small text-body-secondary ms-2">
+          Read-only — fix your file and re-upload if needed
+        </span>
       </CCardHeader>
       <CCardBody className="p-0">
         <div className="table-responsive" style={{ maxHeight: '420px' }}>
@@ -50,7 +53,8 @@ const ImportPreviewTable = ({ rows, loading }) => {
               {!loading &&
                 (rows || []).map((row) => {
                   const st = rowStatus(row)
-                  const firstIssue = (row.issues || []).find((i) => i.severity === 'error') || row.issues?.[0]
+                  const firstIssue =
+                    (row.issues || []).find((i) => i.severity === 'error') || row.issues?.[0]
                   return (
                     <CTableRow key={row.source_row_number}>
                       <CTableDataCell>{row.source_row_number}</CTableDataCell>
@@ -58,7 +62,7 @@ const ImportPreviewTable = ({ rows, loading }) => {
                         <div className="fw-semibold">{row.full_name || '—'}</div>
                         <div className="small text-body-secondary">{row.gender || ''}</div>
                       </CTableDataCell>
-                      <CTableDataCell>{row.date_of_birth || '—'}</CTableDataCell>
+                      <CTableDataCell>{formatDisplayDateDmy(row.date_of_birth)}</CTableDataCell>
                       <CTableDataCell>
                         <div>{row.parent_name || '—'}</div>
                         <div className="small text-body-secondary">{row.parent_phone || ''}</div>
@@ -67,7 +71,10 @@ const ImportPreviewTable = ({ rows, loading }) => {
                       <CTableDataCell>
                         <CBadge color={st.color}>{st.label}</CBadge>
                         {firstIssue ? (
-                          <div className="small text-body-secondary mt-1" title={firstIssue.message}>
+                          <div
+                            className="small text-body-secondary mt-1"
+                            title={firstIssue.message}
+                          >
                             {firstIssue.message}
                           </div>
                         ) : null}

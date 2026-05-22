@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { CAlert, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilCalendar, cilClock, cilDollar, cilSpeedometer } from '@coreui/icons'
+import { cilCalendar, cilClock, cilSpeedometer } from '@coreui/icons'
 
 import TodayClassesPage from '../../classes/pages/TodayClassesPage'
 import roleDashboardApi from '../../dashboard/api/roleDashboardApi'
 import { COACH_PARTICIPATION_COPY } from '../../../core/productCopy'
-import { formatLocalYmd } from '../../dashboard/utils/calendarDate'
+import { formatDisplayDateDmy, formatLocalYmd } from '../../dashboard/utils/calendarDate'
 import DashboardStatCard from '../../dashboard/components/DashboardStatCard'
 import CoachEmbeddedInsights from '../../analytics/components/CoachEmbeddedInsights'
 
@@ -26,6 +26,7 @@ const quickLinks = [
  */
 const CoachOperationalDashboard = () => {
   const dateStr = useMemo(() => formatLocalYmd(), [])
+  const displayDate = useMemo(() => formatDisplayDateDmy(dateStr), [dateStr])
   const activeActivityId = useSelector((state) => state.workspace.activeActivityId)
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -59,7 +60,7 @@ const CoachOperationalDashboard = () => {
         <CCol xs={12}>
           <div className="d-flex align-items-center gap-2 mb-1">
             <CIcon icon={cilSpeedometer} className="text-primary" />
-            <span className="fw-semibold">Today · {dateStr}</span>
+            <span className="fw-semibold">Today · {displayDate}</span>
           </div>
           {error ? (
             <CAlert color="warning" className="py-2 mb-0">
@@ -118,10 +119,6 @@ const CoachOperationalDashboard = () => {
                     {item.label}
                   </Link>
                 ))}
-                <Link className="btn btn-sm btn-outline-secondary" to="/coach/payments">
-                  <CIcon icon={cilDollar} className="me-1" />
-                  Payments
-                </Link>
               </div>
             </CCardBody>
           </CCard>

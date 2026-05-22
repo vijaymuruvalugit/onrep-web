@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { CAlert, CCol, CRow, CSpinner } from '@coreui/react'
 import analyticsApi from '../../analytics/api/analyticsApi'
 import SuperAdminPageHeader from '../components/SuperAdminPageHeader'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 export default function SuperAdminAnalyticsPage() {
   const [governance, setGovernance] = useState(null)
@@ -96,7 +97,7 @@ export default function SuperAdminAnalyticsPage() {
               <ul className="mb-0 small">
                 {(governance?.platformGrowth?.academyGrowthTrend || []).map((w, i) => (
                   <li key={i}>
-                    {w.week ? new Date(w.week).toLocaleDateString() : '—'}: +{w.newAcademies}
+                    {formatDisplayDateDmy(w.week)}: +{w.newAcademies}
                   </li>
                 ))}
               </ul>
@@ -108,7 +109,7 @@ export default function SuperAdminAnalyticsPage() {
               <ul className="mb-0 small" style={{ maxHeight: 200, overflow: 'auto' }}>
                 {(governance?.usageTrends?.sessionVolume || []).slice(-14).map((d, i) => (
                   <li key={i}>
-                    {d.day ? new Date(d.day).toLocaleDateString() : '—'}: {d.sessions}
+                    {formatDisplayDateDmy(d.day)}: {d.sessions}
                   </li>
                 ))}
               </ul>

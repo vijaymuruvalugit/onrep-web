@@ -34,6 +34,18 @@ const TodayClassesPage = ({ activeActivityId }) => {
     return undefined
   }, [activeActivityId, fetchTodayClasses])
 
+  const sessionBadge = (cls) => {
+    const status = String(cls?.status || '').toLowerCase()
+    if (status === 'completed' || status === 'closed' || cls?.actualEndTime) {
+      return { label: 'Completed', color: 'success' }
+    }
+    if (cls?.actualStartTime && !cls?.actualEndTime) {
+      return { label: 'In progress', color: 'info' }
+    }
+    if (cls?.attendanceMarked) return { label: 'Completed', color: 'success' }
+    return { label: 'Check-in pending', color: 'warning' }
+  }
+
   return (
     <CCard>
       <CCardHeader className="d-flex justify-content-between align-items-center">
@@ -79,9 +91,10 @@ const TodayClassesPage = ({ activeActivityId }) => {
                     </div>
                   </div>
                   <div className="d-flex align-items-center gap-2">
-                    <CBadge color={cls.attendanceMarked ? 'success' : 'warning'}>
-                      {cls.attendanceMarked ? 'Check-in done' : 'Check-in pending'}
-                    </CBadge>
+                    {(() => {
+                      const badge = sessionBadge(cls)
+                      return <CBadge color={badge.color}>{badge.label}</CBadge>
+                    })()}
                     <CButton as={Link} to={liveSessionPath(classId)} size="sm" color="primary">
                       {COACH_PARTICIPATION_COPY.openLiveSession}
                     </CButton>

@@ -1,4 +1,6 @@
 /** Parse YYYY-MM-DD without UTC day-shift. */
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
+
 export function parseDate(dateStr) {
   if (dateStr == null || dateStr === '') return null
   return new Date(`${String(dateStr).slice(0, 10)}T12:00:00`)
@@ -7,13 +9,13 @@ export function parseDate(dateStr) {
 export function formatDueShort(dateStr) {
   const d = parseDate(dateStr)
   if (!d || Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  return formatDisplayDateDmy(d)
 }
 
 export function formatDueLong(dateStr) {
   const d = parseDate(dateStr)
   if (!d || Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  return formatDisplayDateDmy(d)
 }
 
 export function formatPeriodMonth(periodMonth) {

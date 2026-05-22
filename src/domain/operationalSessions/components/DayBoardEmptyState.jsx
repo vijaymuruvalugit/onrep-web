@@ -2,6 +2,7 @@ import React from 'react'
 import { CButton, CCard, CCardBody } from '@coreui/react'
 import { Link } from 'react-router-dom'
 import { SKATING_OPS_COPY } from '../../../features/skating/constants/skatingOpsCopy'
+import { formatDisplayDateDmy } from '../../../features/dashboard/utils/calendarDate'
 
 /**
  * @param {{
@@ -25,7 +26,7 @@ export default function DayBoardEmptyState({
     title = 'Wrong program workspace'
     body = SKATING_OPS_COPY.emptyWrongCapability
   } else if (workspaceName) {
-    title = `No sessions on ${dateYmd || 'this day'}`
+    title = `No sessions on ${dateYmd ? formatDisplayDateDmy(dateYmd) : 'this day'}`
     body = SKATING_OPS_COPY.emptyBodyInWorkspace.replace(
       'your current program workspace',
       workspaceName,

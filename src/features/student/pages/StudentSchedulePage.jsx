@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { CAlert, CCard, CCardBody, CListGroup, CListGroupItem, CSpinner } from '@coreui/react'
 import { parentApi } from '../../parent/api/parentApi'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 /** Student schedule — reuses parent-scoped schedule API for linked student. */
 const StudentSchedulePage = () => {
@@ -46,7 +47,7 @@ const StudentSchedulePage = () => {
                 <CListGroupItem key={s.id}>
                   <div className="fw-semibold">{s.title || 'Session'}</div>
                   <div className="small text-body-secondary">
-                    {s.sessionDate || s.startTimeUtc || '—'}
+                    {formatDisplayDateDmy(s.sessionDate || s.startTimeUtc)}
                   </div>
                 </CListGroupItem>
               ))

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { superAdminApi } from '../api/superAdminApi'
 import SuperAdminPageHeader from '../components/SuperAdminPageHeader'
 import AttentionPanel from '../components/AttentionPanel'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 function Stat({ label, value }) {
   return (
@@ -32,6 +33,7 @@ export default function SuperAdminDashboard() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch platform overview on mount
     load()
   }, [load])
 
@@ -43,7 +45,10 @@ export default function SuperAdminDashboard() {
   const sub = overview?.subscription_status || {}
 
   const brokenItems = [
-    h.failed_jobs > 0 && { label: `${h.failed_jobs} failed webhook jobs (24h)`, detail: 'Check system health' },
+    h.failed_jobs > 0 && {
+      label: `${h.failed_jobs} failed webhook jobs (24h)`,
+      detail: 'Check system health',
+    },
     h.notification_failures > 0 && {
       label: `${h.notification_failures} notification failures`,
     },
@@ -54,7 +59,7 @@ export default function SuperAdminDashboard() {
     ...(sub.expiring_subscriptions || []).slice(0, 5).map((a) => ({
       key: a.id,
       label: a.name,
-      detail: `Expires ${a.subscription_end_date ? new Date(a.subscription_end_date).toLocaleDateString() : 'soon'}`,
+      detail: `Expires ${a.subscription_end_date ? formatDisplayDateDmy(a.subscription_end_date) : 'soon'}`,
     })),
     ...(sub.payment_failures || []).slice(0, 3).map((a) => ({
       key: `pf-${a.id}`,
@@ -72,7 +77,10 @@ export default function SuperAdminDashboard() {
 
       <CRow className="g-3 mb-4">
         <CCol sm={6} md={3}>
-          <Stat label="Academies" value={`${g.active_academies ?? 0} active / ${g.total_academies ?? 0}`} />
+          <Stat
+            label="Academies"
+            value={`${g.active_academies ?? 0} active / ${g.total_academies ?? 0}`}
+          />
         </CCol>
         <CCol sm={6} md={3}>
           <Stat label="Coaches" value={g.coaches} />
@@ -93,7 +101,11 @@ export default function SuperAdminDashboard() {
           </div>
         </CCol>
         <CCol md={4}>
-          <AttentionPanel title="Expiring revenue" items={revenueItems} emptyText="No urgent subscription risks." />
+          <AttentionPanel
+            title="Expiring revenue"
+            items={revenueItems}
+            emptyText="No urgent subscription risks."
+          />
           <div className="mt-2 small">
             <Link to="/super-admin/subscriptions">Subscriptions →</Link>
           </div>

@@ -1,4 +1,5 @@
 import { normalizeStatus } from './studentStatus'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 export function getStudentDisplayName(student) {
   return student?.full_name || student?.fullName || 'Unknown student'
@@ -45,7 +46,7 @@ export function getCreatedDate(student) {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleDateString()
+  return formatDisplayDateDmy(date)
 }
 
 export function getEnrollmentStatus(student) {

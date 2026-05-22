@@ -17,6 +17,7 @@ import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
 import { skatingChecklistApi } from '../api/skatingChecklistApi'
 import { skatingIntelligenceApi } from '../api/skatingIntelligenceApi'
 import { groupSkillsByCategory } from '../hooks/athleteIntelligenceData'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 const NOTE_TEMPLATES = [
   'Excellent improvement today',
@@ -70,11 +71,13 @@ export default function AthleteCaptureDrawer({
   const [advancedKpiOpen, setAdvancedKpiOpen] = useState(false)
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- reset drawer-local tab/data when switching athletes */
     setTab('today')
     setSkillsData(null)
     setKpiData(null)
     setHistData(null)
     setAdvancedKpiOpen(false)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [studentId])
 
   const loadSkills = useCallback(async () => {
@@ -112,7 +115,9 @@ export default function AthleteCaptureDrawer({
         'TREND_SPEED_DELTA',
         'TREND_TECHNIQUE_DELTA',
       ]
-      const keys = advancedKpiOpen ? Object.keys(latest).sort() : primaryCodes.filter((c) => latest[c])
+      const keys = advancedKpiOpen
+        ? Object.keys(latest).sort()
+        : primaryCodes.filter((c) => latest[c])
       setKpiData({ latest, keys, codes: keys.map((k) => latest[k]).filter(Boolean) })
     } catch (e) {
       setKpiErr(e?.response?.data?.error || e?.message || 'Failed to load')
@@ -136,9 +141,11 @@ export default function AthleteCaptureDrawer({
 
   useEffect(() => {
     if (!visible || !studentId) return
+    /* eslint-disable react-hooks/set-state-in-effect -- lazy-load the active tab when drawer opens or tab changes */
     if (tab === 'skills') void loadSkills()
     if (tab === 'kpis') void loadKpis()
     if (tab === 'history') void loadHistory()
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [visible, studentId, tab, loadSkills, loadKpis, loadHistory])
 
   const skillsGrouped = useMemo(() => groupSkillsByCategory(skillsData), [skillsData])
@@ -178,7 +185,9 @@ export default function AthleteCaptureDrawer({
         <div>
           <div className="small text-body-secondary mb-1">Athlete</div>
           <div className="fw-semibold">{studentName || '—'}</div>
-          {studentId ? <div className="small text-muted font-monospace">{studentId.slice(0, 8)}…</div> : null}
+          {studentId ? (
+            <div className="small text-muted font-monospace">{studentId.slice(0, 8)}…</div>
+          ) : null}
           {sessionId ? (
             <div className="small text-muted">Session locked for rapid capture in main column.</div>
           ) : null}
@@ -187,10 +196,15 @@ export default function AthleteCaptureDrawer({
         <CNav variant="underline" role="tablist" className="small flex-wrap">
           {TABS.map(({ key, label }) => (
             <CNavItem key={key}>
-              <CNavLink active={tab === key} href="#" className={tab === key ? 'fw-semibold' : ''} onClick={(e) => {
-                e.preventDefault()
-                setTab(key)
-              }}>
+              <CNavLink
+                active={tab === key}
+                href="#"
+                className={tab === key ? 'fw-semibold' : ''}
+                onClick={(e) => {
+                  e.preventDefault()
+                  setTab(key)
+                }}
+              >
                 {label}
               </CNavLink>
             </CNavItem>
@@ -212,7 +226,13 @@ export default function AthleteCaptureDrawer({
                 placeholder="Optional — taps matter more than typing."
               />
               <div className="d-flex gap-2 mt-2 align-items-center flex-wrap">
-                <CButton type="button" color="primary" size="sm" disabled={saving} onClick={onSaveFocus}>
+                <CButton
+                  type="button"
+                  color="primary"
+                  size="sm"
+                  disabled={saving}
+                  onClick={onSaveFocus}
+                >
                   {saving ? 'Saving…' : SESSION_OPS_COPY.focusSave}
                 </CButton>
                 {saveMessage ? <span className="small text-success">{saveMessage}</span> : null}
@@ -237,7 +257,9 @@ export default function AthleteCaptureDrawer({
                       </span>
                       {s.custom ? <CBadge color="warning">Custom</CBadge> : null}
                       {s.focusPriority ? <CBadge color="primary">Focus</CBadge> : null}
-                      <CBadge color={trendBadge(s.trendState)}>{String(s.trendState || '?')}</CBadge>
+                      <CBadge color={trendBadge(s.trendState)}>
+                        {String(s.trendState || '?')}
+                      </CBadge>
                     </div>
                     <div className="d-flex flex-wrap gap-1 mb-1">
                       {[1, 2, 3, 4, 5].map((lv) => (
@@ -257,12 +279,13 @@ export default function AthleteCaptureDrawer({
                       ))}
                     </div>
                     <div className="small text-muted">
-                      Target{' '}
-                      {s.targetLevel != null ? s.targetLevel : '—'} · Last{' '}
-                      {s.lastObservedAt ? new Date(s.lastObservedAt).toLocaleDateString() : '—'}
+                      Target {s.targetLevel != null ? s.targetLevel : '—'} · Last{' '}
+                      {formatDisplayDateDmy(s.lastObservedAt)}
                     </div>
                     {s.latestNote ? (
-                      <div className="small fst-italic text-body-secondary mt-1">{s.latestNote}</div>
+                      <div className="small fst-italic text-body-secondary mt-1">
+                        {s.latestNote}
+                      </div>
                     ) : null}
                   </div>
                 ))}
@@ -308,17 +331,24 @@ export default function AthleteCaptureDrawer({
                     disp = `${(Number(row.value) / 1000).toFixed(2)}s`
                   }
                   return (
-                    <div key={code} className="border rounded px-2 py-2 d-flex justify-content-between">
+                    <div
+                      key={code}
+                      className="border rounded px-2 py-2 d-flex justify-content-between"
+                    >
                       <span className="small fw-semibold text-capitalize">
                         {code.replace(/_/g, ' ').toLowerCase().slice(0, 24)}
                       </span>
-                      <span className="small font-monospace">{disp == null ? '—' : String(disp)}</span>
+                      <span className="small font-monospace">
+                        {disp == null ? '—' : String(disp)}
+                      </span>
                     </div>
                   )
                 })}
               </div>
             ) : (
-              !kpiLoading && <div className="small text-muted">Snapshots appear after sessions end.</div>
+              !kpiLoading && (
+                <div className="small text-muted">Snapshots appear after sessions end.</div>
+              )
             )}
           </div>
         )}
@@ -348,8 +378,7 @@ export default function AthleteCaptureDrawer({
                 {histData.timeline.map((it, idx) => (
                   <li key={idx} className="border-bottom py-2">
                     <div className="text-muted font-monospace" style={{ fontSize: '.7rem' }}>
-                      {String(it.kind)} ·{' '}
-                      {it.at ? new Date(it.at).toLocaleString() : '—'}
+                      {String(it.kind)} · {it.at ? new Date(it.at).toLocaleString() : '—'}
                     </div>
                     <div>{it.summary}</div>
                   </li>

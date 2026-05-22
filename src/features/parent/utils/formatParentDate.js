@@ -1,3 +1,5 @@
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
+
 export function formatSessionWhen(session) {
   if (!session) return '—'
   const utc = session.startTimeUtc
@@ -5,13 +7,8 @@ export function formatSessionWhen(session) {
     try {
       const d = new Date(utc)
       if (!Number.isNaN(d.getTime())) {
-        return d.toLocaleString(undefined, {
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-        })
+        const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+        return `${formatDisplayDateDmy(d)} · ${time}`
       }
     } catch {
       /* fall through */
@@ -19,8 +16,8 @@ export function formatSessionWhen(session) {
   }
   const date = session.sessionDate || session.session_date
   const start = session.startTime || session.start_time
-  if (date && start) return `${date} · ${start}`
-  if (date) return String(date)
+  if (date && start) return `${formatDisplayDateDmy(date)} · ${start}`
+  if (date) return formatDisplayDateDmy(date)
   return '—'
 }
 
@@ -29,7 +26,7 @@ export function formatShortDate(value) {
   try {
     const d = new Date(value)
     if (Number.isNaN(d.getTime())) return String(value)
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    return formatDisplayDateDmy(d)
   } catch {
     return String(value)
   }

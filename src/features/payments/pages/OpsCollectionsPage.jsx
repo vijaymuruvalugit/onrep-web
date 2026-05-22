@@ -17,6 +17,7 @@ import {
   CTableRow,
 } from '@coreui/react'
 import { opsApi } from '../api/opsApi'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 /**
  * Platform-admin cross-academy collections summary (Phase 4.2).
@@ -59,6 +60,7 @@ export default function OpsCollectionsPage() {
   }, [start, end])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch collections when the bounded date window changes
     load()
   }, [load])
 
@@ -91,17 +93,32 @@ export default function OpsCollectionsPage() {
         <CCardBody className="d-flex align-items-end gap-3 flex-wrap">
           <div>
             <CFormLabel htmlFor="opsStart">Start</CFormLabel>
-            <CFormInput id="opsStart" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+            <CFormInput
+              id="opsStart"
+              type="date"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+            />
           </div>
           <div>
             <CFormLabel htmlFor="opsEnd">End</CFormLabel>
-            <CFormInput id="opsEnd" type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+            <CFormInput
+              id="opsEnd"
+              type="date"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+            />
           </div>
           <CButtonGroup>
             <CButton color="primary" onClick={load}>
               Apply
             </CButton>
-            <CButton color="secondary" variant="outline" onClick={downloadCsv} disabled={downloading}>
+            <CButton
+              color="secondary"
+              variant="outline"
+              onClick={downloadCsv}
+              disabled={downloading}
+            >
               {downloading ? <CSpinner size="sm" /> : 'Download CSV'}
             </CButton>
           </CButtonGroup>
@@ -137,11 +154,7 @@ export default function OpsCollectionsPage() {
                     <CTableDataCell className="text-end">{fmtINR(r.online)}</CTableDataCell>
                     <CTableDataCell className="text-end">{fmtINR(r.manual)}</CTableDataCell>
                     <CTableDataCell className="text-end">{r.tx_count}</CTableDataCell>
-                    <CTableDataCell>
-                      {r.last_payment_date
-                        ? new Date(r.last_payment_date).toLocaleDateString('en-IN')
-                        : '—'}
-                    </CTableDataCell>
+                    <CTableDataCell>{formatDisplayDateDmy(r.last_payment_date)}</CTableDataCell>
                   </CTableRow>
                 ))}
               </CTableBody>
