@@ -56,11 +56,12 @@ const SchedulePage = React.lazy(() => import('../features/schedule/pages/Schedul
 const UpcomingClassesPage = React.lazy(
   () => import('../features/classes/pages/UpcomingClassesPage'),
 )
-const AttendanceDashboardPage = React.lazy(
-  () => import('../features/attendance/pages/AttendanceDashboardPage'),
+/** @deprecated compatibility routes — silent redirect into live session workspace */
+const CoachAttendanceCompatRedirectPage = React.lazy(
+  () => import('../features/participation/routes/CoachAttendanceCompatRedirectPage'),
 )
-const AttendanceEntryPage = React.lazy(
-  () => import('../features/attendance/pages/AttendanceEntryPage'),
+const CoachAttendanceClassCompatRedirectPage = React.lazy(
+  () => import('../features/participation/routes/CoachAttendanceClassCompatRedirectPage'),
 )
 const PlacesListPage = React.lazy(() => import('../features/places/pages/PlacesListPage'))
 const PlaceCreatePage = React.lazy(() => import('../features/places/pages/PlaceCreatePage'))
@@ -133,8 +134,8 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/coach/batches/:batchId', component: BatchWorkspacePage },
   { path: '/coach/schedule', component: SchedulePage },
   { path: '/coach/classes/upcoming', component: UpcomingClassesPage },
-  { path: '/coach/attendance', component: AttendanceDashboardPage },
-  { path: '/coach/attendance/class/:classId', component: AttendanceEntryPage },
+  { path: '/coach/attendance', component: CoachAttendanceCompatRedirectPage },
+  { path: '/coach/attendance/class/:classId', component: CoachAttendanceClassCompatRedirectPage },
   { path: '/coach/students', component: StudentsListPage },
   { path: '/coach/students/import', component: StudentImportPage },
   { path: '/coach/students/new', component: StudentCreatePage },

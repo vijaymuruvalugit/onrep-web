@@ -57,7 +57,7 @@ const CoachAnalyticsPage = () => {
         <CRow className="g-3">
           <CCol lg={6}>
             <CCard className="shadow-sm h-100">
-              <CCardHeader className="fw-semibold">Attendance consistency</CCardHeader>
+              <CCardHeader className="fw-semibold">Participation consistency</CCardHeader>
               <CCardBody className="small">
                 <div className="mb-2 text-body-secondary">Most consistent athletes</div>
                 <ul className="mb-3 ps-3">

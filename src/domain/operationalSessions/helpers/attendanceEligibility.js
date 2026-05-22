@@ -28,24 +28,24 @@ export function canMarkSessionAttendance(row) {
 export function sessionAttendanceIneligibleMessage(row) {
   if (!row) return 'Session not found.'
   if (row.isCancelled || String(row.status || '').toUpperCase() === 'CANCELLED') {
-    return 'Attendance cannot be recorded for a cancelled session.'
+    return 'Session participation cannot be recorded for a cancelled session.'
   }
   const op = String(row.operationalState ?? row.state ?? '').toLowerCase()
   if (op === 'cancelled') return 'Attendance cannot be recorded for a cancelled session.'
   if (op === 'scheduled' || op === 'upcoming') {
-    return 'Start the session before marking attendance.'
+    return 'Start the session before roster check-in.'
   }
   if (op === 'paused') {
-    return 'Attendance can only be marked while a session is active or after it is closed. This session is paused.'
+    return 'Roster check-in is only available while a session is active or after it is closed. This session is paused.'
   }
   if (op === 'archived') {
-    return 'Attendance can only be marked while a session is active or after it is closed. This session is archived.'
+    return 'Roster check-in is only available while a session is active or after it is closed. This session is archived.'
   }
   if (op && op !== 'active' && op !== 'completed') {
-    return 'Attendance can only be marked while a session is active or after it is closed.'
+    return 'Roster check-in is only available while a session is active or after it is closed.'
   }
   if (!row.actualStartTime && !row.actual_start_time) {
-    return 'Start the session before marking attendance.'
+    return 'Start the session before roster check-in.'
   }
-  return 'Attendance is not available for this session.'
+  return 'Session participation is not available for this session.'
 }

@@ -1,3 +1,4 @@
+/** @deprecated Standalone coach attendance hub — routes redirect to live session workspace. */
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {

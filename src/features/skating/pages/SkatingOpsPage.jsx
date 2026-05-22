@@ -60,6 +60,7 @@ import { usePhaseCapture } from '../hooks/usePhaseCapture'
 import { usePhaseEntryAutosave } from '../hooks/usePhaseEntryAutosave'
 import { phaseCaptureApi } from '../../../domain/phaseCapture/phaseCaptureApi'
 import attendanceApi from '../../attendance/api/attendanceApi'
+import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 import SessionPhaseSetupModal from '../components/phaseCapture/SessionPhaseSetupModal'
 import EditSessionPhasesModal from '../components/sessionWorkspace/EditSessionPhasesModal'
 import { sessionPhasesApi } from '../../../domain/sessionPhases/sessionPhasesApi'
@@ -364,6 +365,7 @@ const SkatingOpsPage = () => {
   const [athleteFocusSaving, setAthleteFocusSaving] = useState(false)
   const [athleteFocusSaveMsg, setAthleteFocusSaveMsg] = useState('')
   const [attendanceByStudentId, setAttendanceByStudentId] = useState({})
+  const [rosterParticipationEligible, setRosterParticipationEligible] = useState(true)
 
   const [showAddBlockModal, setShowAddBlockModal] = useState(false)
 
@@ -1075,6 +1077,7 @@ const SkatingOpsPage = () => {
   useEffect(() => {
     if (!selectedSessionId || !coachLive) {
       setAttendanceByStudentId({})
+      setRosterParticipationEligible(true)
       return undefined
     }
     let cancelled = false
@@ -1082,6 +1085,7 @@ const SkatingOpsPage = () => {
       .getClassRoster(selectedSessionId)
       .then((payload) => {
         if (cancelled) return
+        setRosterParticipationEligible(payload?.attendanceEligible !== false)
         const next = {}
         for (const student of payload?.students || []) {
           const sid = String(student.id ?? student.studentId ?? student._id ?? '')
@@ -1090,7 +1094,10 @@ const SkatingOpsPage = () => {
         setAttendanceByStudentId(next)
       })
       .catch(() => {
-        if (!cancelled) setAttendanceByStudentId({})
+        if (!cancelled) {
+          setAttendanceByStudentId({})
+          setRosterParticipationEligible(false)
+        }
       })
     return () => {
       cancelled = true
@@ -1101,6 +1108,27 @@ const SkatingOpsPage = () => {
     enabled: Boolean(selectedSessionId && activeActivityId) && coachLive,
   })
   const phaseContentEditable = opsState === 'active' || opsState === 'ended'
+
+  const sessionForParticipationEligibility = useMemo(
+    () => ({
+      operationalState: selSession?.state,
+      state: selSession?.state,
+      status: selSession?.status,
+      isCancelled: sessionCancelled,
+      attendanceEnabled: selSession?.attendanceEnabled ?? selSession?.attendance_enabled,
+      actualStartTime:
+        selSession?.actualStartAt ??
+        selSession?.startedAt ??
+        selSession?.actual_start_time ??
+        selSession?.started_at,
+    }),
+    [selSession, sessionCancelled],
+  )
+
+  const rosterCheckInEnabled =
+    rosterParticipationEligible &&
+    canMarkSessionAttendance(sessionForParticipationEligibility) &&
+    !uiPaused
 
   const { queueEntry: queuePhaseEntry } = usePhaseEntryAutosave({
     operationalSessionId: selectedSessionId,
@@ -1291,7 +1319,7 @@ const SkatingOpsPage = () => {
 
   const handleAttendanceToggle = useCallback(
     async (studentId) => {
-      if (!selectedSessionId || !studentId || !phaseContentEditable) return
+      if (!selectedSessionId || !studentId || !rosterCheckInEnabled) return
       const sid = String(studentId)
       const currentlyPresent = attendanceByStudentId[sid] === 'present'
       const nextStatus = currentlyPresent ? null : 'present'
@@ -1319,7 +1347,7 @@ const SkatingOpsPage = () => {
         }
       }
     },
-    [selectedSessionId, phaseContentEditable, attendanceByStudentId],
+    [selectedSessionId, rosterCheckInEnabled, attendanceByStudentId],
   )
 
   const handleUpdatePhaseSkills = useCallback(
@@ -2205,6 +2233,7 @@ const SkatingOpsPage = () => {
                     phaseCapture={unifiedLiveCoaching ? phaseCaptureProps : null}
                     activePhaseAthletes={activePhaseAthletes}
                     attendanceByStudentId={attendanceByStudentId}
+                    rosterCheckInEnabled={rosterCheckInEnabled}
                     onParticipationStatusChange={handleParticipationStatusChange}
                     onAttendanceToggle={handleAttendanceToggle}
                     onExerciseToggle={handleExerciseToggle}

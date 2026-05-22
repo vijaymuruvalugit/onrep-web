@@ -35,6 +35,7 @@ import DashboardEmptyState from '../../../features/dashboard/components/Dashboar
 import DashboardCardSkeleton from '../../../features/dashboard/components/DashboardCardSkeleton'
 import { formatInr } from '../../../features/payments/utils/formatInr'
 import AcademyOperationsInsights from '../../../features/analytics/components/AcademyOperationsInsights'
+import { liveSessionPath } from '../../../features/participation/utils/liveSessionPath'
 
 const MAX_ACTIONS = 5
 
@@ -47,8 +48,8 @@ function buildPendingActions(operations) {
       key: `att-${p.sessionId}`,
       title: p.batchName || p.title || 'Session',
       subtitle: [p.startTime, p.coachName].filter(Boolean).join(' · '),
-      to: `/coach/attendance/class/${encodeURIComponent(p.sessionId)}`,
-      badge: 'Attendance',
+      to: liveSessionPath(p.sessionId),
+      badge: 'Participation',
       color: 'warning',
     })
   }
@@ -216,7 +217,7 @@ const OwnerDashboard = () => {
           </CCol>
           <CCol xs={6} xl={2}>
             <DashboardStatCard
-              title="Today attendance"
+              title="Today participation"
               value={fmtPct(summary?.todayAttendancePercent)}
               hint="Weighted by roster"
               loading={loading && !summary}
@@ -225,7 +226,7 @@ const OwnerDashboard = () => {
           </CCol>
           <CCol xs={6} xl={2}>
             <DashboardStatCard
-              title="Attendance done"
+              title="Participation recorded"
               value={fmtPct(summary?.attendanceCompletionPercent)}
               hint="Sessions marked today"
               loading={loading && !summary}
@@ -280,8 +281,8 @@ const OwnerDashboard = () => {
                 Pending actions
               </span>
               <div className="d-flex gap-2">
-                <Link to="/coach/attendance" className="btn btn-sm btn-link">
-                  View attendance
+                <Link to="/coach/academy/insights" className="btn btn-sm btn-link">
+                  Participation reports
                   <CIcon icon={cilArrowRight} className="ms-1" />
                 </Link>
                 <Link to="/coach/payments" className="btn btn-sm btn-link">
@@ -299,7 +300,7 @@ const OwnerDashboard = () => {
               {!loading && pendingActions.length === 0 ? (
                 <DashboardEmptyState
                   title="You’re caught up"
-                  detail="No attendance gaps or payment proofs waiting in the top queue."
+                  detail="No participation gaps or payment proofs waiting in the top queue."
                 />
               ) : null}
               {pendingActions.length ? (
@@ -363,15 +364,15 @@ const OwnerDashboard = () => {
                         </div>
                         <div className="d-flex align-items-center gap-2">
                           <CBadge color={s.attendanceMarked ? 'success' : 'warning'}>
-                            {s.attendanceMarked ? 'Attendance done' : 'Attendance pending'}
+                            {s.attendanceMarked ? 'Participation done' : 'Participation pending'}
                           </CBadge>
                           <CButton
                             as={Link}
-                            to={`/coach/attendance/class/${encodeURIComponent(s.sessionId)}`}
+                            to={liveSessionPath(s.sessionId)}
                             size="sm"
                             color="primary"
                           >
-                            Open
+                            Open session
                           </CButton>
                         </div>
                       </div>

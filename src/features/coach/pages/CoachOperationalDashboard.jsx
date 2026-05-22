@@ -5,8 +5,8 @@ import CIcon from '@coreui/icons-react'
 import { cilCalendar, cilClock, cilDollar, cilSpeedometer } from '@coreui/icons'
 
 import TodayClassesPage from '../../classes/pages/TodayClassesPage'
-import AttendanceDashboardPage from '../../attendance/pages/AttendanceDashboardPage'
 import roleDashboardApi from '../../dashboard/api/roleDashboardApi'
+import { COACH_PARTICIPATION_COPY } from '../../../core/productCopy'
 import { formatLocalYmd } from '../../dashboard/utils/calendarDate'
 import DashboardStatCard from '../../dashboard/components/DashboardStatCard'
 import CoachEmbeddedInsights from '../../analytics/components/CoachEmbeddedInsights'
@@ -15,7 +15,7 @@ const quickLinks = [
   { to: '/coach/skating', label: 'Live sessions' },
   { to: '/coach/schedule', label: 'Schedule' },
   { to: '/coach/students', label: 'Students' },
-  { to: '/coach/attendance', label: 'Attendance' },
+  { to: '/coach/insights', label: 'Participation insights' },
   { to: '/coach/payments', label: 'Payments' },
 ]
 
@@ -80,7 +80,7 @@ const CoachOperationalDashboard = () => {
         </CCol>
         <CCol xs={6} md={3}>
           <DashboardStatCard
-            title="Attendance pending"
+            title={COACH_PARTICIPATION_COPY.participationPending}
             value={summary?.attendancePending ?? '—'}
             loading={loading}
             accentClass="border-start border-4 border-warning"
@@ -124,18 +124,17 @@ const CoachOperationalDashboard = () => {
       </CRow>
 
       <CRow className="g-3 align-items-start">
-        <CCol xl={7}>
+        <CCol xs={12}>
           <CCard className="mb-2 border-0 bg-transparent shadow-none">
             <CCardHeader className="bg-transparent border-0 px-0 pt-0 pb-2">
               <CIcon icon={cilClock} className="me-2 text-primary" />
               <strong>Today&apos;s sessions</strong>
-              <span className="small text-body-secondary ms-2">Mark attendance as you go</span>
+              <span className="small text-body-secondary ms-2">
+                Start a session — roster check-in happens in the live workspace
+              </span>
             </CCardHeader>
           </CCard>
           <TodayClassesPage />
-        </CCol>
-        <CCol xl={5}>
-          <AttendanceDashboardPage />
         </CCol>
       </CRow>
     </>

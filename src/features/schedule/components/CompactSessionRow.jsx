@@ -10,6 +10,7 @@ import { sessionTypeLabel } from '../constants/sessionTypes'
 import OperationalSessionModeBadge from '../../../domain/operationalSessions/components/OperationalSessionModeBadge'
 import { isOperationalOneOff, isOperationalRecurring } from '../../classes/utils/sessionRow'
 import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
+import { COACH_PARTICIPATION_COPY } from '../../../core/productCopy'
 
 function shortPlaceLabel(raw, maxLen = 42) {
   const s = stripDemoSuffix(String(raw || '').trim())
@@ -28,7 +29,7 @@ export default function CompactSessionRow({
   onViewSession,
   /** When true, show a primary route into the ops session workspace. */
   canOpenSessionToday = false,
-  /** When true, show Mark attendance — session is active or closed; parent navigates to attendance. */
+  /** When true, show roster check-in — session is active or closed; opens live session workspace. */
   canMarkAttendanceToday = false,
   onOpenSessionPage,
   onMarkAttendance,
@@ -126,7 +127,7 @@ export default function CompactSessionRow({
               className="px-3"
               onClick={() => onMarkAttendance(row)}
             >
-              Mark attendance
+              {COACH_PARTICIPATION_COPY.rosterCheckIn}
             </CButton>
           ) : null}
           {canOpenSessionToday && !attendanceBlocked && typeof onOpenSessionPage === 'function' ? (

@@ -8,7 +8,7 @@ export const SESSION_OPS_COPY = {
   emptyRosterBody: 'Add athletes to coach on the ice.',
   emptyRosterCta: 'Add athletes',
   captureDrawerTitle: 'Athlete',
-  markPresentSoon: 'Attendance — coming soon.',
+  markPresentSoon: 'Roster check-in — coming soon.',
   focusPlaceholder: 'Today note (short)',
   focusSave: 'Save',
   focusSaved: 'Saved.',
@@ -38,7 +38,7 @@ export const SESSION_OPS_COPY = {
   refresh: 'Refresh',
   dayLabel: 'Day',
   newSessionCta: 'Start live session',
-  attendanceLink: 'Attendance',
+  attendanceLink: 'Session participation',
 
   liveSessionTitle: 'Live',
   recordingFor: 'Athlete',

@@ -395,7 +395,7 @@ const BatchWorkspacePage = () => {
       const sessionId = String(row?.sessionId || row?.id || '').trim()
       if (!sessionId) return
       if (canMarkSessionAttendance(row)) {
-        navigate(`/coach/attendance/class/${encodeURIComponent(sessionId)}`)
+        navigate(`/coach/skating?session=${encodeURIComponent(sessionId)}`)
         return
       }
       openSessionPage(sessionId)
@@ -406,7 +406,7 @@ const BatchWorkspacePage = () => {
   /** Lightweight same-day status — not a dashboard; bridges the gap after a session ends. */
   const scheduleContinuityLine = useMemo(() => {
     if (operationalFocus.kind === 'attendance_pending') {
-      return 'Today · Attendance pending'
+      return 'Today · Participation pending'
     }
     if (operationalFocus.kind === 'attendance_done') {
       return 'Completed today'

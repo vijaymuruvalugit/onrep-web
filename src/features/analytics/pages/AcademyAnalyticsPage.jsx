@@ -67,7 +67,7 @@ const AcademyAnalyticsPage = () => {
                 <p>Active students: {ops.academyGrowth?.activeStudents ?? 0}</p>
                 <p>New enrollments: {ops.academyGrowth?.newEnrollments ?? 0}</p>
                 <p className="mb-0">
-                  Attendance rate: {fmtPct(ops.attendanceTrends?.attendanceRate)}
+                  Participation rate: {fmtPct(ops.attendanceTrends?.attendanceRate)}
                 </p>
               </CCardBody>
             </CCard>

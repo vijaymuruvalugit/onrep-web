@@ -363,7 +363,7 @@ const SchedulePage = () => {
       const sid = row.sessionId || row.id
       if (!sid) return
       if (canMarkSessionAttendance(row)) {
-        navigate(`/coach/attendance/class/${encodeURIComponent(sid)}`)
+        navigate(`/coach/skating?session=${encodeURIComponent(sid)}`)
         return
       }
       navigate(`/coach/ops/sessions/${encodeURIComponent(sid)}`)

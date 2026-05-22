@@ -12,6 +12,8 @@ import {
   CSpinner,
 } from '@coreui/react'
 import useClasses from '../hooks/useClasses'
+import { liveSessionPath } from '../../participation/utils/liveSessionPath'
+import { COACH_PARTICIPATION_COPY } from '../../../core/productCopy'
 import {
   displayBatchTitle,
   formatExpectedStudents,
@@ -36,8 +38,8 @@ const TodayClassesPage = () => {
         <div>
           <strong>Today&apos;s Classes</strong>
           <div className="small text-body-secondary">
-            {formatSessionCalendarDate(todayIsoLocal(), { weekday: 'long', month: 'long' })} — open
-            a class to mark attendance
+            {formatSessionCalendarDate(todayIsoLocal(), { weekday: 'long', month: 'long' })} — start
+            a session for roster check-in
           </div>
         </div>
         <CButton size="sm" color="primary" variant="outline" onClick={() => fetchTodayClasses()}>
@@ -78,15 +80,15 @@ const TodayClassesPage = () => {
                   </div>
                   <div className="d-flex align-items-center gap-2">
                     <CBadge color={cls.attendanceMarked ? 'success' : 'warning'}>
-                      {cls.attendanceMarked ? 'Attendance Completed' : 'Attendance Pending'}
+                      {cls.attendanceMarked ? 'Check-in done' : 'Check-in pending'}
                     </CBadge>
                     <CButton
                       as={Link}
-                      to={`/coach/attendance/class/${encodeURIComponent(classId)}`}
+                      to={liveSessionPath(classId)}
                       size="sm"
                       color="primary"
                     >
-                      Mark Attendance
+                      {COACH_PARTICIPATION_COPY.openLiveSession}
                     </CButton>
                   </div>
                 </CListGroupItem>

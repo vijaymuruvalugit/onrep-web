@@ -2,6 +2,8 @@ import React, { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CAlert, CBadge, CButton, CCard, CCardBody, CCardHeader, CSpinner } from '@coreui/react'
 import useClasses from '../hooks/useClasses'
+import { liveSessionPath } from '../../participation/utils/liveSessionPath'
+import { COACH_PARTICIPATION_COPY } from '../../../core/productCopy'
 
 const UpcomingClassesPage = () => {
   const { batchId } = useParams()
@@ -47,12 +49,12 @@ const UpcomingClassesPage = () => {
                   </CBadge>
                   <CButton
                     as={Link}
-                    to={`/coach/attendance/class/${encodeURIComponent(classId)}`}
+                    to={liveSessionPath(classId)}
                     size="sm"
                     color="primary"
                     variant="outline"
                   >
-                    Open
+                    {COACH_PARTICIPATION_COPY.openLiveSession}
                   </CButton>
                 </div>
               </div>

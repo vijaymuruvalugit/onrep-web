@@ -78,6 +78,7 @@ function CoachLiveSessionView({
   phaseCapture,
   activePhaseAthletes = [],
   attendanceByStudentId = {},
+  rosterCheckInEnabled = false,
   onParticipationStatusChange,
   onAttendanceToggle,
   onExerciseToggle,
@@ -102,7 +103,7 @@ function CoachLiveSessionView({
   const phaseContentEditable = opsState === 'active' || opsState === 'ended'
   const phaseLifecycleEditable = opsState === 'active'
   const phaseContentDisabled = uiPaused || !phaseContentEditable
-  const attendanceToggleEnabled = phaseContentEditable && !uiPaused
+  const attendanceToggleEnabled = rosterCheckInEnabled
   const reviewOnly =
     opsState !== 'ended' &&
     (activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped')
@@ -189,7 +190,7 @@ function CoachLiveSessionView({
             aria-labelledby="coach-live-students-heading"
           >
             <h2 id="coach-live-students-heading" className="coach-live-nav-section__heading">
-              Students
+              Active athletes
             </h2>
             <AthleteCardStrip
               variant="tiles"

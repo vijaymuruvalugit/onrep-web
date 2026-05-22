@@ -76,11 +76,11 @@ const CoachEmbeddedInsights = () => {
               ) : null}
               {alertCount > 0 ? (
                 <span className="badge bg-warning-subtle text-warning-emphasis">
-                  {alertCount} attendance check-ins
+                  {alertCount} participation alert{alertCount === 1 ? '' : 's'}
                 </span>
               ) : (
                 <span className="badge bg-success-subtle text-success-emphasis">
-                  No attendance alerts
+                  No participation alerts
                 </span>
               )}
               {topFocus ? (
@@ -115,15 +115,17 @@ const CoachEmbeddedInsights = () => {
                   )}
                 </CCol>
                 <CCol md={6}>
-                  <div className="small text-body-secondary mb-1">Athletes to check in with</div>
+                  <div className="small text-body-secondary mb-1">Low participation trend</div>
                   {(embedded.attendanceAlerts || []).length === 0 ? (
-                    <p className="small text-body-secondary mb-0">No attendance alerts.</p>
+                    <p className="small text-body-secondary mb-0">No participation alerts.</p>
                   ) : (
                     <ul className="small mb-0 ps-3">
                       {embedded.attendanceAlerts.map((a) => (
                         <li key={a.studentId}>
                           {a.studentName}
-                          {a.attendanceRate != null ? ` · ${a.attendanceRate}% participation` : ''}
+                          {a.attendanceRate != null
+                            ? ` · ${a.attendanceRate}% session participation`
+                            : ''}
                         </li>
                       ))}
                     </ul>

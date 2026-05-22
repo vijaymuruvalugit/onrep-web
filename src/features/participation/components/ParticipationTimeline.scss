@@ -1,0 +1,16 @@
+.onrep-participation-timeline__list {
+  max-height: 28rem;
+  overflow-y: auto;
+}
+
+.onrep-participation-timeline__item {
+  border-left: 3px solid transparent;
+}
+
+.onrep-participation-timeline__item:has(.badge.bg-success) {
+  border-left-color: var(--cui-success);
+}
+
+.onrep-participation-timeline__item:has(.badge.bg-danger) {
+  border-left-color: var(--cui-danger);
+}

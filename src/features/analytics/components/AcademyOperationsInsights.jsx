@@ -78,7 +78,7 @@ const AcademyOperationsInsights = () => {
             </CCol>
             <CCol xs={6} md={3}>
               <DashboardStatCard
-                title="Attendance rate"
+                title="Participation rate"
                 value={fmtPct(ops.attendanceTrends?.attendanceRate)}
                 loading={false}
               />

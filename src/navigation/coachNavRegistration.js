@@ -3,7 +3,6 @@
  */
 import {
   cilCalendar,
-  cilCheckCircle,
   cilDollar,
   cilLayers,
   cilLocationPin,
@@ -21,7 +20,6 @@ export const COACH_NAV_REGISTRATION = Object.freeze([
   { name: 'Live sessions', to: { pathname: '/coach/skating', search: '' }, icon: cilMediaPlay },
   { name: 'Batches', to: '/coach/batches', icon: cilLayers },
   { name: 'Schedule', to: '/coach/schedule', icon: cilCalendar },
-  { name: 'Attendance', to: '/coach/attendance', icon: cilCheckCircle },
   { name: 'Students', to: '/coach/students', icon: cilPeople },
   { name: 'Parents', to: '/coach/parents', icon: cilUser },
   { name: 'Places', to: '/coach/places', icon: cilLocationPin },

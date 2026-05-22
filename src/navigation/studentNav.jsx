@@ -22,7 +22,7 @@ export const studentNav = [
   },
   {
     component: CNavItem,
-    name: 'Attendance',
+    name: 'Participation',
     to: '/student/attendance',
     icon: <CIcon icon={cilList} customClassName="nav-icon" />,
   },

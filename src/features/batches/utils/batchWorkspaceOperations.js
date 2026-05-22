@@ -122,9 +122,9 @@ export function computeOperationalFocus({
     const s = idx >= 0 ? pendingToday[idx] : pendingToday[0]
     return {
       kind: 'attendance_pending',
-      message: 'Attendance is open for today’s session.',
+      message: 'Roster check-in is open for today’s session.',
       primarySession: s,
-      primaryLabel: canMarkSessionAttendance(s) ? 'Mark attendance' : 'Open session',
+      primaryLabel: canMarkSessionAttendance(s) ? 'Roster check-in' : 'Open session',
     }
   }
 
@@ -141,7 +141,7 @@ export function computeOperationalFocus({
     })
     return {
       kind: 'attendance_done',
-      message: 'Attendance complete.',
+      message: 'Session participation recorded.',
       nextHint:
         nextFuture ||
         mergedTimeline.find(

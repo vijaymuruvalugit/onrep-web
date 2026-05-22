@@ -3,6 +3,8 @@ import { CButton, CDropdown, CDropdownItem, CDropdownMenu, CDropdownToggle } fro
 import { Link } from 'react-router-dom'
 import { primaryActionForSession, primaryActionLabel } from '../helpers/sessionActions'
 import { canMarkSessionAttendance } from '../helpers/attendanceEligibility'
+import { liveSessionPath } from '../../../features/participation/utils/liveSessionPath'
+import { COACH_PARTICIPATION_COPY } from '../../../core/productCopy'
 
 /**
  * @param {{
@@ -19,9 +21,7 @@ export default function OperationalSessionActions({
   scheduleEditHref = null,
 }) {
   const action = primaryActionForSession(session)
-  const attendanceHref = session?.id
-    ? `/coach/attendance/class/${encodeURIComponent(session.id)}`
-    : '/coach/attendance'
+  const liveSessionHref = liveSessionPath(session?.id)
 
   return (
     <div className="d-flex flex-wrap align-items-center gap-2 op-session-actions">
@@ -39,8 +39,8 @@ export default function OperationalSessionActions({
         </CDropdownToggle>
         <CDropdownMenu>
           {canMarkSessionAttendance(session) ? (
-            <CDropdownItem as={Link} to={attendanceHref}>
-              Attendance
+            <CDropdownItem as={Link} to={liveSessionHref}>
+              {COACH_PARTICIPATION_COPY.rosterCheckIn}
             </CDropdownItem>
           ) : null}
           {scheduleEditHref ? (

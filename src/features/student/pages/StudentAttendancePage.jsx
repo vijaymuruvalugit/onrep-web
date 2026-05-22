@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { CCard, CCardBody, CListGroup, CListGroupItem, CSpinner } from '@coreui/react'
+import { CCard, CCardBody, CCardHeader, CSpinner } from '@coreui/react'
 import { parentApi } from '../../parent/api/parentApi'
+import ParticipationTimeline from '../../participation/components/ParticipationTimeline'
+import { FAMILY_PARTICIPATION_COPY } from '../../../core/productCopy'
 
 const StudentAttendancePage = () => {
   const [rows, setRows] = useState([])
@@ -32,17 +34,12 @@ const StudentAttendancePage = () => {
 
   return (
     <>
-      <h2 className="mb-3">Attendance</h2>
+      <h2 className="mb-1">{FAMILY_PARTICIPATION_COPY.pageTitle}</h2>
+      <p className="text-body-secondary small mb-3">{FAMILY_PARTICIPATION_COPY.pageSubtitle}</p>
       <CCard className="shadow-sm">
-        <CCardBody className="p-0">
-          <CListGroup flush>
-            {rows.map((a) => (
-              <CListGroupItem key={a.id} className="d-flex justify-content-between">
-                <span className="small">{a.sessionTitle || a.sessionDate || 'Session'}</span>
-                <span className="small fw-semibold">{a.status}</span>
-              </CListGroupItem>
-            ))}
-          </CListGroup>
+        <CCardHeader>Session participation</CCardHeader>
+        <CCardBody>
+          <ParticipationTimeline rows={rows} emptyMessage="No session participation yet." />
         </CCardBody>
       </CCard>
     </>

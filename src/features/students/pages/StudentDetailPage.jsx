@@ -178,7 +178,7 @@ const StudentDetailPage = () => {
             <CCardHeader>Status & Metadata</CCardHeader>
             <CCardBody>
               <div className="mb-2">
-                <strong>Attendance summary:</strong>{' '}
+                <strong>Participation consistency:</strong>{' '}
                 {selectedStudent.attendance_percent
                   ? `${selectedStudent.attendance_percent}%`
                   : '—'}

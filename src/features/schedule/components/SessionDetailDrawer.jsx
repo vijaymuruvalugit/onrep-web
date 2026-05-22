@@ -250,7 +250,9 @@ export default function SessionDetailDrawer({
     [row?.actualStartTime, row?.actualEndTime],
   )
 
-  const attendancePath = sessionId && `/coach/attendance/class/${encodeURIComponent(sessionId)}`
+  const liveSessionHref = sessionId
+    ? `/coach/skating?session=${encodeURIComponent(sessionId)}`
+    : null
 
   const sessionStarted = Boolean(row?.actualStartTime ?? row?.actual_start_time)
   const attendanceAllowed = row ? canMarkSessionAttendance(row) : false
@@ -493,14 +495,14 @@ export default function SessionDetailDrawer({
             </section>
 
             <section className="mt-auto pt-2 border-top border-light-subtle">
-              {attendancePath && attendanceAllowed ? (
-                <CButton color="primary" className="w-100 mb-2" as={Link} to={attendancePath}>
-                  Open attendance
+              {liveSessionHref && attendanceAllowed ? (
+                <CButton color="primary" className="w-100 mb-2" as={Link} to={liveSessionHref}>
+                  Open live session
                 </CButton>
               ) : null}
               {row.attendanceEnabled === false ? (
                 <div className="small text-body-secondary mb-2">
-                  Attendance tracking is off for this session.
+                  Session participation tracking is off for this session.
                 </div>
               ) : null}
               {row.attendanceEnabled !== false && !attendanceAllowed && attendanceBlockedMessage ? (

@@ -1,3 +1,4 @@
+/** @deprecated Standalone attendance entry — routes redirect to live session workspace. */
 import React, { useCallback, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import {

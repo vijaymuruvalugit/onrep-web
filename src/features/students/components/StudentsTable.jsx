@@ -102,7 +102,7 @@ const StudentsTable = ({ students, loading, onRetry, error, canRetry = false }) 
                 <CTableHeaderCell>Batch/Activity</CTableHeaderCell>
                 <CTableHeaderCell className="d-none d-lg-table-cell">Parent</CTableHeaderCell>
                 <CTableHeaderCell className="d-none d-lg-table-cell">Age</CTableHeaderCell>
-                <CTableHeaderCell className="d-none d-xl-table-cell">Attendance</CTableHeaderCell>
+                <CTableHeaderCell className="d-none d-xl-table-cell">Participation</CTableHeaderCell>
                 <CTableHeaderCell className="d-none d-xl-table-cell">Created</CTableHeaderCell>
               </CTableRow>
             </CTableHead>

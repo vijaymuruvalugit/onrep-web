@@ -50,7 +50,7 @@ const ParentHomePage = () => {
         <CCol>
           <h2 className="mb-0">Overview</h2>
           <p className="text-body-secondary small mb-0">
-            Calm visibility into schedule, attendance, and coaching highlights for your athletes.
+            Calm visibility into schedule, participation, and coaching highlights for your athletes.
           </p>
         </CCol>
         <CCol xs="auto">
@@ -121,7 +121,7 @@ const ParentHomePage = () => {
                 </ul>
               ) : (
                 <p className="text-body-secondary small mb-0">
-                  Student names appear here when schedule or attendance data is available.
+                  Student names appear here when schedule or participation data is available.
                 </p>
               )}
             </CCardBody>
@@ -131,14 +131,14 @@ const ParentHomePage = () => {
           <CCard className="h-100">
             <CCardHeader>
               <CIcon icon={cilList} className="me-2" />
-              Attendance snapshot
+              Participation snapshot
             </CCardHeader>
             <CCardBody>
               {participation.recentCount > 0 && participation.attendanceRate != null ? (
                 <>
                   <div className="d-flex justify-content-between small text-body-secondary mb-1">
                     <span>Recent marks (preview)</span>
-                    <span>{participation.attendanceRate}% present</span>
+                    <span>{participation.attendanceRate}% consistency</span>
                   </div>
                   <CProgress
                     color={participation.attendanceRate >= 80 ? 'success' : 'warning'}
@@ -146,14 +146,14 @@ const ParentHomePage = () => {
                   />
                   <div className="small text-body-secondary mt-2">
                     Based on the latest {participation.recentCount} recorded session(s) shown on
-                    your home feed — see <Link to="/parent/attendance">Attendance</Link> for full
+                    your home feed — see <Link to="/parent/attendance">Participation</Link> for full
                     history.
                   </div>
                 </>
               ) : (
                 <p className="text-body-secondary small mb-0">
-                  No attendance preview yet. Open <Link to="/parent/attendance">Attendance</Link>{' '}
-                  for history.
+                  No participation preview yet. Open{' '}
+                  <Link to="/parent/attendance">Participation</Link> for history.
                 </p>
               )}
             </CCardBody>
