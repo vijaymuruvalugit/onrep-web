@@ -1111,8 +1111,8 @@ const SkatingOpsPage = () => {
 
   const sessionForParticipationEligibility = useMemo(
     () => ({
-      operationalState: selSession?.state,
-      state: selSession?.state,
+      operationalState: opsState,
+      state: opsState,
       status: selSession?.status,
       isCancelled: sessionCancelled,
       attendanceEnabled: selSession?.attendanceEnabled ?? selSession?.attendance_enabled,
@@ -1120,9 +1120,10 @@ const SkatingOpsPage = () => {
         selSession?.actualStartAt ??
         selSession?.startedAt ??
         selSession?.actual_start_time ??
-        selSession?.started_at,
+        selSession?.started_at ??
+        syncPrimitives.sessionStartedAt,
     }),
-    [selSession, sessionCancelled],
+    [opsState, selSession, sessionCancelled, syncPrimitives.sessionStartedAt],
   )
 
   const rosterCheckInEnabled =
