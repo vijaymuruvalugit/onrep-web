@@ -13,7 +13,6 @@ import {
 } from '@coreui/react'
 import useClasses from '../hooks/useClasses'
 import { liveSessionPath } from '../../participation/utils/liveSessionPath'
-import { COACH_PARTICIPATION_COPY } from '../../../core/productCopy'
 import {
   displayBatchTitle,
   formatExpectedStudents,
@@ -79,8 +78,10 @@ const TodayClassesPage = ({ activeActivityId }) => {
               const expectedLine = formatExpectedStudents(cls)
               return (
                 <CListGroupItem
+                  as={Link}
+                  to={liveSessionPath(classId)}
                   key={classId}
-                  className="d-flex justify-content-between align-items-center"
+                  className="d-flex justify-content-between align-items-center text-body text-decoration-none list-group-item-action"
                 >
                   <div>
                     <div className="fw-semibold">{displayBatchTitle(cls)}</div>
@@ -95,9 +96,6 @@ const TodayClassesPage = ({ activeActivityId }) => {
                       const badge = sessionBadge(cls)
                       return <CBadge color={badge.color}>{badge.label}</CBadge>
                     })()}
-                    <CButton as={Link} to={liveSessionPath(classId)} size="sm" color="primary">
-                      {COACH_PARTICIPATION_COPY.openLiveSession}
-                    </CButton>
                   </div>
                 </CListGroupItem>
               )

@@ -131,9 +131,6 @@ const CoachOperationalDashboard = () => {
             <CCardHeader className="bg-transparent border-0 px-0 pt-0 pb-2">
               <CIcon icon={cilClock} className="me-2 text-primary" />
               <strong>Today&apos;s sessions</strong>
-              <span className="small text-body-secondary ms-2">
-                Start a session — roster check-in happens in the live workspace
-              </span>
             </CCardHeader>
           </CCard>
           <TodayClassesPage activeActivityId={activeActivityId} />
