@@ -16,7 +16,7 @@ export default function SessionPresetPhasePreview({
   const [addType, setAddType] = useState('technical')
   const [customTitle, setCustomTitle] = useState('')
   const [showCustomInput, setShowCustomInput] = useState(false)
-  const [activitiesOpenKey, setActivitiesOpenKey] = useState(null)
+  const [exercisesOpenKey, setExercisesOpenKey] = useState(null)
 
   const updatePhase = (index, patch) => {
     onPhasesChange?.(phases.map((ph, i) => (i === index ? { ...ph, ...patch } : ph)))
@@ -128,7 +128,7 @@ export default function SessionPresetPhasePreview({
                   {customized ? <span className="me-1">★</span> : null}
                   {ph.title}
                   {maxExercises ? (
-                    <span className="text-body-secondary ms-2">({exerciseCount} activities)</span>
+                    <span className="text-body-secondary ms-2">({exerciseCount} exercises)</span>
                   ) : null}
                 </span>
                 {!compact && maxExercises ? (
@@ -136,9 +136,9 @@ export default function SessionPresetPhasePreview({
                     size="sm"
                     variant="ghost"
                     disabled={disabled}
-                    onClick={() => setActivitiesOpenKey((key) => (key === ph.key ? null : ph.key))}
+                    onClick={() => setExercisesOpenKey((key) => (key === ph.key ? null : ph.key))}
                   >
-                    Activities
+                    Exercises
                   </CButton>
                 ) : null}
                 {!compact ? (
@@ -175,7 +175,7 @@ export default function SessionPresetPhasePreview({
                 ) : null}
               </div>
               {!compact && maxExercises ? (
-                <CCollapse visible={activitiesOpenKey === ph.key}>
+                <CCollapse visible={exercisesOpenKey === ph.key}>
                   <div className="mt-2 ps-4 pe-1">
                     {(ph.exercises || []).map((ex, exerciseIndex) => (
                       <div
@@ -185,7 +185,7 @@ export default function SessionPresetPhasePreview({
                         <CFormInput
                           size="sm"
                           className="flex-grow-1"
-                          placeholder="Activity name"
+                          placeholder="Exercise name"
                           value={ex.exerciseName || ''}
                           disabled={disabled}
                           onChange={(e) =>
@@ -223,10 +223,10 @@ export default function SessionPresetPhasePreview({
                       disabled={disabled || (ph.exercises || []).length >= maxExercises}
                       onClick={() => addExercise(index)}
                     >
-                      Add activity
+                      Add exercise
                     </CButton>
                     <span className="small text-body-secondary ms-2">
-                      Up to {maxExercises} activities.
+                      Up to {maxExercises} exercises.
                     </span>
                   </div>
                 </CCollapse>

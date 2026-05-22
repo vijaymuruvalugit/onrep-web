@@ -4,14 +4,14 @@ import { maxExercisesForPhase } from '../../utils/phaseInteractionMode'
 import { phaseCaptureApi } from '../../../../domain/phaseCapture/phaseCaptureApi'
 
 /**
- * Lightweight activity list editor (exercise_list / recovery phases only).
+ * Lightweight exercise list editor (exercise_list / recovery phases only).
  */
 export default function SessionPhaseActivitiesEditor({
   operationalSessionId,
   phase,
   disabled = false,
   onUpdated,
-  title = 'Activities',
+  title = 'Exercises',
 }) {
   const max = maxExercisesForPhase(phase)
   const [local, setLocal] = useState([])
@@ -43,7 +43,7 @@ export default function SessionPhaseActivitiesEditor({
       )
       onUpdated?.(result?.exercises || [])
     } catch (e) {
-      setError(e?.response?.data?.error || e?.message || 'Could not save activities')
+      setError(e?.response?.data?.error || e?.message || 'Could not save exercises')
     } finally {
       setBusy(false)
     }
@@ -92,7 +92,7 @@ export default function SessionPhaseActivitiesEditor({
             <CFormInput
               size="sm"
               className="flex-grow-1"
-              placeholder="Activity name"
+              placeholder="Exercise name"
               value={row.exerciseName}
               disabled={disabled || busy}
               onChange={(e) => {
@@ -132,13 +132,13 @@ export default function SessionPhaseActivitiesEditor({
           disabled={disabled || busy || local.length >= max}
           onClick={handleAdd}
         >
-          Add activity
+          Add exercise
         </CButton>
         <CButton size="sm" color="primary" disabled={disabled || busy} onClick={handleSave}>
-          Save activities
+          Save exercises
         </CButton>
       </div>
-      <p className="small text-body-secondary mb-0 mt-1">Up to {max} activities for this phase.</p>
+      <p className="small text-body-secondary mb-0 mt-1">Up to {max} exercises for this phase.</p>
     </div>
   )
 }

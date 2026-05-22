@@ -25,7 +25,7 @@ describe('sessionPresets', () => {
     expect(payload[0].title).toBe('Sprint Race')
   })
 
-  it('includes edited phase activities in payload', () => {
+  it('includes edited phase exercises in payload', () => {
     const payload = buildPhaseOverridesPayload([
       {
         title: 'Warmup',

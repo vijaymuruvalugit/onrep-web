@@ -6,7 +6,6 @@ import RaceTimingWorkspace from './RaceTimingWorkspace'
 import SkatingRaceWorkspace from './SkatingRaceWorkspace'
 import SkillsPhaseWorkspace from './SkillsPhaseWorkspace'
 import PhaseInteractionRenderer from './PhaseInteractionRenderer'
-import { resolveInteractionMode } from '../utils/phaseInteractionMode'
 import { getLiveUiProfile, liveLabel, isSkillsPhaseBlock } from '../constants/coachLiveLabels'
 import LiveSessionSyncDot from './LiveSessionSyncDot'
 import {
@@ -80,13 +79,8 @@ function CoachLiveSessionView({
   const isSkillsPhase = isSkillsPhaseBlock(activeBlockMeta)
   const activePhase =
     phaseCapture?.phases?.find((p) => String(p.id) === String(activeBlockId)) || activeBlockMeta
-  const interactionMode = activePhase ? resolveInteractionMode(activePhase) : 'observation'
-  const showAthleteStrip = usePhaseCapture && !isRaceMode && interactionMode !== 'timing'
-  const activeBlockType = String(
-    activePhase?.blockType || activePhase?.block_type || '',
-  ).toLowerCase()
-  const attendanceToggleEnabled =
-    opsState === 'active' && (activeBlockType === 'warmup' || activeBlockType === 'cooldown')
+  const showAthleteStrip = Boolean(activePhase && (phaseCapture?.enabled || isRaceMode))
+  const attendanceToggleEnabled = opsState === 'active'
   const reviewOnly =
     activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped'
 
