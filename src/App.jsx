@@ -109,7 +109,7 @@ function SubscriptionPaywallBinder() {
       }
     })
     return () => registerSubscriptionRequiredHandler(null)
-  }, [dispatch, navigate, userRole])
+  }, [dispatch, navigate, user])
   return null
 }
 
