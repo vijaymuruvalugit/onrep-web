@@ -27,9 +27,10 @@ function normalizePaymentModule(raw) {
 }
 
 function readinessFromApi(data) {
+  if (!data) return null
   return {
-    checkout_ready_ok: data.checkout_ready_ok,
-    checkout_ready_reasons: data.checkout_ready_reasons,
+    checkout_ready_ok: data.checkout_ready_ok ?? data.ok,
+    checkout_ready_reasons: data.checkout_ready_reasons ?? data.reasons ?? [],
   }
 }
 
@@ -207,11 +208,11 @@ export default function PaymentSettingsPage() {
       accepts_online_payments: module === 'AUTOMATED',
     })
     if (out?.readiness) {
-      setReadiness(out.readiness)
+      setReadiness(readinessFromApi(out.readiness))
       return
     }
     const r = await paymentSettingsApi.refreshReadiness()
-    if (r) setReadiness(r)
+    if (r) setReadiness(readinessFromApi(r))
   }, [])
 
   useEffect(() => {
@@ -250,7 +251,7 @@ export default function PaymentSettingsPage() {
       const out = await paymentSettingsApi.updateSettings({
         default_fee_due_day: Number(form.default_fee_due_day) || 31,
       })
-      if (out?.readiness) setReadiness(out.readiness)
+      if (out?.readiness) setReadiness(readinessFromApi(out.readiness))
     } catch (e) {
       setError(e?.message || 'Failed to save')
     } finally {
@@ -280,7 +281,7 @@ export default function PaymentSettingsPage() {
     setError(null)
     try {
       const r = await paymentSettingsApi.refreshReadiness()
-      if (r) setReadiness(r)
+      if (r) setReadiness(readinessFromApi(r))
     } catch (e) {
       setError(e?.message || 'Failed to refresh')
     } finally {
@@ -366,7 +367,7 @@ export default function PaymentSettingsPage() {
         <CCardBody>
           <CForm>
             <div className="mb-3">
-              <CFormLabel htmlFor="defaultFeeDueDay">Default due day</CFormLabel>
+              <CFormLabel htmlFor="defaultFeeDueDay">Default due date</CFormLabel>
               <CFormInput
                 id="defaultFeeDueDay"
                 type="number"
