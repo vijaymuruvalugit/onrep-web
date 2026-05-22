@@ -19,7 +19,6 @@ export const API_CLASSIFICATION = Object.freeze({
     '/academy/',
     '/coaches',
     '/dashboard/owner-',
-    '/dashboard/coach-summary',
     '/dashboard/summary',
     '/invites',
     '/parents/overview',
@@ -28,6 +27,7 @@ export const API_CLASSIFICATION = Object.freeze({
   // Transitional explicit exemptions: keep academy-global until contract migration completes.
   exempt: Object.freeze(['/students', '/student-import', '/batches']),
   scoped: Object.freeze([
+    '/dashboard/coach-summary',
     '/dashboard/today',
     '/batch-schedules',
     '/operational-sessions',
