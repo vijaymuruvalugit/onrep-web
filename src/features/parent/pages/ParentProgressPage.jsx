@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { CAlert, CCard, CCardBody, CCardHeader, CCol, CRow, CSpinner } from '@coreui/react'
 import { familyApi } from '../../family/api/familyApi'
+import ParentProgressInsights from '../../analytics/components/ParentProgressInsights'
 
 const ParentProgressPage = () => {
   const [data, setData] = useState(null)
@@ -52,6 +53,7 @@ const ParentProgressPage = () => {
               <CCard className="shadow-sm h-100">
                 <CCardHeader className="fw-semibold">{c.studentName}</CCardHeader>
                 <CCardBody>
+                  <ParentProgressInsights studentId={c.studentId} />
                   {(c.focusAreas || []).length > 0 ? (
                     <div className="mb-3">
                       <div className="small text-body-secondary mb-1">Focus areas</div>

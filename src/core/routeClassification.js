@@ -8,6 +8,7 @@ export const ROUTE_CLASSIFICATION = Object.freeze({
     '/coach/payments',
     '/coach/parents',
     '/coach/activities',
+    '/coach/academy/insights',
     '/super-admin/',
     '/ops/',
   ]),

@@ -34,6 +34,7 @@ import DashboardStatCard from '../../../features/dashboard/components/DashboardS
 import DashboardEmptyState from '../../../features/dashboard/components/DashboardEmptyState'
 import DashboardCardSkeleton from '../../../features/dashboard/components/DashboardCardSkeleton'
 import { formatInr } from '../../../features/payments/utils/formatInr'
+import AcademyOperationsInsights from '../../../features/analytics/components/AcademyOperationsInsights'
 
 const MAX_ACTIONS = 5
 
@@ -200,6 +201,8 @@ const OwnerDashboard = () => {
       ) : null}
 
       {loading && !summary ? <DashboardCardSkeleton rows={6} /> : null}
+
+      <AcademyOperationsInsights />
 
       {!loading || summary ? (
         <CRow className="g-3 mb-3">

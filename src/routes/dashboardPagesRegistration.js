@@ -23,16 +23,10 @@ const PaywallPage = React.lazy(() => import('../features/payments/pages/PaywallP
 const PaymentSettingsPage = React.lazy(
   () => import('../features/payments/pages/PaymentSettingsPage'),
 )
-const PayoutDetailsPage = React.lazy(
-  () => import('../features/payments/pages/PayoutDetailsPage'),
-)
+const PayoutDetailsPage = React.lazy(() => import('../features/payments/pages/PayoutDetailsPage'))
 const OpsWebhooksPage = React.lazy(() => import('../features/payments/pages/OpsWebhooksPage'))
-const OpsCollectionsPage = React.lazy(
-  () => import('../features/payments/pages/OpsCollectionsPage'),
-)
-const OpsSettlementsPage = React.lazy(
-  () => import('../features/payments/pages/OpsSettlementsPage'),
-)
+const OpsCollectionsPage = React.lazy(() => import('../features/payments/pages/OpsCollectionsPage'))
+const OpsSettlementsPage = React.lazy(() => import('../features/payments/pages/OpsSettlementsPage'))
 const ParentNotificationsPage = React.lazy(
   () => import('../features/parent/pages/ParentNotificationsPage'),
 )
@@ -44,7 +38,9 @@ const ParentCompetitionLeaderboardPage = React.lazy(
   () => import('../features/parent/pages/ParentCompetitionLeaderboardPage'),
 )
 const StudentDashboard = React.lazy(() => import('../views/dashboard/onrep/StudentDashboard'))
-const StudentSchedulePage = React.lazy(() => import('../features/student/pages/StudentSchedulePage'))
+const StudentSchedulePage = React.lazy(
+  () => import('../features/student/pages/StudentSchedulePage'),
+)
 const StudentAttendancePage = React.lazy(
   () => import('../features/student/pages/StudentAttendancePage'),
 )
@@ -94,12 +90,20 @@ const SuperAdminDashboard = React.lazy(
 const SuperAdminAcademiesPage = React.lazy(
   () => import('../features/superAdmin/pages/SuperAdminAcademiesPage'),
 )
-const SuperAdminUsersPage = React.lazy(() => import('../features/superAdmin/pages/SuperAdminUsersPage'))
+const SuperAdminUsersPage = React.lazy(
+  () => import('../features/superAdmin/pages/SuperAdminUsersPage'),
+)
 const SuperAdminSubscriptionsPage = React.lazy(
   () => import('../features/superAdmin/pages/SuperAdminSubscriptionsPage'),
 )
 const SuperAdminAnalyticsPage = React.lazy(
   () => import('../features/superAdmin/pages/SuperAdminAnalyticsPage'),
+)
+const CoachAnalyticsPage = React.lazy(
+  () => import('../features/analytics/pages/CoachAnalyticsPage'),
+)
+const AcademyAnalyticsPage = React.lazy(
+  () => import('../features/analytics/pages/AcademyAnalyticsPage'),
 )
 const SuperAdminPresetsPage = React.lazy(
   () => import('../features/superAdmin/pages/SuperAdminPresetsPage'),
@@ -120,6 +124,8 @@ const SuperAdminAuditLogsPage = React.lazy(
 /** @type {ReadonlyArray<{ path: string, component: React.LazyExoticComponent<React.ComponentType<any>> }>} */
 export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/coach/dashboard', component: CoachAreaDashboardPage },
+  { path: '/coach/insights', component: CoachAnalyticsPage },
+  { path: '/coach/academy/insights', component: AcademyAnalyticsPage },
   { path: '/coach/skating', component: SkatingOpsPage },
   { path: '/coach/skating/intelligence', component: SkatingIntelligenceSettingsPage },
   { path: '/coach/ops/sessions/:sessionId', component: CoachOpsSessionRedirectPage },
@@ -151,12 +157,21 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/super-admin/overview', component: withSuperAdminGuard(SuperAdminDashboard) },
   { path: '/super-admin/academies', component: withSuperAdminGuard(SuperAdminAcademiesPage) },
   { path: '/super-admin/users', component: withSuperAdminGuard(SuperAdminUsersPage) },
-  { path: '/super-admin/subscriptions', component: withSuperAdminGuard(SuperAdminSubscriptionsPage) },
+  {
+    path: '/super-admin/subscriptions',
+    component: withSuperAdminGuard(SuperAdminSubscriptionsPage),
+  },
   { path: '/super-admin/analytics', component: withSuperAdminGuard(SuperAdminAnalyticsPage) },
   { path: '/super-admin/presets', component: withSuperAdminGuard(SuperAdminPresetsPage) },
   { path: '/super-admin/support', component: withSuperAdminGuard(SuperAdminSupportPage) },
-  { path: '/super-admin/feature-flags', component: withSuperAdminGuard(SuperAdminFeatureFlagsPage) },
-  { path: '/super-admin/system-health', component: withSuperAdminGuard(SuperAdminSystemHealthPage) },
+  {
+    path: '/super-admin/feature-flags',
+    component: withSuperAdminGuard(SuperAdminFeatureFlagsPage),
+  },
+  {
+    path: '/super-admin/system-health',
+    component: withSuperAdminGuard(SuperAdminSystemHealthPage),
+  },
   { path: '/super-admin/audit-logs', component: withSuperAdminGuard(SuperAdminAuditLogsPage) },
   { path: '/coach/onboarding/coaches', component: CoachInvitesPage },
   { path: '/onboarding/setup', component: OnboardingSetupPage },

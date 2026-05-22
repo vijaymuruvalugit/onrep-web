@@ -5,7 +5,7 @@
 
 import React from 'react'
 import CIcon from '@coreui/icons-react'
-import { cilPeople } from '@coreui/icons'
+import { cilChart, cilPeople } from '@coreui/icons'
 import { CNavItem, CNavTitle } from '@coreui/react'
 
 import { coachNav } from './coachNav'
@@ -20,6 +20,12 @@ const ownerItems = [
     name: 'Coaches',
     to: '/coach/onboarding/coaches',
     icon: <CIcon icon={cilPeople} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Operations',
+    to: '/coach/academy/insights',
+    icon: <CIcon icon={cilChart} customClassName="nav-icon" />,
   },
 ]
 

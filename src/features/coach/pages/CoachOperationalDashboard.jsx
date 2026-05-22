@@ -9,6 +9,7 @@ import AttendanceDashboardPage from '../../attendance/pages/AttendanceDashboardP
 import roleDashboardApi from '../../dashboard/api/roleDashboardApi'
 import { formatLocalYmd } from '../../dashboard/utils/calendarDate'
 import DashboardStatCard from '../../dashboard/components/DashboardStatCard'
+import CoachEmbeddedInsights from '../../analytics/components/CoachEmbeddedInsights'
 
 const quickLinks = [
   { to: '/coach/skating', label: 'Live sessions' },
@@ -95,6 +96,8 @@ const CoachOperationalDashboard = () => {
           />
         </CCol>
       </CRow>
+
+      <CoachEmbeddedInsights />
 
       <CRow className="g-3 mb-3">
         <CCol xs={12}>

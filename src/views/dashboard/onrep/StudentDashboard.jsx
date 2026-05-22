@@ -14,6 +14,7 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilArrowRight, cilCalendar, cilSpeedometer } from '@coreui/icons'
 import { familyApi } from '../../../features/family/api/familyApi'
+import StudentMotivationInsights from '../../../features/analytics/components/StudentMotivationInsights'
 
 const StudentDashboard = () => {
   const [progress, setProgress] = useState(null)
@@ -55,14 +56,20 @@ const StudentDashboard = () => {
         </div>
       ) : null}
 
-      {error ? <CAlert color="warning">{error.message || 'Could not load progress.'}</CAlert> : null}
+      {error ? (
+        <CAlert color="warning">{error.message || 'Could not load progress.'}</CAlert>
+      ) : null}
+
+      <StudentMotivationInsights />
 
       {progress ? (
         <CRow className="g-3 mb-4">
           <CCol sm={6} md={4}>
             <CCard className="shadow-sm text-center">
               <CCardBody>
-                <div className="display-6 fw-bold text-primary">{progress.attendanceStreak ?? 0}</div>
+                <div className="display-6 fw-bold text-primary">
+                  {progress.attendanceStreak ?? 0}
+                </div>
                 <div className="small text-body-secondary">Day streak</div>
               </CCardBody>
             </CCard>
@@ -82,7 +89,9 @@ const StudentDashboard = () => {
               <CCardHeader className="fw-semibold">Coach highlights</CCardHeader>
               <CCardBody>
                 {(progress.coachHighlights || []).length === 0 ? (
-                  <p className="text-body-secondary small mb-0">Highlights appear after your sessions.</p>
+                  <p className="text-body-secondary small mb-0">
+                    Highlights appear after your sessions.
+                  </p>
                 ) : (
                   (progress.coachHighlights || []).map((h, i) => (
                     <CBadge key={i} color="info" className="me-1 mb-1">

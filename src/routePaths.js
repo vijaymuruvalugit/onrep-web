@@ -8,6 +8,8 @@ export const ONREP_ROUTE_DEFS = [
   { path: '/student', name: 'Student', exact: true },
 
   { path: '/coach/dashboard', name: 'Dashboard', exact: true },
+  { path: '/coach/insights', name: 'Session trends', exact: true },
+  { path: '/coach/academy/insights', name: 'Academy operations', exact: true },
   { path: '/coach/skating', name: 'Skating ops', exact: true },
   { path: '/coach/ops/sessions/:sessionId', name: 'Session', exact: true },
   { path: '/coach/batches', name: 'Batches', exact: true },
