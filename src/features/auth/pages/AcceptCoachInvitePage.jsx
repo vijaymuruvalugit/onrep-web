@@ -8,6 +8,7 @@ import { completeCoachInvite } from '../slices/authSlice'
 import { resetPasswordSchema } from '../validations/resetPasswordSchema'
 import { getRoleRedirectPath } from '../utils/roleRedirect'
 import AuthShell from '../components/AuthShell'
+import { readStrandedAuthToken } from '../../../utils/restorePublicHashRoute'
 
 function inviteErrorMessage(payload) {
   const code = payload?.code || payload?.error || payload?.message
@@ -25,10 +26,12 @@ const AcceptCoachInvitePage = () => {
   const isAuthenticated = useSelector((s) => s.auth.isAuthenticated)
   const user = useSelector((s) => s.auth.user)
 
-  const token = useMemo(
-    () => params.get('token') || params.get('code') || routeParams.token || '',
-    [params, routeParams.token],
-  )
+  const token = useMemo(() => {
+    const fromHash =
+      params.get('token') || params.get('code') || routeParams.token || ''
+    if (fromHash) return fromHash
+    return readStrandedAuthToken()
+  }, [params, routeParams.token])
 
   const {
     register,

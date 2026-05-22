@@ -81,10 +81,11 @@
       // the intended hash route so those links still work.
       (function restoreOwnerAuthHash() {
         try {
-          if (window.location.hash && window.location.hash.length > 1) return;
+          var hash = window.location.hash || '';
+          if (hash.length > 1 && hash.charAt(1) === '/') return;
           var pathname = window.location.pathname || '/';
           var search = window.location.search || '';
-          var stripped = pathname.replace(/\/$/, '');
+          var stripped = (pathname.replace(/\/$/, '') || '/').toLowerCase();
           var map = {
             '/verify-email': '/auth/verify-email',
             '/reset-password': '/auth/reset-password',

@@ -46,6 +46,7 @@ import { registerSubscriptionRequiredHandler } from './api/http'
 import { refreshSubscription } from './features/auth/subscriptionRefresh'
 import { sanitizeNext } from './features/auth/sanitizeNext'
 import { hasAcademyAdminCapability } from './features/auth/utils/academyAdminAccess'
+import { restorePublicHashRoute } from './utils/restorePublicHashRoute'
 
 /**
  * Global paywall redirector — 403 SUBSCRIPTION_REQUIRED interceptor.
@@ -206,6 +207,10 @@ const App = () => {
   const dispatch = useDispatch()
   const storedTheme = useSelector((state) => state.ui.theme)
   const isRestored = useSelector((state) => state.auth.isRestored)
+
+  useEffect(() => {
+    restorePublicHashRoute()
+  }, [])
 
   useEffect(() => {
     dispatch(restoreSession())

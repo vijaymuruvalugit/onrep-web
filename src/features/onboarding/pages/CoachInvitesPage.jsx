@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useSelector } from 'react-redux'
 import {
   CAlert,
@@ -24,10 +24,7 @@ import CIcon from '@coreui/icons-react'
 import { cilPeople, cilReload, cilSend } from '@coreui/icons'
 
 import useCoachInvites from '../hooks/useCoachInvites'
-import {
-  hasAcademyAdminCapability,
-  isLegalAcademyOwner,
-} from '../../auth/utils/academyAdminAccess'
+import { hasAcademyAdminCapability, isLegalAcademyOwner } from '../../auth/utils/academyAdminAccess'
 
 function statusBadgeColor(status) {
   const s = String(status || '').toLowerCase()
@@ -87,6 +84,39 @@ const CoachInvitesPage = () => {
 
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [adminOverrides, setAdminOverrides] = useState({})
+
+  const visibleStaff = useMemo(() => {
+    const byId = new Map()
+    for (const row of staff || []) {
+      if (row.role === 'academy_owner') continue
+      const id = String(row.id)
+      byId.set(id, {
+        ...row,
+        isAcademyAdmin: adminOverrides[id] ?? row.isAcademyAdmin,
+      })
+    }
+    for (const row of invites || []) {
+      if (String(row.status || '').toLowerCase() !== 'accepted') continue
+      const id = String(row.userId || '')
+      if (!id || byId.has(id)) continue
+      byId.set(id, {
+        id,
+        name: row.name,
+        email: row.email,
+        role: 'coach',
+        invited: true,
+        password_set: true,
+        isAcademyAdmin: adminOverrides[id] ?? false,
+      })
+    }
+    return [...byId.values()]
+  }, [adminOverrides, invites, staff])
+
+  const refreshAll = () => {
+    loadCoachInvites()
+    loadAcademyStaff()
+  }
 
   useEffect(() => {
     if (!canManage) return
@@ -97,14 +127,16 @@ const CoachInvitesPage = () => {
   useEffect(() => {
     if (submitSuccess) {
       void loadCoachInvites()
+      void loadAcademyStaff()
     }
-  }, [submitSuccess, loadCoachInvites])
+  }, [submitSuccess, loadCoachInvites, loadAcademyStaff])
 
   useEffect(() => {
     if (resendSuccess) {
       void loadCoachInvites()
+      void loadAcademyStaff()
     }
-  }, [resendSuccess, loadCoachInvites])
+  }, [resendSuccess, loadCoachInvites, loadAcademyStaff])
 
   const onSubmit = async (e) => {
     e.preventDefault()
@@ -139,7 +171,9 @@ const CoachInvitesPage = () => {
     clearAdminActionError()
     const result = await grantCoachAdmin(userId)
     if (result.meta.requestStatus === 'fulfilled') {
+      setAdminOverrides((prev) => ({ ...prev, [userId]: true }))
       void loadAcademyStaff()
+      void loadCoachInvites()
     }
   }
 
@@ -147,7 +181,9 @@ const CoachInvitesPage = () => {
     clearAdminActionError()
     const result = await revokeCoachAdmin(userId)
     if (result.meta.requestStatus === 'fulfilled') {
+      setAdminOverrides((prev) => ({ ...prev, [userId]: false }))
       void loadAcademyStaff()
+      void loadCoachInvites()
     }
   }
 
@@ -181,8 +217,8 @@ const CoachInvitesPage = () => {
             color="secondary"
             variant="outline"
             size="sm"
-            onClick={() => loadCoachInvites()}
-            disabled={listLoading}
+            onClick={refreshAll}
+            disabled={listLoading || staffLoading}
           >
             <CIcon icon={cilReload} className="me-1" />
             Refresh
@@ -227,7 +263,10 @@ const CoachInvitesPage = () => {
       ) : null}
 
       {staffError ? (
-        <CAlert color="warning" className="d-flex flex-column flex-sm-row gap-2 align-items-sm-center">
+        <CAlert
+          color="warning"
+          className="d-flex flex-column flex-sm-row gap-2 align-items-sm-center"
+        >
           <span>{staffError.message || 'Could not load staff.'}</span>
           <CButton color="warning" variant="outline" size="sm" onClick={() => loadAcademyStaff()}>
             Retry
@@ -311,15 +350,16 @@ const CoachInvitesPage = () => {
         <CCardHeader>Staff — admin access</CCardHeader>
         <CCardBody className="p-0 overflow-auto">
           <p className="px-4 pt-3 mb-2 small text-body-secondary">
-            Grant <strong>Academy admin</strong> so a coach can manage billing, invites, and settings
-            (same as owner). They keep coach access and can switch perspectives in the header.
+            Grant <strong>Academy admin</strong> so a coach can manage billing, invites, and
+            settings (same as owner). They keep coach access and can switch perspectives in the
+            header.
           </p>
-          {staffLoading && !staff.length ? (
+          {staffLoading && !visibleStaff.length ? (
             <div className="text-center py-4">
               <CSpinner />
             </div>
           ) : null}
-          {staff.length ? (
+          {visibleStaff.length ? (
             <CTable hover responsive className="mb-0">
               <CTableHead>
                 <CTableRow>
@@ -331,56 +371,54 @@ const CoachInvitesPage = () => {
                 </CTableRow>
               </CTableHead>
               <CTableBody>
-                {staff
-                  .filter((row) => row.role !== 'academy_owner')
-                  .map((row) => {
-                    const busy = adminActionLoadingId === row.id
-                    return (
-                      <CTableRow key={row.id}>
-                        <CTableDataCell>{row.name || '—'}</CTableDataCell>
-                        <CTableDataCell className="small">{row.email || '—'}</CTableDataCell>
-                        <CTableDataCell className="small text-capitalize">{row.role}</CTableDataCell>
+                {visibleStaff.map((row) => {
+                  const busy = adminActionLoadingId === row.id
+                  return (
+                    <CTableRow key={row.id}>
+                      <CTableDataCell>{row.name || '—'}</CTableDataCell>
+                      <CTableDataCell className="small">{row.email || '—'}</CTableDataCell>
+                      <CTableDataCell className="small text-capitalize">{row.role}</CTableDataCell>
+                      <CTableDataCell>
+                        {row.isAcademyAdmin ? (
+                          <CBadge color="primary">Admin</CBadge>
+                        ) : (
+                          <span className="text-body-secondary small">Coach</span>
+                        )}
+                      </CTableDataCell>
+                      {canAssignAdmin ? (
                         <CTableDataCell>
-                          {row.isAcademyAdmin ? (
-                            <CBadge color="primary">Admin</CBadge>
+                          {row.role === 'coach' || row.role === 'admin' ? (
+                            <div className="d-flex flex-wrap gap-1">
+                              {row.isAcademyAdmin ? (
+                                <CButton
+                                  color="secondary"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={busy}
+                                  onClick={() => void onRevokeAdmin(row.id)}
+                                >
+                                  {busy ? <CSpinner size="sm" /> : 'Remove admin'}
+                                </CButton>
+                              ) : (
+                                <CButton
+                                  color="primary"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={busy || !row.password_set}
+                                  onClick={() => void onGrantAdmin(row.id)}
+                                >
+                                  {busy ? <CSpinner size="sm" /> : 'Make admin'}
+                                </CButton>
+                              )}
+                            </div>
                           ) : (
-                            <span className="text-body-secondary small">Coach</span>
+                            <span className="text-body-secondary small">—</span>
                           )}
                         </CTableDataCell>
-                        {canAssignAdmin ? (
-                          <CTableDataCell>
-                            {row.role === 'coach' || row.role === 'admin' ? (
-                              <div className="d-flex flex-wrap gap-1">
-                                {row.isAcademyAdmin ? (
-                                  <CButton
-                                    color="secondary"
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={busy}
-                                    onClick={() => void onRevokeAdmin(row.id)}
-                                  >
-                                    {busy ? <CSpinner size="sm" /> : 'Remove admin'}
-                                  </CButton>
-                                ) : (
-                                  <CButton
-                                    color="primary"
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={busy || !row.password_set}
-                                    onClick={() => void onGrantAdmin(row.id)}
-                                  >
-                                    {busy ? <CSpinner size="sm" /> : 'Make admin'}
-                                  </CButton>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-body-secondary small">—</span>
-                            )}
-                          </CTableDataCell>
-                        ) : null}
-                      </CTableRow>
-                    )
-                  })}
+                      ) : null}
+                    </CTableRow>
+                  )
+                })}
               </CTableBody>
             </CTable>
           ) : (
@@ -418,8 +456,7 @@ const CoachInvitesPage = () => {
                 {invites.map((row) => {
                   const canResend = row.status === 'pending' || row.status === 'expired'
                   const canRevoke = canResend
-                  const rowBusy =
-                    revokeLoadingId === row.userId || resendLoadingId === row.userId
+                  const rowBusy = revokeLoadingId === row.userId || resendLoadingId === row.userId
                   return (
                     <CTableRow key={row.userId}>
                       <CTableDataCell>{row.name || '—'}</CTableDataCell>
@@ -442,11 +479,7 @@ const CoachInvitesPage = () => {
                                 disabled={rowBusy}
                                 onClick={() => void onResend(row)}
                               >
-                                {resendLoadingId === row.userId ? (
-                                  <CSpinner size="sm" />
-                                ) : (
-                                  'Resend'
-                                )}
+                                {resendLoadingId === row.userId ? <CSpinner size="sm" /> : 'Resend'}
                               </CButton>
                             ) : null}
                             {canRevoke ? (
