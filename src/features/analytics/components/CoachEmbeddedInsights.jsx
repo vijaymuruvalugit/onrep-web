@@ -19,15 +19,20 @@ import analyticsApi from '../api/analyticsApi'
 /**
  * Compact operational insights for Coach Home — execution flow first.
  */
-const CoachEmbeddedInsights = () => {
+const CoachEmbeddedInsights = ({ activeActivityId }) => {
   const [insights, setInsights] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
+    if (!activeActivityId) {
+      return undefined
+    }
     let cancelled = false
     ;(async () => {
+      setLoading(true)
+      setError(null)
       try {
         const data = await analyticsApi.getCoachInsights({ depth: 'embedded' })
         if (!cancelled) setInsights(data)
@@ -40,7 +45,7 @@ const CoachEmbeddedInsights = () => {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [activeActivityId])
 
   const embedded = insights?.embedded
   const topObservation = embedded?.repeatedObservations?.[0]

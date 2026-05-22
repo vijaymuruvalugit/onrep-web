@@ -25,12 +25,14 @@ const todayIsoLocal = () => {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
 }
 
-const TodayClassesPage = () => {
+const TodayClassesPage = ({ activeActivityId }) => {
   const { today, loadingToday, todayError, fetchTodayClasses } = useClasses()
 
   useEffect(() => {
+    if (!activeActivityId) return undefined
     fetchTodayClasses()
-  }, [fetchTodayClasses])
+    return undefined
+  }, [activeActivityId, fetchTodayClasses])
 
   return (
     <CCard>
@@ -73,21 +75,14 @@ const TodayClassesPage = () => {
                     <div className="small text-body-secondary">
                       {cls.startTime || cls.time || '--'}
                       {expectedLine ? ` · ${expectedLine}` : ''}
-                      {cls.location || cls.placeName
-                        ? ` · ${cls.location || cls.placeName}`
-                        : ''}
+                      {cls.location || cls.placeName ? ` · ${cls.location || cls.placeName}` : ''}
                     </div>
                   </div>
                   <div className="d-flex align-items-center gap-2">
                     <CBadge color={cls.attendanceMarked ? 'success' : 'warning'}>
                       {cls.attendanceMarked ? 'Check-in done' : 'Check-in pending'}
                     </CBadge>
-                    <CButton
-                      as={Link}
-                      to={liveSessionPath(classId)}
-                      size="sm"
-                      color="primary"
-                    >
+                    <CButton as={Link} to={liveSessionPath(classId)} size="sm" color="primary">
                       {COACH_PARTICIPATION_COPY.openLiveSession}
                     </CButton>
                   </div>

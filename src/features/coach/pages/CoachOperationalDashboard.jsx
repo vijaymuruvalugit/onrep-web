@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { CAlert, CCard, CCardBody, CCardHeader, CCol, CRow } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilCalendar, cilClock, cilDollar, cilSpeedometer } from '@coreui/icons'
@@ -25,11 +26,15 @@ const quickLinks = [
  */
 const CoachOperationalDashboard = () => {
   const dateStr = useMemo(() => formatLocalYmd(), [])
+  const activeActivityId = useSelector((state) => state.workspace.activeActivityId)
   const [summary, setSummary] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (!activeActivityId) {
+      return undefined
+    }
     let cancelled = false
     ;(async () => {
       setLoading(true)
@@ -46,7 +51,7 @@ const CoachOperationalDashboard = () => {
     return () => {
       cancelled = true
     }
-  }, [dateStr])
+  }, [dateStr, activeActivityId])
 
   return (
     <>
@@ -97,7 +102,7 @@ const CoachOperationalDashboard = () => {
         </CCol>
       </CRow>
 
-      <CoachEmbeddedInsights />
+      <CoachEmbeddedInsights activeActivityId={activeActivityId} />
 
       <CRow className="g-3 mb-3">
         <CCol xs={12}>
@@ -134,7 +139,7 @@ const CoachOperationalDashboard = () => {
               </span>
             </CCardHeader>
           </CCard>
-          <TodayClassesPage />
+          <TodayClassesPage activeActivityId={activeActivityId} />
         </CCol>
       </CRow>
     </>
