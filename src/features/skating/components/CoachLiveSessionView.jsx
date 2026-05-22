@@ -27,6 +27,24 @@ function rosterFromPhaseAthletes(phaseAthletes = [], rosterForSession = []) {
   })
 }
 
+function sessionCoachNames(session) {
+  if (!session) return []
+  const names = []
+  const seen = new Set()
+  const pushName = (name) => {
+    const trimmed = String(name || '').trim()
+    if (!trimmed || seen.has(trimmed.toLowerCase())) return
+    seen.add(trimmed.toLowerCase())
+    names.push(trimmed)
+  }
+  pushName(session.coachName || session.coach_display_name)
+  const additional = session.additionalCoaches || session.additional_coaches || []
+  if (Array.isArray(additional)) {
+    for (const coach of additional) pushName(coach?.name)
+  }
+  return names
+}
+
 /**
  * Live coaching shell — phases, students, phase-specific workspace.
  */
@@ -75,14 +93,19 @@ function CoachLiveSessionView({
   const sessionTitle = sessionForHeader ? sessionDisplayTitle(sessionForHeader) : 'Session'
   const contextLine = sessionForHeader ? sessionOperationalContextLine(sessionForHeader) : null
   const timeRangeLabel = sessionForHeader ? sessionTimeRangeLabel(sessionForHeader) : ''
+  const coachNames = sessionCoachNames(sessionForHeader)
   const usePhaseCapture = Boolean(phaseCapture?.enabled && !isRaceMode)
   const isSkillsPhase = isSkillsPhaseBlock(activeBlockMeta)
   const activePhase =
     phaseCapture?.phases?.find((p) => String(p.id) === String(activeBlockId)) || activeBlockMeta
   const showAthleteStrip = Boolean(activePhase && (phaseCapture?.enabled || isRaceMode))
-  const attendanceToggleEnabled = opsState === 'active'
+  const phaseContentEditable = opsState === 'active' || opsState === 'ended'
+  const phaseLifecycleEditable = opsState === 'active'
+  const phaseContentDisabled = uiPaused || !phaseContentEditable
+  const attendanceToggleEnabled = phaseContentEditable && !uiPaused
   const reviewOnly =
-    activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped'
+    opsState !== 'ended' &&
+    (activePhase?.runtimeStatus === 'completed' || activePhase?.runtimeStatus === 'skipped')
 
   const phaseRoster = useMemo(
     () => rosterFromPhaseAthletes(rosterForSession, rosterForSession),
@@ -126,6 +149,7 @@ function CoachLiveSessionView({
           lifecycle={lifecycle}
           sessionMode={sessionMode}
           timeRangeLabel={timeRangeLabel}
+          coachNames={coachNames}
           isRaceMode={isRaceMode}
           streamlined
           {...sessionHeaderProps}
@@ -199,7 +223,7 @@ function CoachLiveSessionView({
                 athletes={activityRunSectionProps.athletes || rosterForSession}
                 heatNumber={activityRunSectionProps.heatNumber}
                 phaseTitle={null}
-                disabled={uiPaused || opsState === 'ended'}
+                disabled={phaseContentDisabled}
                 busy={activityRunSectionProps.busy}
                 onRefresh={activityRunSectionProps.onRefresh}
               />
@@ -207,7 +231,7 @@ function CoachLiveSessionView({
               <RaceTimingWorkspace
                 athletes={raceSectionProps?.athletes || rosterForSession}
                 leaderboard={syncDomains?.leaderboard}
-                disabled={uiPaused || opsState === 'ended'}
+                disabled={phaseContentDisabled}
                 busy={raceSectionProps?.busy}
                 heatNumber={raceSectionProps?.heatNumber}
                 onFinishOrder={raceSectionProps?.onFinishOrder}
@@ -227,7 +251,7 @@ function CoachLiveSessionView({
               onSelectAthlete: handleSelectAthlete,
             }}
             lapStudentId={lapStudentId}
-            disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
+            disabled={phaseContentDisabled || phaseCapture.busy}
             reviewOnly={reviewOnly}
             isRaceMode={isRaceMode}
             skillsWorkspace={
@@ -235,7 +259,7 @@ function CoachLiveSessionView({
                 <SkillsPhaseWorkspace
                   studentId={lapStudentId}
                   athleteName={selectedAthlete?.full_name || selectedAthlete?.fullName}
-                  disabled={uiPaused || opsState === 'ended' || phaseCapture.busy}
+                  disabled={phaseContentDisabled || phaseCapture.busy}
                   busy={phaseCapture.busy}
                   phaseConfigJson={activePhase?.configJson}
                   phaseSkills={phaseCapture.skillsForActivePhase}
@@ -279,7 +303,7 @@ function CoachLiveSessionView({
                 blocksLoading ||
                 phaseCapture?.busy ||
                 uiPaused ||
-                opsState === 'ended'
+                !phaseLifecycleEditable
               }
               onClick={() => phaseCapture.onSkipPhase(activeBlockId)}
             >
@@ -297,7 +321,7 @@ function CoachLiveSessionView({
                 blocksLoading ||
                 phaseCapture?.busy ||
                 uiPaused ||
-                opsState === 'ended'
+                !phaseLifecycleEditable
               }
               onClick={() => phaseCapture.onCompletePhase(activeBlockId)}
             >

@@ -16,6 +16,7 @@ export default function SessionLiveHeader({
   elapsedLabel,
   sessionMode,
   timeRangeLabel,
+  coachNames = [],
   isRaceMode = false,
   streamlined = false,
   onPauseToggle,
@@ -31,6 +32,7 @@ export default function SessionLiveHeader({
   const skaterWord = athleteCount === 1 ? 'athlete' : 'athletes'
 
   const showTimeRange = timeRangeLabel && String(timeRangeLabel).trim() && timeRangeLabel !== '—'
+  const coachLine = Array.isArray(coachNames) && coachNames.length ? coachNames.join(', ') : ''
 
   if (streamlined) {
     const title = sessionTitle || placeName || 'Session'
@@ -40,6 +42,7 @@ export default function SessionLiveHeader({
     if (showTimeRange) {
       metadataParts.push(String(timeRangeLabel).replace(/\s*-\s*/g, '–'))
     }
+    if (coachLine) metadataParts.push(`Coaches ${coachLine}`)
     const compactMetadataLine = metadataParts.join(' • ')
 
     return (
@@ -128,6 +131,12 @@ export default function SessionLiveHeader({
             ) : null}
             <span className="opacity-50 mx-1">·</span>
             {athleteCount} {skaterWord}
+            {coachLine ? (
+              <>
+                <span className="opacity-50 mx-1">·</span>
+                Coaches {coachLine}
+              </>
+            ) : null}
           </div>
         </div>
         <div className="session-live-header__actions d-flex flex-wrap gap-1 justify-content-end">

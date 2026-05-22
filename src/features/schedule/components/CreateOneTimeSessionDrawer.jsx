@@ -37,6 +37,26 @@ function CoachSelect({ coaches = [], value, onChange, disabled }) {
   )
 }
 
+function uniqueCoachOptions(options = []) {
+  const seen = new Set()
+  const out = []
+  for (const coach of options) {
+    const id = String(coach?.id || '')
+    if (!id) continue
+    const name = String(coach?.name || '').trim()
+    if (seen.has(id)) {
+      if (name) {
+        const existing = out.find((item) => item.id === id)
+        if (existing && (!existing.name || existing.name === 'Coach')) existing.name = name
+      }
+      continue
+    }
+    seen.add(id)
+    out.push({ id, name: name || 'Coach' })
+  }
+  return out
+}
+
 /**
  * Full operational one-off session creation for a batch.
  *
@@ -51,6 +71,7 @@ export default function CreateOneTimeSessionDrawer({
   batch,
   places = [],
   placesLoading = false,
+  coaches = [],
   patterns = [],
   onCreated,
   onEnsurePlaces,
@@ -62,7 +83,7 @@ export default function CreateOneTimeSessionDrawer({
     return new Set((Array.isArray(raw) ? raw : []).map(String))
   }, [batch])
 
-  const coachOptions = useMemo(() => {
+  const batchCoachOptions = useMemo(() => {
     const raw = batch?.batchCoaches
     if (Array.isArray(raw) && raw.length)
       return raw.map((c) => ({ id: String(c.id), name: c.name || '' }))
@@ -71,6 +92,10 @@ export default function CreateOneTimeSessionDrawer({
     if (lead) return [{ id: String(lead), name: leadName || 'Lead coach' }]
     return []
   }, [batch])
+  const coachOptions = useMemo(
+    () => uniqueCoachOptions([...batchCoachOptions, ...coaches]),
+    [batchCoachOptions, coaches],
+  )
 
   const defaultPlaceId = batch?.defaultPlaceId ?? batch?.default_place_id ?? ''
 
@@ -84,6 +109,7 @@ export default function CreateOneTimeSessionDrawer({
   const [startTime, setStartTime] = useState('18:00')
   const [endTime, setEndTime] = useState('19:30')
   const [coachId, setCoachId] = useState('')
+  const [additionalCoachIds, setAdditionalCoachIds] = useState([])
   const [placeId, setPlaceId] = useState('')
   const [comments, setComments] = useState('')
   const [sessionType, setSessionType] = useState('')
@@ -105,6 +131,7 @@ export default function CreateOneTimeSessionDrawer({
     setPlaceId(defaultPlaceId ? String(defaultPlaceId) : '')
     const lead = batch?.leadCoachUserId ?? batch?.lead_coach_user_id
     setCoachId(lead ? String(lead) : '')
+    setAdditionalCoachIds([])
     setRecurringPatternId('')
     setError(null)
     setAddOpen(false)
@@ -203,6 +230,23 @@ export default function CreateOneTimeSessionDrawer({
       .slice(0, 25)
   }, [studentDirectory, addQuery, roster])
 
+  const additionalCoachOptions = useMemo(
+    () => coachOptions.filter((coach) => String(coach.id) !== String(coachId || '')),
+    [coachOptions, coachId],
+  )
+
+  const toggleAdditionalCoach = (id) => {
+    const sid = String(id)
+    setAdditionalCoachIds((prev) =>
+      prev.includes(sid) ? prev.filter((coachId) => coachId !== sid) : [...prev, sid],
+    )
+  }
+
+  const handleCoachChange = (nextCoachId) => {
+    setCoachId(nextCoachId)
+    setAdditionalCoachIds((prev) => prev.filter((id) => String(id) !== String(nextCoachId || '')))
+  }
+
   const handleSubmit = async () => {
     setError(null)
     if (!batchId) return
@@ -229,6 +273,9 @@ export default function CreateOneTimeSessionDrawer({
         startTime,
         endTime,
         coachId: coachId || undefined,
+        additionalCoachIds: additionalCoachIds.filter(
+          (id) => id && String(id) !== String(coachId || ''),
+        ),
         placeId: placeId || undefined,
         studentIds,
         guestStudentIds,
@@ -315,10 +362,29 @@ export default function CreateOneTimeSessionDrawer({
             <CoachSelect
               coaches={coachOptions}
               value={coachId}
-              onChange={setCoachId}
+              onChange={handleCoachChange}
               disabled={busy}
             />
           </div>
+          {additionalCoachOptions.length > 0 ? (
+            <div className="mb-3">
+              <CFormLabel className="small mb-1">
+                Additional coaches <span className="fw-normal text-body-secondary">(optional)</span>
+              </CFormLabel>
+              <div className="d-flex flex-column gap-1">
+                {additionalCoachOptions.map((coach) => (
+                  <CFormCheck
+                    key={coach.id}
+                    id={`one-time-additional-coach-${coach.id}`}
+                    label={coach.name || 'Coach'}
+                    checked={additionalCoachIds.includes(String(coach.id))}
+                    onChange={() => toggleAdditionalCoach(coach.id)}
+                    disabled={busy}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="mb-3">
             <CFormLabel className="small mb-1">Place</CFormLabel>
             <CFormSelect
@@ -450,7 +516,11 @@ export default function CreateOneTimeSessionDrawer({
 
         <section>
           <div className="onrep-type-label mb-2">Session mode</div>
-          <CFormSelect value={sessionMode} onChange={(e) => setSessionMode(e.target.value)} className="mb-2">
+          <CFormSelect
+            value={sessionMode}
+            onChange={(e) => setSessionMode(e.target.value)}
+            className="mb-2"
+          >
             {SESSION_MODE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}

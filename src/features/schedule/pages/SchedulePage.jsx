@@ -729,6 +729,7 @@ const SchedulePage = () => {
         batch={selectedBatch}
         places={activePlaces}
         placesLoading={placesLoading}
+        coaches={coaches}
         patterns={activePatterns}
         onClose={() => setCreateOneTimeOpen(false)}
         onCreated={refreshAll}

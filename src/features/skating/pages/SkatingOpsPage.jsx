@@ -1100,12 +1100,13 @@ const SkatingOpsPage = () => {
   const phaseCaptureState = usePhaseCapture(selectedSessionId, {
     enabled: Boolean(selectedSessionId && activeActivityId) && coachLive,
   })
+  const phaseContentEditable = opsState === 'active' || opsState === 'ended'
 
   const { queueEntry: queuePhaseEntry } = usePhaseEntryAutosave({
     operationalSessionId: selectedSessionId,
     phaseId: activeBlockId,
     disabled:
-      !selectedSessionId || !activeBlockId || uiPaused || opsState === 'ended' || !coachLive,
+      !selectedSessionId || !activeBlockId || uiPaused || !phaseContentEditable || !coachLive,
     onSaved: (saved) => phaseCaptureState.mergeEntries(saved),
   })
 
@@ -1290,7 +1291,7 @@ const SkatingOpsPage = () => {
 
   const handleAttendanceToggle = useCallback(
     async (studentId) => {
-      if (!selectedSessionId || !studentId || opsState !== 'active') return
+      if (!selectedSessionId || !studentId || !phaseContentEditable) return
       const sid = String(studentId)
       const currentlyPresent = attendanceByStudentId[sid] === 'present'
       const nextStatus = currentlyPresent ? null : 'present'
@@ -1318,7 +1319,7 @@ const SkatingOpsPage = () => {
         }
       }
     },
-    [selectedSessionId, opsState, attendanceByStudentId],
+    [selectedSessionId, phaseContentEditable, attendanceByStudentId],
   )
 
   const handleUpdatePhaseSkills = useCallback(
@@ -1554,7 +1555,7 @@ const SkatingOpsPage = () => {
   const sessionModeForCoach = syncPrimitives.sessionMode || selSession?.sessionMode || 'practice'
 
   const coachingDisabled =
-    !lapStudentId || obsSaving || uiPaused || opsState === 'ended' || !selectedSessionId
+    !lapStudentId || obsSaving || uiPaused || !phaseContentEditable || !selectedSessionId
 
   const runPostCaptureSuccess = useCallback(
     (sidKey, sk) => {
@@ -1631,7 +1632,7 @@ const SkatingOpsPage = () => {
 
   const submitObservation = useCallback(
     async ({ manual = false } = {}) => {
-      if (!selectedSessionId || !lapStudentId || uiPaused || opsState === 'ended') return
+      if (!selectedSessionId || !lapStudentId || uiPaused || !phaseContentEditable) return
       const scores = scoresPayload(obsScores)
       if (Object.keys(scores).length === 0) return
       const sidKey = String(lapStudentId)
@@ -1677,7 +1678,7 @@ const SkatingOpsPage = () => {
       lapStudentId,
       lapRaceId,
       uiPaused,
-      opsState,
+      phaseContentEditable,
       obsScores,
       obsNotes,
       rosterForSession,
@@ -1707,7 +1708,7 @@ const SkatingOpsPage = () => {
 
   useEffect(() => {
     if (obsAutoSaveSuppressedRef.current) return
-    if (!selectedSessionId || !lapStudentId || uiPaused || opsState === 'ended') return
+    if (!selectedSessionId || !lapStudentId || uiPaused || !phaseContentEditable) return
     const scores = scoresPayload(obsScores)
     if (Object.keys(scores).length === 0) return
     const full = isFullObservationSet(obsScores)
@@ -1716,7 +1717,15 @@ const SkatingOpsPage = () => {
       void submitObservation({ manual: false })
     }, ms)
     return () => window.clearTimeout(id)
-  }, [obsScores, obsNotes, lapStudentId, selectedSessionId, uiPaused, opsState, submitObservation])
+  }, [
+    obsScores,
+    obsNotes,
+    lapStudentId,
+    selectedSessionId,
+    uiPaused,
+    phaseContentEditable,
+    submitObservation,
+  ])
 
   const onFormKeyDown = (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
