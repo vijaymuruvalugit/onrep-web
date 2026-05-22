@@ -28,7 +28,10 @@ export default function RecoveryPhaseView({
     [activePhase?.exercises],
   )
 
-  const defs = activePhase?.sessionObservationDefs || []
+  const defs = useMemo(
+    () => activePhase?.sessionObservationDefs || [],
+    [activePhase?.sessionObservationDefs],
+  )
 
   const valuesByKey = useMemo(() => {
     const phaseId = String(activePhase?.id || '')

@@ -35,7 +35,10 @@ export default function SessionPresetPhasePreview({
     const exercises = [...(phase?.exercises || [])]
     if (!max || exercises.length >= max) return
     updatePhase(phaseIndex, {
-      exercises: [...exercises, { sequence: exercises.length + 1, exerciseName: '', description: '' }],
+      exercises: [
+        ...exercises,
+        { sequence: exercises.length + 1, exerciseName: '', description: '' },
+      ],
     })
   }
 
@@ -114,13 +117,9 @@ export default function SessionPresetPhasePreview({
           const exerciseCount = (ph.exercises || []).filter((ex) =>
             String(ex.exerciseName || '').trim(),
           ).length
-          const customized =
-            ph.isCustom || (ph.baselineTitle && ph.title !== ph.baselineTitle)
+          const customized = ph.isCustom || (ph.baselineTitle && ph.title !== ph.baselineTitle)
           return (
-            <li
-              key={ph.key}
-              className="py-1 border-bottom border-light-subtle"
-            >
+            <li key={ph.key} className="py-1 border-bottom border-light-subtle">
               <div className="d-flex align-items-center gap-1">
                 <span className="text-body-secondary" style={{ width: '1.25rem' }}>
                   {index + 1}.
@@ -137,9 +136,7 @@ export default function SessionPresetPhasePreview({
                     size="sm"
                     variant="ghost"
                     disabled={disabled}
-                    onClick={() =>
-                      setActivitiesOpenKey((key) => (key === ph.key ? null : ph.key))
-                    }
+                    onClick={() => setActivitiesOpenKey((key) => (key === ph.key ? null : ph.key))}
                   >
                     Activities
                   </CButton>

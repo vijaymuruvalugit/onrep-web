@@ -19,6 +19,7 @@ export default function SessionPhaseActivitiesEditor({
   const [error, setError] = useState('')
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- reset the editable draft when the phase changes */
     const sorted = [...(phase?.exercises || [])].sort((a, b) => a.sequence - b.sequence)
     setLocal(
       sorted.map((ex) => ({
@@ -27,6 +28,7 @@ export default function SessionPhaseActivitiesEditor({
       })),
     )
     setError('')
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [phase?.id, phase?.exercises])
 
   const persist = async (nextList) => {
@@ -34,7 +36,11 @@ export default function SessionPhaseActivitiesEditor({
     setBusy(true)
     setError('')
     try {
-      const result = await phaseCaptureApi.replacePhaseExercises(operationalSessionId, phase.id, nextList)
+      const result = await phaseCaptureApi.replacePhaseExercises(
+        operationalSessionId,
+        phase.id,
+        nextList,
+      )
       onUpdated?.(result?.exercises || [])
     } catch (e) {
       setError(e?.response?.data?.error || e?.message || 'Could not save activities')
@@ -74,7 +80,10 @@ export default function SessionPhaseActivitiesEditor({
   }
 
   return (
-    <div className="session-phase-activities mt-2 pt-2 border-top" data-testid="phase-activities-editor">
+    <div
+      className="session-phase-activities mt-2 pt-2 border-top"
+      data-testid="phase-activities-editor"
+    >
       <p className="small fw-semibold mb-2">{title}</p>
       {error ? <p className="small text-warning mb-2">{error}</p> : null}
       <ul className="list-unstyled mb-2">
@@ -101,9 +110,7 @@ export default function SessionPhaseActivitiesEditor({
               disabled={disabled || busy}
               onChange={(e) => {
                 const v = e.target.value
-                setLocal((prev) =>
-                  prev.map((r, i) => (i === index ? { ...r, description: v } : r)),
-                )
+                setLocal((prev) => prev.map((r, i) => (i === index ? { ...r, description: v } : r)))
               }}
             />
             <CButton
@@ -131,9 +138,7 @@ export default function SessionPhaseActivitiesEditor({
           Save activities
         </CButton>
       </div>
-      <p className="small text-body-secondary mb-0 mt-1">
-        Up to {max} activities for this phase.
-      </p>
+      <p className="small text-body-secondary mb-0 mt-1">Up to {max} activities for this phase.</p>
     </div>
   )
 }
