@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { CAlert, CSpinner } from '@coreui/react'
 
 import analyticsApi from '../api/analyticsApi'
+import { InsightBarChart } from './InsightChartCard'
 
 /**
  * Motivational progress cues for student home — narrative-first.
@@ -38,9 +39,22 @@ const StudentMotivationInsights = () => {
   }
   if (!motivation) return null
 
+  const sessionsAttended = Number(motivation.sessionsAttended || 0)
+  const streakDays = Number(motivation.participationStreak || 0)
+
   return (
     <div className="mb-3 p-3 bg-body-tertiary rounded">
       {motivation.narrative ? <p className="fw-semibold mb-0">{motivation.narrative}</p> : null}
+      {sessionsAttended > 0 || streakDays > 0 ? (
+        <div className="mt-2" style={{ height: 140 }}>
+          <InsightBarChart
+            labels={['Sessions attended', 'Consistency streak']}
+            values={[sessionsAttended, streakDays]}
+            label="Count"
+            horizontal
+          />
+        </div>
+      ) : null}
       {(motivation.milestones || []).length > 0 ? (
         <div className="small mt-2">
           <div className="text-body-secondary mb-1">Milestones</div>

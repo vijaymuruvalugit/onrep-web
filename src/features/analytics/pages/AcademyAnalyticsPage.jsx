@@ -5,7 +5,14 @@ import CIcon from '@coreui/icons-react'
 import { cilArrowLeft, cilChart } from '@coreui/icons'
 
 import analyticsApi from '../api/analyticsApi'
+import {
+  InsightBarChart,
+  InsightChartCard,
+  InsightDoughnutChart,
+  InsightLineChart,
+} from '../components/InsightChartCard'
 import { formatInr } from '../../payments/utils/formatInr'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 function fmtPct(v) {
   if (v == null || Number.isNaN(Number(v))) return '—'
@@ -37,6 +44,15 @@ const AcademyAnalyticsPage = () => {
     }
   }, [])
 
+  const retentionTrend = ops?.academyGrowth?.retentionTrend || []
+  const mostActiveCoaches = ops?.coachingOperations?.mostActiveCoaches || []
+  const mostUsedPresets = ops?.coachingStructure?.mostUsedPresets || []
+  const mostCommonPhases = ops?.coachingStructure?.mostCommonPhases || []
+  const completedSessions = ops?.sessionReliability?.completedSessions || 0
+  const cancelledSessions = ops?.sessionReliability?.cancelledSessions || 0
+  const conductedSessions = ops?.coachingOperations?.sessionsConducted || 0
+  const otherSessions = Math.max(conductedSessions - completedSessions - cancelledSessions, 0)
+
   return (
     <div className="p-2">
       <div className="d-flex align-items-center gap-2 mb-3">
@@ -60,6 +76,31 @@ const AcademyAnalyticsPage = () => {
 
       {!loading && ops ? (
         <CRow className="g-3">
+          <CCol xl={8}>
+            <InsightChartCard
+              title="Active student retention"
+              subtitle="Weekly active students with present marks"
+              height={280}
+            >
+              <InsightLineChart
+                labels={retentionTrend.map((r) => formatDisplayDateDmy(r.week))}
+                datasets={[
+                  {
+                    label: 'Active students',
+                    data: retentionTrend.map((r) => r.activeStudents || 0),
+                  },
+                ]}
+              />
+            </InsightChartCard>
+          </CCol>
+          <CCol xl={4}>
+            <InsightChartCard title="Session reliability" subtitle="Completed, cancelled, open">
+              <InsightDoughnutChart
+                labels={['Completed', 'Cancelled', 'Other']}
+                values={[completedSessions, cancelledSessions, otherSessions]}
+              />
+            </InsightChartCard>
+          </CCol>
           <CCol md={6}>
             <CCard className="shadow-sm">
               <CCardHeader className="fw-semibold">Growth</CCardHeader>
@@ -71,6 +112,15 @@ const AcademyAnalyticsPage = () => {
                 </p>
               </CCardBody>
             </CCard>
+          </CCol>
+          <CCol md={6}>
+            <InsightChartCard title="Coach session load" subtitle="Sessions by coach">
+              <InsightBarChart
+                labels={mostActiveCoaches.map((c) => c.coachName)}
+                values={mostActiveCoaches.map((c) => c.sessionCount || 0)}
+                label="Sessions"
+              />
+            </InsightChartCard>
           </CCol>
           <CCol md={6}>
             <CCard className="shadow-sm">
@@ -90,6 +140,24 @@ const AcademyAnalyticsPage = () => {
             </CCard>
           </CCol>
           <CCol md={6}>
+            <InsightChartCard title="Preset usage" subtitle="Most used session presets">
+              <InsightBarChart
+                labels={mostUsedPresets.map((p) => p.label)}
+                values={mostUsedPresets.map((p) => p.count || 0)}
+                label="Sessions"
+              />
+            </InsightChartCard>
+          </CCol>
+          <CCol md={6}>
+            <InsightChartCard title="Phase mix" subtitle="Most common phase types">
+              <InsightBarChart
+                labels={mostCommonPhases.map((p) => p.phaseType)}
+                values={mostCommonPhases.map((p) => p.count || 0)}
+                label="Phases"
+              />
+            </InsightChartCard>
+          </CCol>
+          <CCol md={6}>
             <CCard className="shadow-sm">
               <CCardHeader className="fw-semibold">Coaching structure</CCardHeader>
               <CCardBody className="small">
@@ -102,6 +170,18 @@ const AcademyAnalyticsPage = () => {
                 </ul>
               </CCardBody>
             </CCard>
+          </CCol>
+          <CCol md={6}>
+            <InsightChartCard title="Payment continuity" subtitle="Active plans vs follow-ups">
+              <InsightDoughnutChart
+                labels={['Active plans', 'Overdue', 'Renewing soon']}
+                values={[
+                  ops.paymentsContinuity?.activePlans || 0,
+                  ops.paymentsContinuity?.overdueStudents?.length || 0,
+                  ops.paymentsContinuity?.upcomingRenewals?.length || 0,
+                ]}
+              />
+            </InsightChartCard>
           </CCol>
           <CCol md={6}>
             <CCard className="shadow-sm">

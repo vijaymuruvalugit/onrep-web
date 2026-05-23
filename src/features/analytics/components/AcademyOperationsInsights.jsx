@@ -16,6 +16,7 @@ import { cilChart } from '@coreui/icons'
 
 import analyticsApi from '../api/analyticsApi'
 import DashboardStatCard from '../../dashboard/components/DashboardStatCard'
+import { InsightBarChart, InsightChartCard } from './InsightChartCard'
 
 function fmtPct(v) {
   if (v == null || Number.isNaN(Number(v))) return '—'
@@ -96,6 +97,30 @@ const AcademyOperationsInsights = () => {
                 value={fmtPct(ops.sessionReliability?.completionRate)}
                 loading={false}
               />
+            </CCol>
+            <CCol lg={6}>
+              <InsightChartCard
+                title="Coach session load"
+                subtitle="Top coaches in this period"
+                height={180}
+              >
+                <InsightBarChart
+                  labels={(ops.coachingOperations?.mostActiveCoaches || []).map((c) => c.coachName)}
+                  values={(ops.coachingOperations?.mostActiveCoaches || []).map(
+                    (c) => c.sessionCount || 0,
+                  )}
+                  label="Sessions"
+                />
+              </InsightChartCard>
+            </CCol>
+            <CCol lg={6}>
+              <InsightChartCard title="Preset usage" subtitle="Most used templates" height={180}>
+                <InsightBarChart
+                  labels={(ops.coachingStructure?.mostUsedPresets || []).map((p) => p.label)}
+                  values={(ops.coachingStructure?.mostUsedPresets || []).map((p) => p.count || 0)}
+                  label="Sessions"
+                />
+              </InsightChartCard>
             </CCol>
             <CCol xs={12}>
               <div className="d-flex align-items-center justify-content-between gap-2">

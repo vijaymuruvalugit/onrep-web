@@ -5,6 +5,13 @@ import CIcon from '@coreui/icons-react'
 import { cilArrowLeft, cilLightbulb } from '@coreui/icons'
 
 import analyticsApi from '../api/analyticsApi'
+import {
+  InsightBarChart,
+  InsightChartCard,
+  InsightDoughnutChart,
+  InsightLineChart,
+} from '../components/InsightChartCard'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 /**
  * Coach drill-down — session trends and deeper operational patterns.
@@ -33,6 +40,11 @@ const CoachAnalyticsPage = () => {
   }, [])
 
   const dd = insights?.drilldown
+  const participationTrend = dd?.attendanceTrends?.trendLine || []
+  const focusAreas = dd?.observationTrends?.mostCommonFocusAreas || []
+  const presets = dd?.sessionComposition?.mostUsedPresets || []
+  const phaseDistribution = dd?.sessionComposition?.phaseDistribution || []
+  const sessionStyleMix = dd?.sessionComposition?.sessionStyleMix || {}
 
   return (
     <div className="p-2">
@@ -55,6 +67,39 @@ const CoachAnalyticsPage = () => {
 
       {!loading && dd ? (
         <CRow className="g-3">
+          <CCol xl={8}>
+            <InsightChartCard
+              title="Participation trend"
+              subtitle="Present athletes vs roster marks"
+              height={280}
+            >
+              <InsightLineChart
+                labels={participationTrend.map((d) => formatDisplayDateDmy(d.day))}
+                datasets={[
+                  {
+                    label: 'Present',
+                    data: participationTrend.map((d) => d.present || 0),
+                  },
+                  {
+                    label: 'Total marks',
+                    data: participationTrend.map((d) => d.total || 0),
+                    color: '#6c757d',
+                  },
+                ]}
+              />
+            </InsightChartCard>
+          </CCol>
+          <CCol xl={4}>
+            <InsightChartCard title="Session style mix" subtitle="Exercise vs observation led">
+              <InsightDoughnutChart
+                labels={['Exercise heavy', 'Observation heavy']}
+                values={[
+                  sessionStyleMix.exerciseHeavySessions || 0,
+                  sessionStyleMix.observationHeavySessions || 0,
+                ]}
+              />
+            </InsightChartCard>
+          </CCol>
           <CCol lg={6}>
             <CCard className="shadow-sm h-100">
               <CCardHeader className="fw-semibold">Participation consistency</CCardHeader>
@@ -80,6 +125,15 @@ const CoachAnalyticsPage = () => {
             </CCard>
           </CCol>
           <CCol lg={6}>
+            <InsightChartCard title="Focus area frequency" subtitle="Most common observations">
+              <InsightBarChart
+                labels={focusAreas.map((o) => o.label)}
+                values={focusAreas.map((o) => o.count || 0)}
+                label="Observations"
+              />
+            </InsightChartCard>
+          </CCol>
+          <CCol lg={6}>
             <CCard className="shadow-sm h-100">
               <CCardHeader className="fw-semibold">Observation trends</CCardHeader>
               <CCardBody className="small">
@@ -92,6 +146,15 @@ const CoachAnalyticsPage = () => {
                 </ul>
               </CCardBody>
             </CCard>
+          </CCol>
+          <CCol lg={6}>
+            <InsightChartCard title="Preset usage" subtitle="Sessions by preset">
+              <InsightBarChart
+                labels={presets.map((p) => p.label)}
+                values={presets.map((p) => p.sessionCount || 0)}
+                label="Sessions"
+              />
+            </InsightChartCard>
           </CCol>
           <CCol lg={6}>
             <CCard className="shadow-sm h-100">
@@ -112,6 +175,15 @@ const CoachAnalyticsPage = () => {
                 ) : null}
               </CCardBody>
             </CCard>
+          </CCol>
+          <CCol lg={6}>
+            <InsightChartCard title="Phase distribution" subtitle="Phase types used in sessions">
+              <InsightBarChart
+                labels={phaseDistribution.map((p) => p.phaseType)}
+                values={phaseDistribution.map((p) => p.count || 0)}
+                label="Phases"
+              />
+            </InsightChartCard>
           </CCol>
           <CCol lg={6}>
             <CCard className="shadow-sm h-100">

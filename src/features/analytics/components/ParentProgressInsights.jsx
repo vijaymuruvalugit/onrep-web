@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { CAlert, CSpinner } from '@coreui/react'
 
 import analyticsApi from '../api/analyticsApi'
+import { InsightDoughnutChart } from './InsightChartCard'
 
 /**
  * Narrative-first progress summaries for parent child overview.
@@ -39,10 +40,22 @@ const ParentProgressInsights = ({ studentId }) => {
 
   const child = progress?.children?.[0]
   if (!child) return null
+  const attendance = child.attendanceConsistency || {}
+  const present = Number(attendance.present || 0)
+  const total = Number(attendance.total || 0)
+  const missed = Math.max(total - present, 0)
 
   return (
     <div className="small">
       {child.narrative?.attendance ? <p className="mb-2">{child.narrative.attendance}</p> : null}
+      {total > 0 ? (
+        <div className="mb-2 p-2 bg-body-tertiary rounded">
+          <div className="text-body-secondary mb-1">Participation mix</div>
+          <div style={{ height: 150 }}>
+            <InsightDoughnutChart labels={['Present', 'Missed']} values={[present, missed]} />
+          </div>
+        </div>
+      ) : null}
       {child.narrative?.streak ? (
         <p className="mb-2 text-body-secondary">{child.narrative.streak}</p>
       ) : null}

@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { CAlert, CCol, CRow, CSpinner } from '@coreui/react'
 import analyticsApi from '../../analytics/api/analyticsApi'
+import {
+  InsightBarChart,
+  InsightChartCard,
+  InsightLineChart,
+} from '../../analytics/components/InsightChartCard'
 import SuperAdminPageHeader from '../components/SuperAdminPageHeader'
 import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
@@ -80,40 +85,57 @@ export default function SuperAdminAnalyticsPage() {
             </div>
           </CCol>
           <CCol md={6}>
-            <div className="p-3 bg-white rounded shadow-sm">
-              <h6>Top presets</h6>
-              <ul className="mb-0 small">
-                {(governance?.featureAdoption?.mostUsedPresets || []).map((p) => (
-                  <li key={p.presetId}>
-                    {p.label}: {p.sessionCount} sessions
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <InsightChartCard
+              title="Top presets"
+              subtitle="Platform-wide session templates"
+              height={220}
+            >
+              <InsightBarChart
+                labels={(governance?.featureAdoption?.mostUsedPresets || []).map((p) => p.label)}
+                values={(governance?.featureAdoption?.mostUsedPresets || []).map(
+                  (p) => p.sessionCount || 0,
+                )}
+                label="Sessions"
+              />
+            </InsightChartCard>
           </CCol>
           <CCol md={6}>
-            <div className="p-3 bg-white rounded shadow-sm">
-              <h6>Academy growth (weekly)</h6>
-              <ul className="mb-0 small">
-                {(governance?.platformGrowth?.academyGrowthTrend || []).map((w, i) => (
-                  <li key={i}>
-                    {formatDisplayDateDmy(w.week)}: +{w.newAcademies}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <InsightChartCard title="Academy growth" subtitle="New academies per week" height={220}>
+              <InsightLineChart
+                labels={(governance?.platformGrowth?.academyGrowthTrend || []).map((w) =>
+                  formatDisplayDateDmy(w.week),
+                )}
+                datasets={[
+                  {
+                    label: 'New academies',
+                    data: (governance?.platformGrowth?.academyGrowthTrend || []).map(
+                      (w) => w.newAcademies || 0,
+                    ),
+                  },
+                ]}
+              />
+            </InsightChartCard>
           </CCol>
-          <CCol md={6}>
-            <div className="p-3 bg-white rounded shadow-sm">
-              <h6>Session volume (daily)</h6>
-              <ul className="mb-0 small" style={{ maxHeight: 200, overflow: 'auto' }}>
-                {(governance?.usageTrends?.sessionVolume || []).slice(-14).map((d, i) => (
-                  <li key={i}>
-                    {formatDisplayDateDmy(d.day)}: {d.sessions}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <CCol md={12}>
+            <InsightChartCard
+              title="Session volume"
+              subtitle="Daily sessions across the platform"
+              height={260}
+            >
+              <InsightLineChart
+                labels={(governance?.usageTrends?.sessionVolume || [])
+                  .slice(-14)
+                  .map((d) => formatDisplayDateDmy(d.day))}
+                datasets={[
+                  {
+                    label: 'Sessions',
+                    data: (governance?.usageTrends?.sessionVolume || [])
+                      .slice(-14)
+                      .map((d) => d.sessions || 0),
+                  },
+                ]}
+              />
+            </InsightChartCard>
           </CCol>
         </CRow>
       )}
