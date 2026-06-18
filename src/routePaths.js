@@ -27,6 +27,7 @@ export const ONREP_ROUTE_DEFS = [
   { path: '/coach/places/new', name: 'Add Place', exact: true },
   { path: '/coach/places/:placeId/edit', name: 'Edit Place', exact: true },
   { path: '/coach/places/:placeId', name: 'Place', exact: true },
+  { path: '/coach/communications', name: 'Communications', exact: true },
   { path: '/coach/payments', name: 'Payments', exact: true },
   { path: '/coach/payments/settings', name: 'Payment Settings', exact: true },
   { path: '/coach/payments/payout-details', name: 'Payout Details', exact: true },

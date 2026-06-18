@@ -18,6 +18,7 @@ const ParentPaymentHistoryPage = React.lazy(
 )
 const PaymentsHubPage = React.lazy(() => import('../features/payments/pages/PaymentsHubPage'))
 const CoachPaymentsPage = React.lazy(() => import('../features/payments/pages/CoachPaymentsPage'))
+const CommunicationsPage = React.lazy(() => import('../features/communications/pages/CommunicationsPage'))
 const BillingPage = React.lazy(() => import('../features/payments/pages/BillingPage'))
 const PaywallPage = React.lazy(() => import('../features/payments/pages/PaywallPage'))
 const PaymentSettingsPage = React.lazy(
@@ -147,6 +148,7 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/coach/places/:placeId/edit', component: PlaceEditPage },
   { path: '/coach/parents', component: ParentsOverviewPage },
   { path: '/coach/activities', component: ManageActivitiesPage },
+  { path: '/coach/communications', component: CommunicationsPage },
   { path: '/coach/payments', component: PaymentsHubPage },
   { path: '/coach/payments/settings', component: PaymentSettingsPage },
   { path: '/coach/payments/payout-details', component: PayoutDetailsPage },
