@@ -179,7 +179,7 @@ const ParentHomePage = () => {
                       Due {feesSummary.dueCount}
                     </CBadge>
                   </div>
-                  <ul className="list-unstyled small mb-0">
+                  <ul className="list-unstyled small mb-2">
                     {feesSummary.items.map((f) => (
                       <li
                         key={f.id}
@@ -194,6 +194,11 @@ const ParentHomePage = () => {
                       </li>
                     ))}
                   </ul>
+                  {feesSummary.dueCount > 0 ? (
+                    <Link to="/parent/payments/history" className="btn btn-primary btn-sm w-100">
+                      Pay fees
+                    </Link>
+                  ) : null}
                 </>
               ) : (
                 <p className="text-body-secondary small mb-0">

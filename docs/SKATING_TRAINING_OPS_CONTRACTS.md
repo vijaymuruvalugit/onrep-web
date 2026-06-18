@@ -2,13 +2,15 @@
 
 This document lists the **unchanged** REST surface used by **Skating Ops** (`onrep-admin` coach live session UI). UX refactors must keep these paths and payload shapes unless a deliberate backend change is shipped separately.
 
-**Backend reference (mount, bundle fields, rapid-observation persistence):** in the same monorepo, see `ezyplay-backend/CONTEXT/11-skating-training-ops-api.md` and `ezyplay-backend/docs/openapi.yaml` under `/api/v1/skating/training/…`.
+**Backend reference (mount, bundle fields, rapid-observation persistence):** in the same monorepo, see `ezyplay-backend/CONTEXT/11-skating-training-ops-api.md`, `ezyplay-backend/docs/openapi.yaml`, and the canonical operational-session routes under `/api/v1/operational-sessions`.
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/skating/training/ops/snapshot` | Day snapshot + session list |
+| `GET` | `/operational-sessions/day-board?date=YYYY-MM-DD` | Canonical day board + session list |
+| `GET` | `/operational-sessions/board` | Range board for operational sessions |
+| `POST` | `/operational-sessions/:id/start` / `pause` / `end` / `cancel` | Canonical live-session lifecycle |
 | `GET` | `/skating/training/sessions/:id/bundle` | Session bundle (session, groups, races, recent laps) |
 | `POST` | `/skating/training/sessions` | Create session (`date`, `placeId`, `sessionSkaterIds`, `rinkOrRoad`, `notes`, `createdBy`, …) |
 | `PATCH` | `/skating/training/sessions/:id` | Patch `sessionSkaterIds`, `startedAt`, `endedAt`, `sessionFocus`, `objectivesJson`, `sessionAthleteFocusJson`, … |
@@ -17,6 +19,12 @@ This document lists the **unchanged** REST surface used by **Skating Ops** (`onr
 | `PUT` | `/skating/training/sessions/:id/groups/:groupKey` | Merge / upsert group |
 | `POST` | `/skating/training/sessions/:id/groups/:groupKey/races` | Add race (timing lane) |
 | `POST` | `/skating/training/sessions/:id/rapid-observation` | Rapid observation KPI scores |
+| `GET` | `/skating/training/session-presets` | Session preset list for planning/live setup |
+| `GET` | `/skating/training/skaters/active` | Active skaters for live-session selection |
+| `POST` | `/skating/training/sessions/:id/coaching-events` | Record coaching event |
+| `GET` | `/skating/training/race-results` | Race result rows |
+| `GET` | `/skating/training/leaderboard` | Leaderboard data |
+| `GET` | `/skating/training/sessions/:id/races-aggregate` | Aggregated race data for a session |
 
 ## Skating intelligence (governance + longitudinal state)
 

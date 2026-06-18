@@ -11,6 +11,14 @@ export const studentsApi = {
     return data || {}
   },
 
+  async getParticipationSummary(studentId, params = {}) {
+    const { data } = await http.get(
+      `/students/${encodeURIComponent(studentId)}/participation-summary`,
+      { params },
+    )
+    return data || {}
+  },
+
   async createStudent(payload) {
     const { data } = await http.post('/students', payload)
     return data || {}

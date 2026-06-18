@@ -34,11 +34,12 @@ The collapsed **Schedule setup** area may contain **only** rare operational main
 - **No dedicated Status column** in list view. Setup gaps appear as **small hints under the batch name** (empty batch, needs schedule, coach not assigned, etc.), not a parallel badge column.
 - **Tiles** remain the default layout; list view is for dense scanning with the same data columns minus status.
 
-## Start session timing (Batch Workspace)
+## Start session timing (current app split)
 
-- **Start session** must call **`POST /operational-sessions/:id/start`** before opening attendance so **actual start** is recorded on the server.
-- If the coach starts **more than ~10 minutes** before the scheduled start or **after** the scheduled end (with grace), show a **confirm** dialog; continuing still uses the real **now** as start time.
-- **End** is recorded on operational end and/or when **attendance is finalized** (bulk save), not from the scheduled slot alone.
+- **Batch Workspace** currently routes the primary "Roster check-in" action to the skating live-session shell (`/coach/skating?session=...`). It does **not** call `POST /operational-sessions/:id/start` itself.
+- **Skating Ops** owns canonical live-session lifecycle actions (`POST /operational-sessions/:id/start`, `pause`, `end`, `cancel`) through `operationalSessionsApi`.
+- The ±10 minute early/late confirmation helper exists as a governance rule, but it is not currently wired into the Batch Workspace CTA. If product wants strict actual-start capture from the batch screen, wire the helper and start call there before changing copy.
+- `/coach/attendance/class/:id` is a compatibility redirect into the skating/live-session route, not the primary attendance target.
 
 ## Interaction validation checklist (ship / iterate)
 

@@ -199,19 +199,8 @@ function ParentPaymentsView({ hub }) {
                 </div>
               ))}
             </div>
-            {c.canPayNow ? (
-              <CButton color="primary" size="sm" as={Link} to="/parent/fees">
-                {manualMode ? 'View payment details' : 'Pay now'}
-              </CButton>
-            ) : null}
-            <CButton
-              color="link"
-              size="sm"
-              className="ms-2"
-              as={Link}
-              to="/parent/payments/history"
-            >
-              Receipts
+            <CButton color="primary" size="sm" as={Link} to="/parent/payments/history">
+              {c.canPayNow ? (manualMode ? 'View & report payment' : 'Pay now') : 'Payment history'}
             </CButton>
           </CCardBody>
         </CCard>

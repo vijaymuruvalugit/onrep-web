@@ -1,6 +1,9 @@
 {
+  "activityId": "act_skating_1",
   "fullName": "John Doe",
-  "monthlyFeeInr": 0,
+  "monthlyFeeInr": 1500,
+  "feeDueDay": 5,
+  "status": "active",
   "dateOfBirth": "2012-09-14",
   "gender": "M",
   "group": "Beginner",

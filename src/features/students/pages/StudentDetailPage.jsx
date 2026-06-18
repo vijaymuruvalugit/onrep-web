@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   CAlert,
@@ -18,6 +18,7 @@ import StudentSkatingSnapshotCard from '../../skating/components/StudentSkatingS
 import { getStudentActivity, getStudentBatch, getStudentDisplayName } from '../utils/studentMappers'
 import { sanitizeStudentNotesForDisplay } from '../../batches/utils/batchDisplayUtils'
 import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
+import studentsApi from '../api/studentsApi'
 
 const initialsFromName = (name) =>
   String(name || '')
@@ -50,11 +51,27 @@ const StudentDetailPage = () => {
     clearSelected,
     mutationError,
   } = useStudents()
+  const [participationPercent, setParticipationPercent] = useState(null)
 
   useEffect(() => {
     fetchStudentById(studentId)
     return () => clearSelected()
   }, [fetchStudentById, studentId, clearSelected])
+
+  useEffect(() => {
+    let cancelled = false
+    studentsApi
+      .getParticipationSummary(studentId)
+      .then((summary) => {
+        if (!cancelled) setParticipationPercent(summary.attendancePercent ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setParticipationPercent(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [studentId])
 
   if (detailLoading && !selectedStudent) return <DetailLoadingState />
 
@@ -178,9 +195,11 @@ const StudentDetailPage = () => {
             <CCardBody>
               <div className="mb-2">
                 <strong>Participation consistency:</strong>{' '}
-                {selectedStudent.attendance_percent
-                  ? `${selectedStudent.attendance_percent}%`
-                  : '—'}
+                {participationPercent != null
+                  ? `${participationPercent}%`
+                  : selectedStudent.attendance_percent
+                    ? `${selectedStudent.attendance_percent}%`
+                    : '—'}
               </div>
               <div className="mb-2">
                 <strong>Payment summary:</strong>{' '}

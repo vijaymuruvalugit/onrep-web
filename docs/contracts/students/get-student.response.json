@@ -1,8 +1,11 @@
 {
   "student": {
     "id": "stu_123",
+    "activity_id": "act_skating_1",
+    "activityId": "act_skating_1",
     "full_name": "John Doe",
     "monthly_fee_inr": 1500,
+    "fee_due_day": 10,
     "status": "active",
     "date_of_birth": "2012-09-14",
     "gender": "M",

@@ -8,7 +8,7 @@ This matrix verifies operational correctness for **activity workspaces** (`x-act
 - Academy has at least **two enabled activities** when testing switching (future: e.g. skating + swimming).
 - Test users include: owner + coach with access to both activities.
 - At least one batch, schedule, student, and attendance record exists in each activity.
-- For debug logs, run frontend with `VITE_ACTIVITY_WORKSPACE_DEBUG=1`.
+- For debug logs, run the dev frontend with `VITE_ACTIVITY_WORKSPACE_DEBUG=1`. Logging is gated by both `import.meta.env.DEV` and that flag.
 
 ## Core Scenarios
 
@@ -38,10 +38,11 @@ Minimum routes to verify in QA cycle:
 - Attendance/session/schedule APIs are `scoped`.
 - Dashboard operational aggregates are correctly scoped where expected.
 - Billing/payments/onboarding remain global unless explicitly migrated.
+- `/analytics/*` may receive `x-activity-id` when a workspace is selected, but the activity workspace gate does not require it the way scoped operational/skating routes do.
 
 ## Temporary Workspace Logging Validation
 
-When `VITE_ACTIVITY_WORKSPACE_DEBUG=1`, verify browser console entries like:
+When running a dev build with `VITE_ACTIVITY_WORKSPACE_DEBUG=1`, verify browser console entries like:
 
 - `route` (current pathname)
 - `requestUrl`
