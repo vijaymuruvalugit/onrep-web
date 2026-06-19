@@ -10,17 +10,20 @@ import {
   parentInviteAcceptSchema,
   parentInvitePasswordAndNameSchema,
   parentInvitePasswordOnlySchema,
+  parentInviteLinkAccountSchema,
 } from '../validations/parentInviteAcceptSchema'
 import { getRoleRedirectPath } from '../utils/roleRedirect'
 import AuthShell from '../components/AuthShell'
 
-function parentInviteErrorMessage(payload) {
+function parentInviteErrorMessage(payload, isExistingAccount = false) {
   const code = payload?.code || payload?.error || payload?.message
   if (code === 'INVITE_EXPIRED') return 'This invite has expired. Ask the academy to send a new one.'
   if (code === 'INVITE_ALREADY_USED') return 'This invite was already used. Sign in with your account.'
   if (code === 'INVITE_REVOKED') return 'This invite is no longer valid.'
   if (code === 'EMAIL_ALREADY_EXISTS') return 'That email is already registered with a different role.'
   if (code === 'EMAIL_MISMATCH') return 'This invite is tied to a different email address.'
+  if (isExistingAccount && (payload?.status === 401 || payload?.statusCode === 401))
+    return 'Incorrect password. Enter the password for your existing parent account.'
   return payload?.message || 'Unable to accept this invite'
 }
 
@@ -34,17 +37,18 @@ export function resolveInviteProfile(preview) {
   }
 }
 
-function ParentInviteAcceptForm({ code, inviteeEmail, inviteeName, onError }) {
+function ParentInviteAcceptForm({ code, inviteeEmail, inviteeName, isExistingAccount, onError }) {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const lockedEmail = Boolean(inviteeEmail)
   const lockedName = Boolean(inviteeName)
 
   const formSchema = useMemo(() => {
+    if (isExistingAccount) return parentInviteLinkAccountSchema
     if (lockedEmail && lockedName) return parentInvitePasswordOnlySchema
     if (lockedEmail) return parentInvitePasswordAndNameSchema
     return parentInviteAcceptSchema
-  }, [lockedEmail, lockedName])
+  }, [isExistingAccount, lockedEmail, lockedName])
 
   const {
     register,
@@ -74,7 +78,36 @@ function ParentInviteAcceptForm({ code, inviteeEmail, inviteeName, onError }) {
       navigate(getRoleRedirectPath(result.payload?.user), { replace: true })
       return
     }
-    onError(parentInviteErrorMessage(result?.payload))
+    onError(parentInviteErrorMessage(result?.payload, isExistingAccount))
+  }
+
+  if (isExistingAccount) {
+    return (
+      <CForm onSubmit={handleSubmit(onSubmit)} noValidate className="onrep-auth-form">
+        <div className="mb-3 rounded border bg-light px-3 py-2 small">
+          <span className="text-body-secondary">Email</span>
+          <div className="fw-semibold">{inviteeEmail}</div>
+        </div>
+        <div className="mb-3">
+          <CFormLabel htmlFor="parent-invite-password">Your existing password</CFormLabel>
+          <CFormInput
+            id="parent-invite-password"
+            type="password"
+            placeholder="Enter your existing password"
+            autoComplete="current-password"
+            invalid={Boolean(errors.password)}
+            {...register('password')}
+          />
+          {errors.password ? (
+            <small className="text-danger d-block mt-1">{errors.password.message}</small>
+          ) : null}
+        </div>
+        <CButton type="submit" color="primary" disabled={isSubmitting} className="w-100 onrep-auth-cta">
+          {isSubmitting ? <CSpinner size="sm" className="me-2" /> : null}
+          Link my account &amp; sign in
+        </CButton>
+      </CForm>
+    )
   }
 
   return (
@@ -210,12 +243,15 @@ const AcceptParentInvitePage = () => {
     return <Navigate to={getRoleRedirectPath(user)} replace />
   }
 
-  const subtitle =
-    preview?.studentName && preview?.academyName
+  const isExistingAccount = Boolean(preview?.existingAccount)
+
+  const subtitle = isExistingAccount && preview?.studentName && preview?.academyName
+    ? `You already have a parent account. Enter your password to link ${preview.studentName} at ${preview.academyName}.`
+    : preview?.studentName && preview?.academyName
       ? `Create your parent account to follow ${preview.studentName} at ${preview.academyName}.`
       : 'Create your parent account to view schedules, attendance, and progress.'
 
-  const formKey = `${profile.inviteeEmail}|${profile.inviteeName}`
+  const formKey = `${profile.inviteeEmail}|${profile.inviteeName}|${isExistingAccount}`
 
   return (
     <AuthShell title="Parent invite" subtitle={subtitle} badge="PARENT INVITE">
@@ -235,6 +271,7 @@ const AcceptParentInvitePage = () => {
             code={code}
             inviteeEmail={profile.inviteeEmail}
             inviteeName={profile.inviteeName}
+            isExistingAccount={isExistingAccount}
             onError={setError}
           />
         </>

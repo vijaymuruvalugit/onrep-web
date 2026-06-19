@@ -11,6 +11,11 @@ const passwordFields = {
     .required('Confirm your password'),
 }
 
+/** Existing account linking — only the existing password, no confirm. */
+export const parentInviteLinkAccountSchema = yup.object({
+  password: yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
+})
+
 /** Invite already has parent email + name — only password needed. */
 export const parentInvitePasswordOnlySchema = yup.object(passwordFields)
 
