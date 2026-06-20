@@ -14,12 +14,15 @@ export const studentParentsApi = {
     return data || { linked: [], invites: [] }
   },
 
-  async inviteParent(studentId, { email, name, expiresInDays } = {}) {
+  async inviteParent(studentId, { email, name, expiresInDays, phoneNumber } = {}) {
     const payload = { studentId }
     if (email != null && String(email).trim() !== '') payload.email = String(email).trim()
     if (name != null && String(name).trim() !== '') payload.name = String(name).trim()
     if (Number.isFinite(Number(expiresInDays)) && Number(expiresInDays) > 0) {
       payload.expiresInDays = Number(expiresInDays)
+    }
+    if (phoneNumber != null && String(phoneNumber).trim() !== '') {
+      payload.phoneNumber = String(phoneNumber).trim()
     }
     const { data } = await http.post('/invites', payload)
     return data || {}

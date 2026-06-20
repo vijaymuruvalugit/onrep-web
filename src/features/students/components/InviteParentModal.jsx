@@ -27,22 +27,32 @@ const ExpiryOptions = [
  * set-state-in-effect pattern (we don't need an effect to clear fields when
  * the modal opens — a fresh mount gives fresh state).
  */
+const E164_RE = /^\+[1-9]\d{6,14}$/
+
 const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }) => {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [expiresInDays, setExpiresInDays] = useState(14)
   const [touched, setTouched] = useState(false)
 
   const trimmedEmail = email.trim().toLowerCase()
   const trimmedName = name.trim()
+  const trimmedPhone = phone.trim()
   const emailValid = EMAIL_RE.test(trimmedEmail)
-  const canSubmit = emailValid && !submitting
+  const phoneValid = !trimmedPhone || E164_RE.test(trimmedPhone)
+  const canSubmit = emailValid && phoneValid && !submitting
 
   const handleSubmit = (event) => {
     event.preventDefault()
     setTouched(true)
     if (!canSubmit) return
-    onSubmit({ email: trimmedEmail, name: trimmedName, expiresInDays })
+    onSubmit({
+      email: trimmedEmail,
+      name: trimmedName,
+      expiresInDays,
+      phoneNumber: trimmedPhone || undefined,
+    })
   }
 
   return (
@@ -91,6 +101,29 @@ const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }
           <small className="text-body-secondary">
             Helps you tell multiple parents apart on this student.
           </small>
+        </div>
+
+        <div className="mb-3">
+          <CFormLabel htmlFor="invite-parent-phone">
+            Phone number <span className="text-body-secondary fw-normal">(optional — for phone sign in)</span>
+          </CFormLabel>
+          <CFormInput
+            id="invite-parent-phone"
+            type="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(ev) => setPhone(ev.target.value)}
+            onBlur={() => setTouched(true)}
+            placeholder="+919876543210"
+            invalid={touched && !phoneValid}
+          />
+          {touched && !phoneValid ? (
+            <small className="text-danger">Include country code, e.g. +919876543210</small>
+          ) : (
+            <small className="text-body-secondary">
+              Lets the parent sign in with OTP instead of a password.
+            </small>
+          )}
         </div>
 
         <div className="mb-1">

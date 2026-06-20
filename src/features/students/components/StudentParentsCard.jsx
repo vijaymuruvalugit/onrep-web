@@ -122,9 +122,9 @@ const StudentParentsCard = ({ studentId, studentName }) => {
   const linkedCount = rows.filter((r) => r.status === 'linked').length
   const invitedCount = rows.filter((r) => r.status === 'invited').length
 
-  const handleInvite = async ({ email, name, expiresInDays }) => {
+  const handleInvite = async ({ email, name, expiresInDays, phoneNumber }) => {
     clearSubmit()
-    const result = await invite({ email, name, expiresInDays })
+    const result = await invite({ email, name, expiresInDays, phoneNumber })
     if (result?.meta?.requestStatus === 'fulfilled') {
       setShowInviteModal(false)
       reload()

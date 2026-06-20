@@ -35,9 +35,9 @@ export function useStudentParents(studentId) {
   }, [dispatch, studentId])
 
   const invite = useCallback(
-    ({ email, name, expiresInDays } = {}) => {
+    ({ email, name, expiresInDays, phoneNumber } = {}) => {
       if (!studentId) return undefined
-      return dispatch(inviteStudentParent({ studentId, email, name, expiresInDays }))
+      return dispatch(inviteStudentParent({ studentId, email, name, expiresInDays, phoneNumber }))
     },
     [dispatch, studentId],
   )

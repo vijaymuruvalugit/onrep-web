@@ -43,12 +43,13 @@ export const fetchStudentParents = createAsyncThunk(
 
 export const inviteStudentParent = createAsyncThunk(
   'studentParents/invite',
-  async ({ studentId, email, name, expiresInDays }, thunkApi) => {
+  async ({ studentId, email, name, expiresInDays, phoneNumber }, thunkApi) => {
     try {
       const data = await studentParentsApi.inviteParent(studentId, {
         email,
         name,
         expiresInDays,
+        phoneNumber,
       })
       return { studentId, invite: data.invite || null }
     } catch (error) {
