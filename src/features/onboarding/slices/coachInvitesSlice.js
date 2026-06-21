@@ -34,9 +34,9 @@ export const fetchCoachInvites = createAsyncThunk('coachInvites/fetchList', asyn
 
 export const createCoachInvite = createAsyncThunk(
   'coachInvites/create',
-  async ({ email, name }, thunkApi) => {
+  async ({ email, name, phoneNumber }, thunkApi) => {
     try {
-      const data = await coachInvitesApi.postCoachInvite({ email, name })
+      const data = await coachInvitesApi.postCoachInvite({ email, name, phoneNumber })
       return data
     } catch (error) {
       return thunkApi.rejectWithValue(normalizeApiError(error))

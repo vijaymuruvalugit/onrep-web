@@ -84,6 +84,7 @@ const CoachInvitesPage = () => {
 
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [adminOverrides, setAdminOverrides] = useState({})
 
   const visibleStaff = useMemo(() => {
@@ -138,16 +139,19 @@ const CoachInvitesPage = () => {
     }
   }, [resendSuccess, loadCoachInvites, loadAcademyStaff])
 
+  const E164_RE = /^\+[1-9]\d{6,14}$/
   const onSubmit = async (e) => {
     e.preventDefault()
     clearSubmitState()
     const em = email.trim().toLowerCase()
     const nm = name.trim()
-    if (!em || !nm) return
-    const result = await sendCoachInvite({ email: em, name: nm })
+    const ph = phone.trim()
+    if (!em || !nm || !ph || !E164_RE.test(ph)) return
+    const result = await sendCoachInvite({ email: em, name: nm, phoneNumber: ph })
     if (result.meta.requestStatus === 'fulfilled') {
       setEmail('')
       setName('')
+      setPhone('')
     }
   }
 
@@ -325,6 +329,21 @@ const CoachInvitesPage = () => {
                   placeholder="Full name"
                   required
                 />
+              </CCol>
+              <CCol md={6}>
+                <CFormLabel htmlFor="coach-invite-phone">Phone number</CFormLabel>
+                <CFormInput
+                  id="coach-invite-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={(ev) => setPhone(ev.target.value)}
+                  placeholder="+919876543210"
+                  required
+                />
+                <small className="text-body-secondary">
+                  E.164 format with country code. The coach will use this for mobile sign in.
+                </small>
               </CCol>
               <CCol xs={12}>
                 <CButton type="submit" color="primary" disabled={submitLoading}>

@@ -40,7 +40,7 @@ const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }
   const trimmedName = name.trim()
   const trimmedPhone = phone.trim()
   const emailValid = EMAIL_RE.test(trimmedEmail)
-  const phoneValid = !trimmedPhone || E164_RE.test(trimmedPhone)
+  const phoneValid = !!trimmedPhone && E164_RE.test(trimmedPhone)
   const canSubmit = emailValid && phoneValid && !submitting
 
   const handleSubmit = (event) => {
@@ -51,7 +51,7 @@ const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }
       email: trimmedEmail,
       name: trimmedName,
       expiresInDays,
-      phoneNumber: trimmedPhone || undefined,
+      phoneNumber: trimmedPhone,
     })
   }
 
@@ -105,7 +105,7 @@ const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }
 
         <div className="mb-3">
           <CFormLabel htmlFor="invite-parent-phone">
-            Phone number <span className="text-body-secondary fw-normal">(optional — for phone sign in)</span>
+            Phone number <span className="text-danger">*</span>
           </CFormLabel>
           <CFormInput
             id="invite-parent-phone"
@@ -116,12 +116,13 @@ const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }
             onBlur={() => setTouched(true)}
             placeholder="+919876543210"
             invalid={touched && !phoneValid}
+            required
           />
           {touched && !phoneValid ? (
             <small className="text-danger">Include country code, e.g. +919876543210</small>
           ) : (
             <small className="text-body-secondary">
-              Lets the parent sign in with OTP instead of a password.
+              Required — the parent will use this to sign in via OTP on the mobile app.
             </small>
           )}
         </div>

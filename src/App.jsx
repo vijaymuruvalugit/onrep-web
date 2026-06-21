@@ -39,6 +39,7 @@ const SubscriptionPaymentProcessingPage = React.lazy(
 )
 const SubscriptionGuard = React.lazy(() => import('./features/auth/guards/SubscriptionGuard'))
 const ChangePasswordPage = React.lazy(() => import('./features/auth/pages/ChangePasswordPage'))
+const MobileOnlyPage = React.lazy(() => import('./features/auth/pages/MobileOnlyPage'))
 
 import { publicRoutes } from './routes/publicRoutes'
 import { restoreSession } from './features/auth/slices/authSlice'
@@ -252,6 +253,8 @@ const App = () => {
            * not an admin dashboard. The processing page would self-redirect
            * if it were inside the guard.
            */}
+          <Route path="/mobile-only" element={<MobileOnlyPage />} />
+
           <Route element={<RequireAuth />}>
             <Route path="/auth/change-password" element={<ChangePasswordPage />} />
             <Route path="/subscription" element={<SubscriptionShell />}>

@@ -19,6 +19,12 @@ const RequireAuth = () => {
     return <Navigate to="/auth/login" replace state={{ from: location }} />
   }
 
+  const role = user?.role
+  const mobileOnlyRoles = ['parent', 'student']
+  if (role && mobileOnlyRoles.includes(role)) {
+    return <Navigate to="/mobile-only" replace />
+  }
+
   if (
     (user?.force_password_change === true || user?.next_action === 'FORCE_PASSWORD_CHANGE') &&
     location.pathname !== '/auth/change-password'
