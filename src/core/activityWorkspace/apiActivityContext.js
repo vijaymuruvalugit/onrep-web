@@ -23,6 +23,7 @@ export const API_CLASSIFICATION = Object.freeze({
     '/invites',
     '/parents/overview',
     '/ops/',
+    '/events',
   ]),
   // Transitional explicit exemptions: keep academy-global until contract migration completes.
   exempt: Object.freeze(['/students', '/student-import', '/batches']),

@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   CButton, CCard, CCardBody, CCardHeader, CSpinner, CAlert, CBadge,
   CTable, CTableHead, CTableRow, CTableHeaderCell, CTableBody, CTableDataCell,
-  CNav, CNavItem, CNavLink, CTabContent, CTabPanel,
+  CNav, CNavItem, CNavLink,
   CFormInput, CFormTextarea, CRow, CCol,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilPencil, cilArrowLeft, cilCheck, cilX } from '@coreui/icons'
+import { cilPencil, cilArrowLeft, cilPlus, cilX } from '@coreui/icons'
+import http from '../../../api/http'
 import useEvents from '../hooks/useEvents'
 import EventFormModal from '../components/EventFormModal'
 import { StatusBadge, CategoryBadge } from '../components/EventStatusBadge'
@@ -34,33 +35,112 @@ function RevenueCard({ metrics }) {
   )
 }
 
-function ParticipantsTab({ eventId, registrations, registrationsMap, loadRegistrations, updateRegistration }) {
+function StudentSearchPicker({ onAdd, adding, existingIds }) {
+  const [query, setQuery] = useState('')
+  const [allStudents, setAllStudents] = useState([])
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    http.get('/students').then(({ data }) => setAllStudents(data.students || [])).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  const filtered = query.trim().length >= 1
+    ? allStudents.filter(
+        (s) => !existingIds.has(s.id) &&
+          s.full_name.toLowerCase().includes(query.trim().toLowerCase())
+      ).slice(0, 8)
+    : []
+
+  return (
+    <div ref={ref} style={{ position: 'relative', maxWidth: 320 }}>
+      <CFormInput
+        size="sm"
+        placeholder="Search students to add…"
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <div style={{
+          position: 'absolute', zIndex: 100, top: '100%', left: 0, right: 0,
+          background: 'var(--cui-body-bg, #fff)',
+          border: '1px solid var(--cui-border-color, #dee2e6)',
+          borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,.1)',
+          maxHeight: 260, overflowY: 'auto',
+        }}>
+          {filtered.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className="d-flex align-items-center gap-2 px-3 py-2 w-100 text-start border-0 bg-transparent"
+              style={{ fontSize: 14, cursor: adding ? 'not-allowed' : 'pointer' }}
+              disabled={adding}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onAdd(s); setQuery(''); setOpen(false) }}
+            >
+              <span
+                style={{
+                  width: 28, height: 28, borderRadius: '50%', background: '#e2e8f0',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700, flexShrink: 0,
+                }}
+              >
+                {s.full_name.charAt(0).toUpperCase()}
+              </span>
+              <span>{s.full_name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ParticipantsTab({ eventId, registrationsMap, loadRegistrations, addRegistrations, mutating }) {
   useEffect(() => { if (eventId) loadRegistrations(eventId) }, [eventId])
   const rows = registrationsMap[eventId] || []
+  const existingIds = new Set(rows.map((r) => r.student_id))
+
+  const handleAdd = async (student) => {
+    await addRegistrations(eventId, [student.id], 'REGISTERED')
+    loadRegistrations(eventId)
+  }
 
   return (
     <div>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <span className="small text-body-secondary">{rows.length} participant{rows.length !== 1 ? 's' : ''}</span>
+        <StudentSearchPicker onAdd={handleAdd} adding={mutating} existingIds={existingIds} />
+      </div>
       {!rows.length ? (
-        <p className="text-body-secondary">No participants yet.</p>
+        <p className="text-body-secondary">No participants yet. Search above to add students.</p>
       ) : (
         <CTable hover responsive>
           <CTableHead>
             <CTableRow>
               <CTableHeaderCell>Student</CTableHeaderCell>
               <CTableHeaderCell>Status</CTableHeaderCell>
-              <CTableHeaderCell>Source</CTableHeaderCell>
               <CTableHeaderCell>RSVP</CTableHeaderCell>
+              <CTableHeaderCell>Source</CTableHeaderCell>
               <CTableHeaderCell>Registered</CTableHeaderCell>
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {rows.map((r) => (
               <CTableRow key={r.id}>
-                <CTableDataCell>{r.student_name}</CTableDataCell>
-                <CTableDataCell><CBadge color="info">{r.status}</CBadge></CTableDataCell>
+                <CTableDataCell className="fw-semibold">{r.student_name}</CTableDataCell>
+                <CTableDataCell><CBadge color={r.status === 'REGISTERED' || r.status === 'ATTENDED' ? 'success' : r.status === 'WAITLISTED' ? 'warning' : 'secondary'}>{r.status}</CBadge></CTableDataCell>
+                <CTableDataCell>{r.rsvp_status ? <CBadge color="info">{r.rsvp_status}</CBadge> : <span className="text-body-secondary">—</span>}</CTableDataCell>
                 <CTableDataCell className="text-body-secondary small">{r.registration_source}</CTableDataCell>
-                <CTableDataCell>{r.rsvp_status || '—'}</CTableDataCell>
-                <CTableDataCell className="small">{formatDate(r.registered_at)}</CTableDataCell>
+                <CTableDataCell className="small text-body-secondary">{formatDate(r.registered_at)}</CTableDataCell>
               </CTableRow>
             ))}
           </CTableBody>
@@ -198,16 +278,19 @@ export default function EventDetailPage() {
   const navigate = useNavigate()
   const {
     currentEvent, currentEventLoading, currentEventError,
-    registrationsMap, resultsMap, mediaMap, timelineMap,
+    registrationsMap, resultsMap, timelineMap,
     mutating, mutateError,
     loadEvent, saveUpdateEvent, doPublish, doCancel, doComplete,
-    loadRegistrations, loadResults, loadMedia, loadTimeline, saveResults,
+    loadRegistrations, addRegistrations, loadResults, loadTimeline, saveResults,
+    resetCurrentEvent,
   } = useEvents()
 
   const [activeTab, setActiveTab] = useState('overview')
   const [showEdit, setShowEdit] = useState(false)
 
   useEffect(() => {
+    // Clear stale data from a previous detail page so we never flash the wrong event.
+    resetCurrentEvent()
     if (id) loadEvent(id)
   }, [id])
 
@@ -219,7 +302,7 @@ export default function EventDetailPage() {
     }
   }
 
-  if (currentEventLoading) return <div className="text-center py-5"><CSpinner /></div>
+  if (currentEventLoading || (!currentEvent && !currentEventError)) return <div className="text-center py-5"><CSpinner /></div>
   if (currentEventError) return <CAlert color="danger">{currentEventError.message}</CAlert>
   if (!currentEvent) return null
 
@@ -311,6 +394,8 @@ export default function EventDetailPage() {
           eventId={id}
           registrationsMap={registrationsMap}
           loadRegistrations={loadRegistrations}
+          addRegistrations={addRegistrations}
+          mutating={mutating}
         />
       )}
 
