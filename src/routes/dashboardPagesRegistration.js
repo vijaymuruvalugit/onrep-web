@@ -32,11 +32,17 @@ const ParentNotificationsPage = React.lazy(
   () => import('../features/parent/pages/ParentNotificationsPage'),
 )
 const ParentProfilePage = React.lazy(() => import('../features/parent/pages/ParentProfilePage'))
-const ParentCompetitionsPage = React.lazy(
-  () => import('../features/parent/pages/ParentCompetitionsPage'),
+const ParentEventsPage = React.lazy(
+  () => import('../features/events/pages/ParentEventsPage'),
 )
-const ParentCompetitionLeaderboardPage = React.lazy(
-  () => import('../features/parent/pages/ParentCompetitionLeaderboardPage'),
+const ParentEventDetailPage = React.lazy(
+  () => import('../features/events/pages/ParentEventDetailPage'),
+)
+const EventsListPage = React.lazy(
+  () => import('../features/events/pages/EventsListPage'),
+)
+const EventDetailPage = React.lazy(
+  () => import('../features/events/pages/EventDetailPage'),
 )
 const StudentDashboard = React.lazy(() => import('../views/dashboard/onrep/StudentDashboard'))
 const StudentSchedulePage = React.lazy(
@@ -188,11 +194,10 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/parent/payments/history', component: ParentPaymentHistoryPage },
   { path: '/parent/notifications', component: ParentNotificationsPage },
   { path: '/parent/profile', component: ParentProfilePage },
-  { path: '/parent/competitions', component: ParentCompetitionsPage },
-  {
-    path: '/parent/competitions/:competitionId/leaderboard',
-    component: ParentCompetitionLeaderboardPage,
-  },
+  { path: '/parent/events', component: ParentEventsPage },
+  { path: '/parent/events/:eventId', component: ParentEventDetailPage },
+  { path: '/coach/events', component: EventsListPage },
+  { path: '/coach/events/:eventId', component: EventDetailPage },
   { path: '/student/home', component: StudentDashboard },
   { path: '/student/schedule', component: StudentSchedulePage },
   { path: '/student/attendance', component: StudentAttendancePage },

@@ -4,7 +4,7 @@
 
 import React from 'react'
 import CIcon from '@coreui/icons-react'
-import { cilCalendar, cilChartLine, cilDollar, cilHome, cilList } from '@coreui/icons'
+import { cilCalendar, cilCalendarCheck, cilChartLine, cilDollar, cilHome, cilList } from '@coreui/icons'
 import { CNavItem } from '@coreui/react'
 
 export const parentNav = [
@@ -31,6 +31,12 @@ export const parentNav = [
     name: 'Progress',
     to: '/parent/progress',
     icon: <CIcon icon={cilChartLine} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Events',
+    to: '/parent/events',
+    icon: <CIcon icon={cilCalendarCheck} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,

@@ -18,6 +18,7 @@ import parentReducer from './features/parent/slices/parentSlice'
 import coachParentsReducer from './features/coach/slices/coachParentsSlice'
 import coachInvitesReducer from './features/onboarding/slices/coachInvitesSlice'
 import paymentsReducer from './features/payments/slices/paymentsSlice'
+import eventsReducer from './features/events/slices/eventsSlice'
 
 const store = configureStore({
   reducer: {
@@ -35,6 +36,7 @@ const store = configureStore({
     coachParents: coachParentsReducer,
     coachInvites: coachInvitesReducer,
     payments: paymentsReducer,
+    events: eventsReducer,
   },
 })
 
