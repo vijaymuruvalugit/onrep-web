@@ -194,7 +194,7 @@ function TimelineTab({ eventId, timelineMap, loadTimeline }) {
 }
 
 export default function EventDetailPage() {
-  const { id } = useParams()
+  const { eventId: id } = useParams()
   const navigate = useNavigate()
   const {
     currentEvent, currentEventLoading, currentEventError,

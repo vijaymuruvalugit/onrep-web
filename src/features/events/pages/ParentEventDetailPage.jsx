@@ -152,7 +152,7 @@ function RsvpSection({ event, registrations, onRsvp }) {
 }
 
 export default function ParentEventDetailPage() {
-  const { id } = useParams()
+  const { eventId: id } = useParams()
   const navigate = useNavigate()
   const {
     parentCurrentEvent, parentCurrentEventLoading, parentCurrentEventError,
