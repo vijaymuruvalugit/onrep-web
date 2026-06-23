@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  CButton, CCard, CCardBody, CCardHeader, CSpinner, CAlert, CBadge,
+  CButton, CCard, CCardBody, CCardHeader, CSpinner, CAlert, CBadge, CCol, CRow,
   CTable, CTableHead, CTableRow, CTableHeaderCell, CTableBody, CTableDataCell,
   CNav, CNavItem, CNavLink,
-  CFormInput, CFormTextarea, CRow, CCol,
+  CFormInput, CFormTextarea,
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPencil, cilArrowLeft, cilPlus, cilX } from '@coreui/icons'
@@ -70,11 +70,11 @@ function StudentSearchPicker({ onAdd, adding, existingIds }) {
       />
       {open && filtered.length > 0 && (
         <div style={{
-          position: 'absolute', zIndex: 100, top: '100%', left: 0, right: 0,
+          position: 'absolute', zIndex: 100, top: '100%', left: 0,
+          minWidth: '100%', width: 'max-content',
           background: 'var(--cui-body-bg, #fff)',
           border: '1px solid var(--cui-border-color, #dee2e6)',
           borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,.1)',
-          maxHeight: 260, overflowY: 'auto',
         }}>
           {filtered.map((s) => (
             <button
@@ -355,6 +355,7 @@ export default function EventDetailPage() {
       {activeTab === 'overview' && (
         <div>
           {ev.revenue_metrics && <RevenueCard metrics={ev.revenue_metrics} />}
+
           <CCard>
             <CCardBody>
               <CRow>
@@ -376,6 +377,22 @@ export default function EventDetailPage() {
                       {ev.capacity ? ` · Capacity: ${ev.capacity}` : ''}
                       {ev.waitlist_enabled ? ' · Waitlist on' : ''}
                     </dd>
+                    {(ev.registration_open_date || ev.registration_close_date) && (
+                      <>
+                        <dt className="small text-body-secondary">Registration Window</dt>
+                        <dd>
+                          {ev.registration_open_date ? formatDate(ev.registration_open_date) : '—'}
+                          {' → '}
+                          {ev.registration_close_date ? formatDate(ev.registration_close_date) : 'Open'}
+                        </dd>
+                      </>
+                    )}
+                    {ev.rsvp_deadline && (
+                      <>
+                        <dt className="small text-body-secondary">RSVP Deadline</dt>
+                        <dd>{formatDate(ev.rsvp_deadline)}</dd>
+                      </>
+                    )}
                     <dt className="small text-body-secondary">Scope / Audience</dt>
                     <dd>{ev.scope} · {ev.target_audience}</dd>
                     <dt className="small text-body-secondary">Visibility</dt>

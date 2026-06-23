@@ -205,7 +205,7 @@ export default function ParentEventDetailPage() {
       <FamilyRegisterSection
         event={ev}
         registrations={ev.children_registrations}
-        onRegister={(regs) => doFamilyRegister(id, regs)}
+        onRegister={async (regs) => { await doFamilyRegister(id, regs); loadParentEvent(id) }}
         loading={familyRegisterLoading}
         result={familyRegisterResult}
         error={familyRegisterError}
@@ -214,7 +214,7 @@ export default function ParentEventDetailPage() {
       <RsvpSection
         event={ev}
         registrations={ev.children_registrations}
-        onRsvp={(studentId, rsvpStatus) => doRsvp(id, studentId, rsvpStatus)}
+        onRsvp={async (studentId, rsvpStatus) => { await doRsvp(id, studentId, rsvpStatus); loadParentEvent(id) }}
       />
 
       {timeline.length > 0 && (
