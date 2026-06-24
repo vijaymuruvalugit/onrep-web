@@ -36,6 +36,7 @@ export default function EventFormModal({ visible, event, submitting, error, onCl
     visibility: 'ACADEMY',
     target_audience: 'ALL_MEMBERS',
     registration_required: true,
+    rsvp_enabled: true,
     registration_open_date: '',
     registration_close_date: '',
     capacity: '',
@@ -57,6 +58,7 @@ export default function EventFormModal({ visible, event, submitting, error, onCl
         visibility: event.visibility || 'ACADEMY',
         target_audience: event.target_audience || 'ALL_MEMBERS',
         registration_required: event.registration_required !== false,
+        rsvp_enabled: event.rsvp_enabled !== false,
         registration_open_date: toDatetimeLocal(event.registration_open_date),
         registration_close_date: toDatetimeLocal(event.registration_close_date),
         capacity: event.capacity || '',
@@ -184,6 +186,15 @@ export default function EventFormModal({ visible, event, submitting, error, onCl
                 </CRow>
               </>
             )}
+          </div>
+
+          <div className="mb-3">
+            <CFormSwitch
+              label="Allow parents to RSVP"
+              checked={form.rsvp_enabled}
+              onChange={setCheck('rsvp_enabled')}
+            />
+            <div className="text-body-secondary small mt-1">When off, parents can register but won't see Yes / No / Maybe options.</div>
           </div>
 
           <CRow className="mb-1">

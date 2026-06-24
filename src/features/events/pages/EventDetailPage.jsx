@@ -280,7 +280,7 @@ export default function EventDetailPage() {
     currentEvent, currentEventLoading, currentEventError,
     registrationsMap, resultsMap, timelineMap,
     mutating, mutateError,
-    loadEvent, saveUpdateEvent, doPublish, doCancel, doComplete,
+    loadEvent, saveUpdateEvent, doPublish, doCancel,
     loadRegistrations, addRegistrations, loadResults, loadTimeline, saveResults,
     resetCurrentEvent,
   } = useEvents()
@@ -328,9 +328,7 @@ export default function EventDetailPage() {
           {ev.status === 'DRAFT' && (
             <CButton size="sm" color="success" onClick={() => doPublish(id)}>Publish</CButton>
           )}
-          {ev.status === 'PUBLISHED' && (
-            <CButton size="sm" color="info" onClick={() => doComplete(id)}>Mark Complete</CButton>
-          )}
+
           {['DRAFT', 'PUBLISHED'].includes(ev.status) && (
             <CButton size="sm" color="danger" variant="outline" onClick={() => doCancel(id)}>Cancel Event</CButton>
           )}
