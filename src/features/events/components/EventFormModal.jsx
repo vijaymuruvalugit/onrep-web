@@ -86,12 +86,12 @@ export default function EventFormModal({ visible, event, submitting, error, onCl
   }
 
   return (
-    <CModal visible={visible} onClose={onClose} size="lg" backdrop="static" alignment="center" scrollable>
+    <CModal visible={visible} onClose={onClose} size="lg" backdrop="static" scrollable>
       <CModalHeader>
         <CModalTitle>{isEdit ? 'Edit Event' : 'New Event'}</CModalTitle>
       </CModalHeader>
       <CForm onSubmit={handleSubmit}>
-        <CModalBody>
+        <CModalBody style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {error ? <CAlert color="danger" className="py-2">{error.message || 'Something went wrong'}</CAlert> : null}
 
           <div className="mb-3">
