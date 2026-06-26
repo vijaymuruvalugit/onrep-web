@@ -76,6 +76,9 @@ const PlaceDetailPage = React.lazy(() => import('../features/places/pages/PlaceD
 const PlaceEditPage = React.lazy(() => import('../features/places/pages/PlaceEditPage'))
 const ParentsOverviewPage = React.lazy(() => import('../features/coach/pages/ParentsOverviewPage'))
 const CoachInvitesPage = React.lazy(() => import('../features/onboarding/pages/CoachInvitesPage'))
+const AccountSettingsPage = React.lazy(
+  () => import('../features/auth/pages/AccountSettingsPage'),
+)
 const OnboardingSetupPage = React.lazy(
   () => import('../features/onboarding/pages/OnboardingSetupPage'),
 )
@@ -183,6 +186,7 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   },
   { path: '/super-admin/audit-logs', component: withSuperAdminGuard(SuperAdminAuditLogsPage) },
   { path: '/coach/onboarding/coaches', component: CoachInvitesPage },
+  { path: '/coach/account', component: AccountSettingsPage },
   { path: '/onboarding/setup', component: OnboardingSetupPage },
   { path: '/onboarding/complete', component: OnboardingCompletePage },
   { path: '/parent/home', component: ParentHomePage },

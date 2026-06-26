@@ -50,6 +50,7 @@ export const ONREP_ROUTE_DEFS = [
   { path: '/super-admin/audit-logs', name: 'Audit logs', exact: true },
   { path: '/coach/activities', name: 'Academy activities', exact: true },
   { path: '/coach/onboarding/coaches', name: 'Coaches', exact: true },
+  { path: '/coach/account', name: 'Account Settings', exact: true },
   { path: '/onboarding/setup', name: 'Payment setup', exact: true },
   { path: '/onboarding/complete', name: 'Setup complete', exact: true },
 

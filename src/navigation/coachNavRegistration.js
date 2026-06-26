@@ -11,6 +11,7 @@ import {
   cilMediaPlay,
   cilPeople,
   cilPuzzle,
+  cilSettings,
   cilSpeedometer,
   cilUser,
 } from '@coreui/icons'
@@ -29,4 +30,5 @@ export const COACH_NAV_REGISTRATION = Object.freeze([
   { name: 'Events', to: '/coach/events', icon: cilCalendarCheck },
   { name: 'Communications', to: '/coach/communications', icon: cilChatBubble },
   { name: 'Payments', to: '/coach/payments', icon: cilDollar },
+  { name: 'Account', to: '/coach/account', icon: cilSettings },
 ])
