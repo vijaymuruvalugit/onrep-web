@@ -59,6 +59,9 @@ export const authApi = {
   switchPerspective(activeRole) {
     return http.post(AUTH_ENDPOINTS.switchPerspective, { activeRole })
   },
+  setupOwnerRoles(choice) {
+    return http.post('/auth/setup-owner-roles', { choice })
+  },
 }
 
 export default authApi
