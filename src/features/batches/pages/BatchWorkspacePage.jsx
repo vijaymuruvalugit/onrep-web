@@ -98,6 +98,7 @@ const BatchWorkspacePage = () => {
     fetchBatchById,
     fetchBatchSchedules,
     saveBatchSettings,
+    clearErrors,
   } = useBatches()
 
   const [opBoardRows, setOpBoardRows] = useState([])
@@ -122,9 +123,10 @@ const BatchWorkspacePage = () => {
 
   useEffect(() => {
     if (!batchId) return
+    clearErrors()
     fetchBatchById(batchId)
     fetchBatchSchedules(batchId)
-  }, [batchId, activeActivityId, fetchBatchById, fetchBatchSchedules])
+  }, [batchId, activeActivityId, fetchBatchById, fetchBatchSchedules, clearErrors])
 
   const reloadOpBoard = useCallback(async () => {
     if (!batchId || batchWorkspaceMismatch) return
@@ -231,7 +233,14 @@ const BatchWorkspacePage = () => {
     placesApi
       .listPlaces({ status: 'active' })
       .then((data) => {
-        if (!cancelled) setPlaces(Array.isArray(data?.places) ? data.places : [])
+        if (cancelled) return
+        const list = Array.isArray(data?.places) ? data.places : []
+        setPlaces(list)
+        setDefaultPlaceId((prev) => {
+          if (!prev) return prev
+          const stillValid = list.some((p) => String(p.id) === prev)
+          return stillValid ? prev : ''
+        })
       })
       .catch(() => {
         if (!cancelled) setPlaces([])
