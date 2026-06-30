@@ -498,7 +498,7 @@ const BatchesListPage = () => {
       setAddOpen(false)
       const id = batch?.id || batch?._id
       if (id) {
-        navigate(`/coach/batches/${encodeURIComponent(id)}`)
+        navigate(`/coach/batches/${encodeURIComponent(id)}?tab=settings`)
       }
     } catch {
       // mutationError set in slice

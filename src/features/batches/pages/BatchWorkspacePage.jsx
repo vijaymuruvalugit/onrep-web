@@ -551,7 +551,18 @@ const BatchWorkspacePage = () => {
       {classesError && classesError.code !== WORKSPACE_REQUIRED ? (
         <CAlert color="danger">{classesError.message}</CAlert>
       ) : null}
-      {mutationError ? <CAlert color="danger">{mutationError.message}</CAlert> : null}
+      {mutationError ? (
+        /coach/i.test(mutationError.message) ? (
+          <CAlert color="warning" className="d-flex justify-content-between align-items-center">
+            <span>Could not assign coach — the selected user may not have a coach role in this academy.</span>
+            <CButton size="sm" color="warning" variant="outline" onClick={() => setActiveTab('settings')}>
+              Assign coach
+            </CButton>
+          </CAlert>
+        ) : (
+          <CAlert color="danger">{mutationError.message}</CAlert>
+        )
+      ) : null}
 
       <CTabContent>
         <CTabPane visible={activeTab === 'schedule'}>
