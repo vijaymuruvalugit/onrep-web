@@ -160,6 +160,11 @@ export const batchesApi = {
     return data || {}
   },
 
+  async deleteBatch(batchId) {
+    const { data } = await http.delete(`/batches/${encodeURIComponent(batchId)}`)
+    return data || {}
+  },
+
   async replaceBatchStudents(batchId, studentIds) {
     const { data } = await http.put(`/batches/${encodeURIComponent(batchId)}/students`, {
       studentIds,

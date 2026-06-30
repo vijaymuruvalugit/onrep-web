@@ -4,6 +4,7 @@ import {
   assignBatchStudents,
   clearBatchErrors,
   createBatch,
+  deleteBatch,
   fetchBatchById,
   fetchBatches,
   fetchBatchSchedules,
@@ -25,6 +26,7 @@ export function useBatches() {
       assignBatchStudents: (batchId, studentIds) =>
         dispatch(assignBatchStudents({ batchId, studentIds })),
       createBatch: (payload) => dispatch(createBatch(payload)),
+      deleteBatch: (batchId) => dispatch(deleteBatch(batchId)),
       clearErrors: () => dispatch(clearBatchErrors()),
     }),
     [dispatch],

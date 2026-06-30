@@ -95,6 +95,15 @@ export const saveBatchSettings = createAsyncThunk(
   },
 )
 
+export const deleteBatch = createAsyncThunk('batches/deleteBatch', async (batchId, thunkApi) => {
+  try {
+    await batchesApi.deleteBatch(batchId)
+    return batchId
+  } catch (error) {
+    return thunkApi.rejectWithValue(normalizeApiError(error))
+  }
+})
+
 export const assignBatchStudents = createAsyncThunk(
   'batches/assignBatchStudents',
   async ({ batchId, studentIds }, thunkApi) => {
@@ -223,6 +232,18 @@ const batchesSlice = createSlice({
       .addCase(createBatch.rejected, (state, action) => {
         state.mutationLoading = false
         state.mutationError = action.payload || { message: 'Unable to create batch.' }
+      })
+      .addCase(deleteBatch.pending, (state) => {
+        state.mutationLoading = true
+        state.mutationError = null
+      })
+      .addCase(deleteBatch.fulfilled, (state, action) => {
+        state.mutationLoading = false
+        state.items = state.items.filter((b) => String(b.id || b._id) !== String(action.payload))
+      })
+      .addCase(deleteBatch.rejected, (state, action) => {
+        state.mutationLoading = false
+        state.mutationError = action.payload || { message: 'Unable to delete batch.' }
       })
   },
 })

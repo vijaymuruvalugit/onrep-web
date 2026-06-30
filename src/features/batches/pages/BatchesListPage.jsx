@@ -127,7 +127,7 @@ function stopCardNavigate(e) {
   e.stopPropagation()
 }
 
-function BatchTileCard({ m }) {
+function BatchTileCard({ m, onDelete }) {
   const navigate = useNavigate()
   const d = m.nextSessionDisplay
   const openBatch = () => navigate(`${m.base}?tab=schedule`)
@@ -227,12 +227,23 @@ function BatchTileCard({ m }) {
             )}
           </div>
         </div>
+
+        <div className="mt-3 pt-2 border-top d-flex justify-content-end" onClick={stopCardNavigate}>
+          <CButton
+            size="sm"
+            color="danger"
+            variant="ghost"
+            onClick={() => onDelete(m.id, m.batchNameOnly)}
+          >
+            Delete
+          </CButton>
+        </div>
       </CCardBody>
     </CCard>
   )
 }
 
-function BatchListRow({ m }) {
+function BatchListRow({ m, onDelete }) {
   const d = m.nextSessionDisplay
   const attention =
     m.isInactive || m.emptyBatch || m.needSchedule || m.needCoach || m.needsAttention
@@ -330,6 +341,15 @@ function BatchListRow({ m }) {
           <Link to={m.scheduleHref} className="small text-primary text-decoration-none">
             Schedule
           </Link>
+          <CButton
+            size="sm"
+            color="danger"
+            variant="ghost"
+            className="p-0 small"
+            onClick={() => onDelete(m.id, m.batchNameOnly)}
+          >
+            Delete
+          </CButton>
         </div>
       </div>
     </div>
@@ -356,10 +376,12 @@ const BatchesListPage = () => {
     mutationError,
     fetchBatches,
     createBatch,
+    deleteBatch,
     clearErrors,
   } = useBatches()
 
   const [addOpen, setAddOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null) // { id, name }
   const [newName, setNewName] = useState('')
   const [feeInr, setFeeInr] = useState('')
   const [subActivitiesRows, setSubActivitiesRows] = useState([])
@@ -483,6 +505,16 @@ const BatchesListPage = () => {
     }
   }
 
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    try {
+      await deleteBatch(deleteTarget.id).unwrap()
+      setDeleteTarget(null)
+    } catch {
+      // mutationError set in slice
+    }
+  }
+
   return (
     <CCard className="onrep-batches-shell border-0 shadow-none bg-transparent">
       <CCardHeader className="onrep-batches-toolbar border-0 pb-0 px-0 pt-1 bg-transparent">
@@ -585,7 +617,7 @@ const BatchesListPage = () => {
             <CRow className="g-4 onrep-batch-grid">
               {rowModels.map((m) => (
                 <CCol key={m.id} xs={12} md={6} xl={4}>
-                  <BatchTileCard m={m} />
+                  <BatchTileCard m={m} onDelete={(id, name) => setDeleteTarget({ id, name })} />
                 </CCol>
               ))}
             </CRow>
@@ -601,7 +633,7 @@ const BatchesListPage = () => {
               </div>
               <div className="onrep-batch-list-body">
                 {rowModels.map((m) => (
-                  <BatchListRow key={m.id} m={m} />
+                  <BatchListRow key={m.id} m={m} onDelete={(id, name) => setDeleteTarget({ id, name })} />
                 ))}
               </div>
             </div>
@@ -712,6 +744,34 @@ const BatchesListPage = () => {
             ) : (
               'Create batch'
             )}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      <CModal
+        visible={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        alignment="center"
+      >
+        <CModalHeader>
+          <CModalTitle>Delete batch</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {mutationError ? (
+            <CAlert color="danger" className="mb-3">
+              {mutationError.message}
+            </CAlert>
+          ) : null}
+          <p>
+            Delete <strong>{deleteTarget?.name}</strong>? This will remove the batch, its coach assignments, and student enrolments. Sessions and payments are not affected.
+          </p>
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" variant="outline" onClick={() => setDeleteTarget(null)}>
+            Cancel
+          </CButton>
+          <CButton color="danger" disabled={mutationLoading} onClick={handleDeleteConfirm}>
+            {mutationLoading ? <><CSpinner size="sm" className="me-2" />Deleting…</> : 'Delete batch'}
           </CButton>
         </CModalFooter>
       </CModal>
