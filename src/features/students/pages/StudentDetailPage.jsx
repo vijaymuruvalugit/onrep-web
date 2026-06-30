@@ -14,6 +14,7 @@ import {
 import { useStudents } from '../hooks/useStudents'
 import StudentStatusBadge from '../components/StudentStatusBadge'
 import StudentParentsCard from '../components/StudentParentsCard'
+import StudentLoginCard from '../components/StudentLoginCard'
 import StudentSkatingSnapshotCard from '../../skating/components/StudentSkatingSnapshotCard'
 import { getStudentActivity, getStudentBatch, getStudentDisplayName } from '../utils/studentMappers'
 import { sanitizeStudentNotesForDisplay } from '../../batches/utils/batchDisplayUtils'
@@ -155,6 +156,7 @@ const StudentDetailPage = () => {
         </CCol>
         <CCol lg={6}>
           <StudentParentsCard studentId={studentId} studentName={name} />
+          <StudentLoginCard studentId={studentId} studentName={name} />
         </CCol>
         <CCol lg={6}>
           <CCard>
