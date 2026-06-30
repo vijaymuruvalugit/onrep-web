@@ -559,6 +559,15 @@ const BatchWorkspacePage = () => {
               Assign coach
             </CButton>
           </CAlert>
+        ) : /place/i.test(mutationError.message) ? (
+          <CAlert color="warning" className="d-flex justify-content-between align-items-center">
+            <span>No venues set up yet — add a place first, then set it as the batch default.</span>
+            <Link to="/coach/places/new">
+              <CButton size="sm" color="warning" variant="outline">
+                Add a place
+              </CButton>
+            </Link>
+          </CAlert>
         ) : (
           <CAlert color="danger">{mutationError.message}</CAlert>
         )
@@ -702,6 +711,13 @@ const BatchWorkspacePage = () => {
                       <div className="py-2">
                         <CSpinner size="sm" />
                       </div>
+                    ) : places.length === 0 ? (
+                      <div className="d-flex align-items-center gap-3 py-1">
+                        <span className="small text-body-secondary">No venues added yet.</span>
+                        <Link to="/coach/places/new" className="small text-primary text-decoration-none fw-semibold">
+                          + Add a place
+                        </Link>
+                      </div>
                     ) : (
                       <>
                         <CFormSelect
@@ -718,8 +734,7 @@ const BatchWorkspacePage = () => {
                           ))}
                         </CFormSelect>
                         <div className="small text-body-secondary mt-1">
-                          Used when no venue is set on a schedule row or session. Manage venues
-                          under Places.
+                          Used when no venue is set on a schedule row or session.
                         </div>
                       </>
                     )}
