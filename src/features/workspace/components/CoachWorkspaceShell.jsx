@@ -37,18 +37,20 @@ export default function CoachWorkspaceShell({ children }) {
   }
 
   const path = location.pathname
+  // Block rendering until bootstrap is done so API calls never fire with a null activityId.
+  if (status === 'loading') return null
+
   const needsGate =
     coachPathRequiresWorkspace(path) &&
     !onboardingPathExemptFromWorkspace(path) &&
     bootstrapComplete &&
     status === 'succeeded'
 
+  // Only ask the user to pick when there are genuinely multiple activities and none is selected.
   const mustPickWorkspace =
     needsGate &&
     !workspaceFault &&
-    (activities.length === 0 ||
-      (activities.length > 1 && !activeActivityId) ||
-      (activities.length === 1 && !activeActivityId))
+    (activities.length === 0 || (activities.length > 1 && !activeActivityId))
 
   return (
     <>
