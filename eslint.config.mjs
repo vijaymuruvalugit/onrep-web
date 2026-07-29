@@ -38,7 +38,7 @@ export default [
         {
           paths: [
             {
-              name: '@ezyplay/activityTypes',
+              name: '@onrep/activityTypes',
               message: 'Use @onrep/contracts for the activity registry.',
             },
           ],

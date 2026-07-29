@@ -22,7 +22,7 @@ CoreUI is meant to be the UX game changer. Pure & transparent code is devoid of 
 
 ## OnRep (this fork)
 
-Coach/owner web app for **Ezyplay** — batches, schedule, attendance, skating ops. API: **ezyplay-backend** (`/api/v1`).
+Coach/owner web app for **Onrep** — batches, schedule, attendance, skating ops. API: **onrep-backend** (`/api/v1`).
 
 | Doc | Purpose |
 |-----|---------|

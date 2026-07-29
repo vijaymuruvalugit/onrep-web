@@ -1,7 +1,7 @@
 import http from '../../../api/http'
 
 /**
- * Academy onboarding — matches `ezyplay-backend/src/routes/onboarding.js`.
+ * Academy onboarding — matches `onrep-backend/src/routes/onboarding.js`.
  */
 export const onboardingApi = {
   async getStatus() {

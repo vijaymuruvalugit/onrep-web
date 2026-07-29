@@ -2,7 +2,7 @@
 
 Shared vocabulary for coach/instructor operational surfaces (Batch Operations, attendance lists, timelines). Activity-specific terms (skating, music, yoga) stay in **activity modules** or localized copy — not in generic API or shared component names.
 
-**AI / onboarding context pack:** [../CONTEXT/README.md](../CONTEXT/README.md) (batches, schedule, start-session flow). **Backend API:** `ezyplay-backend/CONTEXT/12-operational-sessions-and-batches.md`.
+**AI / onboarding context pack:** [../CONTEXT/README.md](../CONTEXT/README.md) (batches, schedule, start-session flow). **Backend API:** `onrep-backend/CONTEXT/12-operational-sessions-and-batches.md`.
 
 ## Core primitives
 

@@ -7,7 +7,7 @@ Use these files when working in **onrep-admin** (coach/owner web app; deployed f
 | [01-project-overview.md](01-project-overview.md) | Stack, repo layout, API client, workspace header |
 | [02-batches-schedule-ops.md](02-batches-schedule-ops.md) | Batches list, Batch Workspace, operational sessions client, start/attendance flow |
 
-**Related backend context** (sibling repo / monorepo): **`ezyplay-backend/CONTEXT/`**, especially [12-operational-sessions-and-batches.md](../../ezyplay-backend/CONTEXT/12-operational-sessions-and-batches.md).
+**Related backend context** (sibling repo / monorepo): **`onrep-backend/CONTEXT/`**, especially [12-operational-sessions-and-batches.md](../../onrep-backend/CONTEXT/12-operational-sessions-and-batches.md).
 
 **Product vocabulary (shared surfaces):** [docs/platform-primitives.md](../docs/platform-primitives.md)
 

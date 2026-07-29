@@ -1,4 +1,4 @@
-/** Mirrors backend / ezyplay-frontend onboarding step enums for client checks. */
+/** Mirrors backend / onrep-frontend onboarding step enums for client checks. */
 
 export const OnboardingStep = {
   PAYMENT_MODULE: 'PAYMENT_MODULE',

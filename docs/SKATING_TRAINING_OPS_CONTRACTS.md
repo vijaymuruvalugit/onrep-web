@@ -2,7 +2,7 @@
 
 This document lists the **unchanged** REST surface used by **Skating Ops** (`onrep-admin` coach live session UI). UX refactors must keep these paths and payload shapes unless a deliberate backend change is shipped separately.
 
-**Backend reference (mount, bundle fields, rapid-observation persistence):** in the same monorepo, see `ezyplay-backend/CONTEXT/11-skating-training-ops-api.md`, `ezyplay-backend/docs/openapi.yaml`, and the canonical operational-session routes under `/api/v1/operational-sessions`.
+**Backend reference (mount, bundle fields, rapid-observation persistence):** in the same monorepo, see `onrep-backend/CONTEXT/11-skating-training-ops-api.md`, `onrep-backend/docs/openapi.yaml`, and the canonical operational-session routes under `/api/v1/operational-sessions`.
 
 ## Endpoints
 
@@ -28,7 +28,7 @@ This document lists the **unchanged** REST surface used by **Skating Ops** (`onr
 
 ## Skating intelligence (governance + longitudinal state)
 
-Mounted on the same **`/api/v1/skating`** coach router (requires `x-activity-id`). See `ezyplay-backend/src/modules/skating/skatingIntelligence.routes.js`.
+Mounted on the same **`/api/v1/skating`** coach router (requires `x-activity-id`). See `onrep-backend/src/modules/skating/skatingIntelligence.routes.js`.
 
 | Method | Path | Purpose |
 |--------|------|---------|

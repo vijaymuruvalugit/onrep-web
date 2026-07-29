@@ -1,6 +1,6 @@
 /**
- * Role-based navigation for OnRep admin (structure from ezyplay-frontend).
- * Roles match src/core/auth/roles in ezyplay: academy_owner, coach, admin, parent, student.
+ * Role-based navigation for OnRep admin (structure from onrep-frontend).
+ * Roles match src/core/auth/roles in onrep: academy_owner, coach, admin, parent, student.
  */
 
 import { coachNav } from './coachNav'

@@ -1,6 +1,6 @@
 # Batches list, Batch Workspace, and operational timelines
 
-Coach flows for **groups (batches)**, **recurring patterns**, and **near-term session instances**. Backend contract: **ezyplay-backend** [12-operational-sessions-and-batches.md](../../ezyplay-backend/CONTEXT/12-operational-sessions-and-batches.md).
+Coach flows for **groups (batches)**, **recurring patterns**, and **near-term session instances**. Backend contract: **onrep-backend** [12-operational-sessions-and-batches.md](../../onrep-backend/CONTEXT/12-operational-sessions-and-batches.md).
 
 ---
 

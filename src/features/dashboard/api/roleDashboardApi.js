@@ -1,7 +1,7 @@
 import http from '../../../api/http'
 
 /**
- * Role-aware dashboard APIs (`ezyplay-backend/src/routes/dashboard.js`).
+ * Role-aware dashboard APIs (`onrep-backend/src/routes/dashboard.js`).
  * Distinct from {@link ../payments/api/dashboardApi} which wraps legacy `/dashboard/summary` (payment KPIs only).
  */
 const roleDashboardApi = {

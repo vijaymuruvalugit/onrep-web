@@ -1,5 +1,5 @@
 /**
- * Frontend mirror of `ezyplay-backend/src/services/checkoutReadiness.js`
+ * Frontend mirror of `onrep-backend/src/services/checkoutReadiness.js`
  * `CHECKOUT_READINESS_REASONS`.
  *
  * Keep this file in sync with the backend constants. The UI switches on the

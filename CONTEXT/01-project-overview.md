@@ -2,7 +2,7 @@
 
 ## What this repo is
 
-**onrep-admin** — React (Vite) coach/owner **web** app built on CoreUI. It is the primary **management and operational** surface for academies (batches, schedule, attendance, students, skating ops, payments). Mobile execution stays in **ezyplay-frontend**; this app calls **ezyplay-backend** at `/api/v1`.
+**onrep-admin** — React (Vite) coach/owner **web** app built on CoreUI. It is the primary **management and operational** surface for academies (batches, schedule, attendance, students, skating ops, payments). Mobile execution stays in **onrep-frontend**; this app calls **onrep-backend** at `/api/v1`.
 
 Git remote is often named **onrep-web**; package name **`@onrep/onrep-admin`**.
 
@@ -60,10 +60,10 @@ onrep-admin/
 
 ## Environment
 
-See root **`README.md`** / Vite env for API URL. Local dev typically proxies or points `VITE_*` API base at **ezyplay-backend**.
+See root **`README.md`** / Vite env for API URL. Local dev typically proxies or points `VITE_*` API base at **onrep-backend**.
 
 ## When to update this pack
 
 - New shared operational primitives or copy rules → `docs/platform-primitives.md` + this pack if behavior changes.
 - Batches / schedule / operational session UX → [02-batches-schedule-ops.md](02-batches-schedule-ops.md).
-- Backend API contract changes → mirror updates in **ezyplay-backend/CONTEXT/**.
+- Backend API contract changes → mirror updates in **onrep-backend/CONTEXT/**.

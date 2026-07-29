@@ -1,5 +1,5 @@
 /**
- * Aligned with ezyplay-backend/src/domain/sessionRuns/activityRunDefinitions.js
+ * Aligned with onrep-backend/src/domain/sessionRuns/activityRunDefinitions.js
  * Keep type keys and payloadVersion in sync (see activityRunDefinitions.sync.test.js).
  */
 

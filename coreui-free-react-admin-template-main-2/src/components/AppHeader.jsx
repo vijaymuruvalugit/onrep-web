@@ -1,5 +1,5 @@
 /**
- * AppHeader — CoreUI header + theme + demo role switcher (mirrors ezyplay roles).
+ * AppHeader — CoreUI header + theme + demo role switcher (mirrors onrep roles).
  */
 
 import React, { useEffect, useRef } from 'react'

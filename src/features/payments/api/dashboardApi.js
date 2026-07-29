@@ -2,7 +2,7 @@ import http from '../../../api/http'
 
 /**
  * Coach dashboard summary — `GET /api/v1/dashboard/summary`
- * (`ezyplay-backend/src/routes/dashboard.js`).
+ * (`onrep-backend/src/routes/dashboard.js`).
  *
  * Includes payment KPIs plus optional `paymentOps`:
  * `onlinePaidTodayInr`, `manualRecordedTodayInr`, `activePayLinksCount`,

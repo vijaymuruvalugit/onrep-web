@@ -21,7 +21,7 @@ export const authApi = {
   login(payload) {
     return http.post(AUTH_ENDPOINTS.login, payload)
   },
-  /** Canonical academy + owner creation — matches `ezyplay-backend` POST /auth/signup. */
+  /** Canonical academy + owner creation — matches `onrep-backend` POST /auth/signup. */
   signup(payload) {
     return http.post(AUTH_ENDPOINTS.signup, payload)
   },

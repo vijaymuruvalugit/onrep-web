@@ -1,6 +1,6 @@
 /**
  * Coach & staff navigation (roles: coach, admin).
- * Mirrors ezyplay: CoachTabs (Dashboard, Students, Payments, Skating) + CoachHomeStack + CoachAcademyMenuSheet.
+ * Mirrors onrep: CoachTabs (Dashboard, Students, Payments, Skating) + CoachHomeStack + CoachAcademyMenuSheet.
  */
 
 import React from 'react'

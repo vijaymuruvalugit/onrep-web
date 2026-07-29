@@ -1,5 +1,5 @@
 /**
- * AppSidebar — CoreUI sidebar; items come from role-based navigation config (ezyplay structure).
+ * AppSidebar — CoreUI sidebar; items come from role-based navigation config (onrep structure).
  */
 
 import React, { useMemo } from 'react'

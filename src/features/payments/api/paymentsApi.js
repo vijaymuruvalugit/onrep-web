@@ -1,10 +1,10 @@
 import http from '../../../api/http'
 
 /**
- * Mirrors `ezyplay-frontend` `manualPaymentService` against the existing
+ * Mirrors `onrep-frontend` `manualPaymentService` against the existing
  * `/payments/*` REST surface. No new endpoints are introduced — all paths,
  * payloads, and response shapes match the React Native client and the
- * routes registered in `ezyplay-backend/src/routes/payments.js`.
+ * routes registered in `onrep-backend/src/routes/payments.js`.
  */
 export const paymentsApi = {
   async getObligations({ studentId } = {}) {

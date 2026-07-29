@@ -1,5 +1,5 @@
 /**
- * Mirror of ezyplay-backend normalizeProgressionPayload (keep in sync).
+ * Mirror of onrep-backend normalizeProgressionPayload (keep in sync).
  */
 
 /** @param {unknown} value */

@@ -1,5 +1,5 @@
 /**
- * Canonical paths and breadcrumb names for OnRep (aligned with ezyplay-frontend flows).
+ * Canonical paths and breadcrumb names for OnRep (aligned with onrep-frontend flows).
  * Kept separate from routes.jsx to avoid circular imports with PlaceholderPage.
  */
 

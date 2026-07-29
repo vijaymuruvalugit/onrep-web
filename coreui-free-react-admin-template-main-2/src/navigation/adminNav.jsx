@@ -1,6 +1,6 @@
 /**
  * Academy owner navigation (role: academy_owner).
- * Everything in coachNav plus owner-only items from ezyplay CoachAcademyMenuSheet (fee collection).
+ * Everything in coachNav plus owner-only items from onrep CoachAcademyMenuSheet (fee collection).
  */
 
 import React from 'react'
