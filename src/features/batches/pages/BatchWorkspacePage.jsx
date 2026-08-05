@@ -245,13 +245,22 @@ const BatchWorkspacePage = () => {
   }, [selectedBatch?.id, selectedBatch?.subActivityIds?.join(','), selectedBatch?.subActivityId])
 
   useEffect(() => {
-    if (!activeActivityId || activeTab !== 'settings') return
+    const programId =
+      selectedBatch?.activityWorkspaceId ?? selectedBatch?.activity_workspace_id ?? activeActivityId
+    if (!programId || activeTab !== 'settings') return
     let cancelled = false
     setSubActivitiesLoading(true)
     academySubActivitiesApi
       .list({ activeOnly: true })
       .then((rows) => {
-        if (!cancelled) setSubActivitiesRows(Array.isArray(rows) ? rows : [])
+        if (cancelled) return
+        const list = Array.isArray(rows) ? rows : []
+        // Prefer rows for this batch's program when activityId is present on the row.
+        const forProgram = list.filter((r) => {
+          const aid = r.activityId ?? r.activity_id
+          return !aid || String(aid) === String(programId)
+        })
+        setSubActivitiesRows(forProgram.length ? forProgram : list)
       })
       .catch(() => {
         if (!cancelled) setSubActivitiesRows([])
@@ -262,7 +271,12 @@ const BatchWorkspacePage = () => {
     return () => {
       cancelled = true
     }
-  }, [activeActivityId, activeTab])
+  }, [
+    activeActivityId,
+    activeTab,
+    selectedBatch?.activityWorkspaceId,
+    selectedBatch?.activity_workspace_id,
+  ])
 
   useEffect(() => {
     if (!activeActivityId) return
@@ -481,8 +495,19 @@ const BatchWorkspacePage = () => {
 
   const handleSettingsSave = () => {
     if (!settingsFormRef.current) return
+    if (batchWorkspaceMismatch) {
+      window.alert(
+        `Switch to “${batchWorkspaceMismatch.batchActivityName}” in the header before saving this batch.`,
+      )
+      return
+    }
     const formData = new FormData(settingsFormRef.current)
     const feeRaw = String(formData.get('feeInr') ?? '').trim()
+    const name = String(formData.get('name') || '').trim()
+    if (!name) {
+      window.alert('Batch name is required.')
+      return
+    }
     const selectedIds = [...selectedSubActivityIds].map(String).filter(Boolean)
     const existingIds = Array.isArray(selectedBatch?.subActivityIds)
       ? selectedBatch.subActivityIds.map(String).filter(Boolean)
@@ -491,13 +516,17 @@ const BatchWorkspacePage = () => {
         : selectedBatch?.sub_activity_id
           ? [String(selectedBatch.sub_activity_id).trim()].filter(Boolean)
           : []
+    const subActivityIds = selectedIds.length ? selectedIds : existingIds
+    if (!subActivityIds.length) {
+      window.alert('Select at least one specialization before saving.')
+      return
+    }
     const payload = {
-      name: String(formData.get('name') || ''),
+      name,
       coachUserIds: [...selectedCoachIds],
       defaultPlaceId: defaultPlaceId ? defaultPlaceId : null,
+      subActivityIds,
     }
-    const subActivityIds = selectedIds.length ? selectedIds : existingIds
-    if (subActivityIds.length) payload.subActivityIds = subActivityIds
     if (feeRaw !== '') {
       const n = Number(feeRaw)
       if (Number.isFinite(n) && n >= 0) payload.feeInr = Math.round(n)
@@ -633,12 +662,19 @@ const BatchWorkspacePage = () => {
           </CAlert>
         ) : /place/i.test(mutationError.message) ? (
           <CAlert color="warning" className="d-flex justify-content-between align-items-center">
-            <span>No venues set up yet — add a place first, then set it as the batch default.</span>
+            <span>{mutationError.message || 'No venues set up yet — add a place first, then set it as the batch default.'}</span>
             <Link to="/coach/places/new">
               <CButton size="sm" color="warning" variant="outline">
                 Add a place
               </CButton>
             </Link>
+          </CAlert>
+        ) : /specialization|subActivity|program/i.test(mutationError.message) ? (
+          <CAlert color="danger">
+            {mutationError.message}
+            {batchWorkspaceMismatch
+              ? ` Switch to “${batchWorkspaceMismatch.batchActivityName}” in the header, then try again.`
+              : ' Make sure every specialization belongs to this batch’s program.'}
           </CAlert>
         ) : (
           <CAlert color="danger">{mutationError.message}</CAlert>
@@ -884,7 +920,11 @@ const BatchWorkspacePage = () => {
               <div className="mt-3 d-flex justify-content-end">
                 <CButton
                   color="primary"
-                  disabled={mutationLoading || selectedSubActivityIds.size === 0}
+                  disabled={
+                    mutationLoading ||
+                    selectedSubActivityIds.size === 0 ||
+                    Boolean(batchWorkspaceMismatch)
+                  }
                   onClick={handleSettingsSave}
                 >
                   {mutationLoading ? 'Saving…' : 'Save settings'}
