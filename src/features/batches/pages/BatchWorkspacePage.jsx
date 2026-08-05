@@ -483,12 +483,21 @@ const BatchWorkspacePage = () => {
     if (!settingsFormRef.current) return
     const formData = new FormData(settingsFormRef.current)
     const feeRaw = String(formData.get('feeInr') ?? '').trim()
+    const selectedIds = [...selectedSubActivityIds].map(String).filter(Boolean)
+    const existingIds = Array.isArray(selectedBatch?.subActivityIds)
+      ? selectedBatch.subActivityIds.map(String).filter(Boolean)
+      : selectedBatch?.subActivityId
+        ? [String(selectedBatch.subActivityId).trim()].filter(Boolean)
+        : selectedBatch?.sub_activity_id
+          ? [String(selectedBatch.sub_activity_id).trim()].filter(Boolean)
+          : []
     const payload = {
       name: String(formData.get('name') || ''),
       coachUserIds: [...selectedCoachIds],
       defaultPlaceId: defaultPlaceId ? defaultPlaceId : null,
-      subActivityIds: [...selectedSubActivityIds],
     }
+    const subActivityIds = selectedIds.length ? selectedIds : existingIds
+    if (subActivityIds.length) payload.subActivityIds = subActivityIds
     if (feeRaw !== '') {
       const n = Number(feeRaw)
       if (Number.isFinite(n) && n >= 0) payload.feeInr = Math.round(n)
