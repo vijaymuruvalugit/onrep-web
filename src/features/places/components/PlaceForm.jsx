@@ -68,6 +68,7 @@ const PlaceForm = ({ title, subtitle, submitLabel, initialValues, saving, error,
   const [searchQ, setSearchQ] = useState('')
   const [predictions, setPredictions] = useState([])
   const [searchLoading, setSearchLoading] = useState(false)
+  const [searchError, setSearchError] = useState('')
   const searchTimer = useRef(null)
 
   useEffect(() => {
@@ -98,14 +99,26 @@ const PlaceForm = ({ title, subtitle, submitLabel, initialValues, saving, error,
   const runAddressSearch = async (q) => {
     if (!q || q.trim().length < 2) {
       setPredictions([])
+      setSearchError('')
       return
     }
     setSearchLoading(true)
+    setSearchError('')
     try {
       const data = await placesApi.autocomplete(q.trim())
       setPredictions(data.predictions || [])
-    } catch {
+    } catch (err) {
       setPredictions([])
+      const status = err?.status
+      if (status === 500) {
+        setSearchError('Address search is unavailable (Google API key not configured on server).')
+      } else if (status === 502) {
+        setSearchError(err?.message || 'Google Places is temporarily unavailable. Try again.')
+      } else if (err?.code === 'WORKSPACE_REQUIRED') {
+        setSearchError('Choose an activity to continue.')
+      } else {
+        setSearchError(err?.message || 'Could not fetch address suggestions.')
+      }
     } finally {
       setSearchLoading(false)
     }
@@ -122,6 +135,7 @@ const PlaceForm = ({ title, subtitle, submitLabel, initialValues, saving, error,
   const applyPrediction = async (pred) => {
     const pid = pred.placeId || pred.place_id
     if (!pid) return
+    setSearchError('')
     try {
       const details = await placesApi.getPlaceDetails(pid)
       if (details?.address) setValue('address', details.address, { shouldDirty: true })
@@ -131,8 +145,16 @@ const PlaceForm = ({ title, subtitle, submitLabel, initialValues, saving, error,
       if (details?.placeId) setValue('googlePlaceId', details.placeId, { shouldDirty: true })
       setPredictions([])
       setSearchQ('')
-    } catch {
+    } catch (err) {
       setPredictions([])
+      const status = err?.status
+      if (status === 500) {
+        setSearchError('Address search is unavailable (Google API key not configured on server).')
+      } else if (status === 502) {
+        setSearchError(err?.message || 'Google Places is temporarily unavailable. Try again.')
+      } else {
+        setSearchError(err?.message || 'Could not fetch place details.')
+      }
     }
   }
 
@@ -187,6 +209,9 @@ const PlaceForm = ({ title, subtitle, submitLabel, initialValues, saving, error,
                   <CSpinner size="sm" className="position-absolute end-0 me-2 mt-1" />
                 ) : null}
               </div>
+              {searchError ? (
+                <CFormText className="text-danger">{searchError}</CFormText>
+              ) : null}
               {predictions.length ? (
                 <CListGroup className="mt-1 shadow-sm" style={{ maxHeight: 180, overflow: 'auto' }}>
                   {predictions.map((p, idx) => (

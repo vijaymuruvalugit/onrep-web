@@ -62,13 +62,22 @@ function isBatchesExempt(pathname) {
   return pathname.includes('/batches') && !pathname.includes('/batch-schedules')
 }
 
+function isPlacesLookupExempt(pathname) {
+  return (
+    pathname === '/places/autocomplete' ||
+    pathname.startsWith('/places/autocomplete?') ||
+    pathname === '/places/details' ||
+    pathname.startsWith('/places/details?')
+  )
+}
+
 /** Paths that must never send x-activity-id (bootstrap / academy-global / exempt). */
 export function requestSkipsActivityHeader(urlPath) {
   const p = normalizeApiPath(urlPath)
   if (!p) return true
   if (pathHasPrefix(p, API_CLASSIFICATION.bootstrap)) return true
   if (pathHasPrefix(p, API_CLASSIFICATION.global)) return true
-  if (isStudentsExempt(p) || isBatchesExempt(p)) return true
+  if (isStudentsExempt(p) || isBatchesExempt(p) || isPlacesLookupExempt(p)) return true
   return false
 }
 

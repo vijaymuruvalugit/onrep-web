@@ -33,4 +33,11 @@ describe('apiActivityContext', () => {
     expect(requestSkipsActivityHeader('/student-import/preview')).toBe(true)
     expect(requestRequiresActivityWorkspace('/student-import/execute')).toBe(false)
   })
+
+  it('skips activity header for Google place lookup', () => {
+    expect(requestSkipsActivityHeader('/places/autocomplete')).toBe(true)
+    expect(requestSkipsActivityHeader('/places/details')).toBe(true)
+    expect(requestRequiresActivityWorkspace('/places/autocomplete')).toBe(false)
+    expect(requestRequiresActivityWorkspace('/places/details')).toBe(false)
+  })
 })
