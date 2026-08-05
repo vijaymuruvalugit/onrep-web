@@ -98,6 +98,7 @@ const SchedulePage = () => {
   } = useSchedule()
   const [sessionsLoading, setSessionsLoading] = useState(false)
   const [sessionsError, setSessionsError] = useState(null)
+  const [sessionsEmptyHint, setSessionsEmptyHint] = useState(null)
   const [sessionRows, setSessionRows] = useState([])
   const [drawerSessionId, setDrawerSessionId] = useState(null)
   const [drawerSeedRow, setDrawerSeedRow] = useState(null)
