@@ -17,6 +17,7 @@ import {
 import { AppSidebarNav } from './AppSidebarNav'
 
 import primaryLogo from '../assets/brand/primary-logo.png'
+import brandMark from '../assets/brand/mark.png'
 
 import { getNavigationForRole } from '../navigation'
 import { isSuperAdminUser } from '../features/superAdmin/utils/superAdminAccess'
@@ -58,7 +59,7 @@ const AppSidebar = () => {
             className="sidebar-brand-full onrep-sidebar-brand-primary"
           />
           <img
-            src={primaryLogo}
+            src={brandMark}
             alt="OnRep"
             className="sidebar-brand-narrow onrep-sidebar-brand-primary onrep-sidebar-brand-primary--narrow"
           />
