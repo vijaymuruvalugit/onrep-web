@@ -12,17 +12,17 @@ import {
   CBadge,
 } from '@coreui/react'
 import { useDispatch } from 'react-redux'
-import { patchCurrentUser } from '../../auth/slices/authSlice'
-import onboardingApi from '../../onboarding/api/onboardingApi'
-import paymentsApi from '../api/paymentsApi'
-import { paymentSettingsApi } from '../api/paymentSettingsApi'
+import { patchCurrentUser } from '../../../auth/slices/authSlice'
+import onboardingApi from '../../../onboarding/api/onboardingApi'
+import paymentsApi from '../../api/paymentsApi'
+import { paymentSettingsApi } from '../../api/paymentSettingsApi'
 import {
   buildPayoutSavePayload,
   inferPayoutMethodFromServer,
   validatePayoutForm,
-} from '../utils/payoutDetailsValidation'
-import normalizeApiError from '../../../api/normalizeApiError'
-import { copyForReason } from '../constants/checkoutReadiness'
+} from '../../utils/payoutDetailsValidation'
+import normalizeApiError from '../../../../api/normalizeApiError'
+import { copyForReason } from '../../constants/checkoutReadiness'
 
 function normalizePaymentModule(raw) {
   return String(raw || 'MANUAL').toUpperCase() === 'AUTOMATED' ? 'AUTOMATED' : 'MANUAL'
