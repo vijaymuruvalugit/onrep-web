@@ -31,9 +31,11 @@ export function resolveInviteProfile(preview) {
   const inviteeEmail =
     preview?.inviteeEmail || preview?.parentEmail || preview?.inviteEmail || null
   const inviteeName = preview?.inviteeName || null
+  const inviteePhone = preview?.inviteePhone || null
   return {
     inviteeEmail: inviteeEmail ? String(inviteeEmail).trim().toLowerCase() : '',
     inviteeName: inviteeName ? String(inviteeName).trim() : '',
+    inviteePhone: inviteePhone ? String(inviteePhone).trim() : '',
   }
 }
 
@@ -248,13 +250,26 @@ const AcceptParentInvitePage = () => {
   const subtitle = isExistingAccount && preview?.studentName && preview?.academyName
     ? `You already have a parent account. Enter your password to link ${preview.studentName} at ${preview.academyName}.`
     : preview?.studentName && preview?.academyName
-      ? `Create your parent account to follow ${preview.studentName} at ${preview.academyName}.`
-      : 'Create your parent account to view schedules, attendance, and progress.'
+      ? `Follow ${preview.studentName} at ${preview.academyName}. Prefer the mobile app with phone OTP; web password is optional.`
+      : 'Prefer the OnRep mobile app with phone OTP. Web password signup is optional.'
 
   const formKey = `${profile.inviteeEmail}|${profile.inviteeName}|${isExistingAccount}`
 
   return (
     <AuthShell title="Parent invite" subtitle={subtitle} badge="PARENT INVITE">
+      <CAlert color="info" className="mb-3">
+        {profile.inviteePhone ? (
+          <>
+            Install OnRep and sign in with phone OTP using <strong>{profile.inviteePhone}</strong>. That activates
+            parent access without a password.
+          </>
+        ) : (
+          <>
+            Install OnRep and sign in with the phone number from your invite email (OTP). That is the primary way to
+            access the parent app.
+          </>
+        )}
+      </CAlert>
       {!code ? (
         <CAlert color="warning">This invite link is missing its code.</CAlert>
       ) : previewState === 'loading' ? (
@@ -266,6 +281,7 @@ const AcceptParentInvitePage = () => {
       ) : (
         <>
           {error ? <CAlert color="danger" className="mb-3">{error}</CAlert> : null}
+          <p className="small text-body-secondary mb-2">Optional — create a web password below if you need it.</p>
           <ParentInviteAcceptForm
             key={formKey}
             code={code}

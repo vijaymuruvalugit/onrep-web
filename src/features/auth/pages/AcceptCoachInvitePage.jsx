@@ -61,9 +61,13 @@ const AcceptCoachInvitePage = () => {
   return (
     <AuthShell
       title="Join your academy"
-      subtitle="Create a password to activate your coach account and sign in."
+      subtitle="Use the OnRep mobile app with your invited phone number (OTP). Set a password here only if you also need web access."
       badge="COACH INVITE"
     >
+      <CAlert color="info" className="mb-3">
+        Day-to-day coaching is on the <strong>mobile app</strong>: install OnRep → Sign in with phone → use the
+        number from your invite email. This page is optional for web/admin password access.
+      </CAlert>
       {!token ? (
         <CAlert color="warning">
           This invite link is missing its token. Ask your academy owner to resend the invite.
@@ -72,7 +76,7 @@ const AcceptCoachInvitePage = () => {
         <CForm onSubmit={handleSubmit(onSubmit)} noValidate className="onrep-auth-form">
           {error ? <CAlert color="danger">{error}</CAlert> : null}
           <div className="mb-3">
-            <CFormLabel htmlFor="invite-password">Password</CFormLabel>
+            <CFormLabel htmlFor="invite-password">Password (web access)</CFormLabel>
             <CFormInput
               id="invite-password"
               type="password"
@@ -104,7 +108,7 @@ const AcceptCoachInvitePage = () => {
             className="w-100 onrep-auth-cta"
           >
             {isSubmitting ? <CSpinner size="sm" className="me-2" /> : null}
-            Set password &amp; sign in
+            Set password &amp; continue on web
           </CButton>
         </CForm>
       )}

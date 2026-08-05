@@ -338,7 +338,7 @@ const CoachInvitesPage = () => {
                   onChange={setPhone}
                   required
                   className="mb-0"
-                  hint="The coach will use this for mobile sign in."
+                  hint="The coach signs in on the mobile app with OTP using this number. Email is for the invite only."
                 />
               </CCol>
               <CCol xs={12}>

@@ -112,7 +112,7 @@ const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }
           }}
           required
           invalid={touched && !phoneValid}
-          hint="Required — the parent will use this to sign in via OTP on the mobile app."
+          hint="Required — the parent signs in on the mobile app with OTP using this number."
         />
 
         <div className="mb-1">
