@@ -59,6 +59,7 @@ import { listStaffCoaches } from '../../directory/api/directoryApi'
 import { getCoachUiConfig } from '../../academy/api/academyUiApi'
 import BatchStudentsTab from '../components/batchStudents/BatchStudentsTab'
 import placesApi from '../../places/api/placesApi'
+import { mapPlaceFromApi } from '../../places/utils/placeMappers'
 import { academySubActivitiesApi } from '../../../api/academySubActivitiesApi'
 import './BatchWorkspacePage.scss'
 
@@ -227,7 +228,8 @@ const BatchWorkspacePage = () => {
 
   useEffect(() => {
     const pid = selectedBatch?.defaultPlaceId ?? selectedBatch?.default_place_id
-    setDefaultPlaceId(pid ? String(pid) : '')
+    const normalized = pid != null ? String(pid).trim() : ''
+    setDefaultPlaceId(isValidUuid(normalized) ? normalized : '')
   }, [selectedBatch?.id, selectedBatch?.defaultPlaceId, selectedBatch?.default_place_id])
 
   useEffect(() => {
@@ -286,7 +288,10 @@ const BatchWorkspacePage = () => {
       .listPlaces({ status: 'active' })
       .then((data) => {
         if (cancelled) return
-        const list = Array.isArray(data?.places) ? data.places : []
+        const raw = Array.isArray(data?.places) ? data.places : []
+        const list = raw
+          .map((p) => mapPlaceFromApi(p))
+          .filter((p) => p && isValidUuid(String(p.id)))
         setPlaces(list)
         setDefaultPlaceId((prev) => {
           if (!prev) return prev
@@ -517,15 +522,17 @@ const BatchWorkspacePage = () => {
           ? [String(selectedBatch.sub_activity_id).trim()].filter(Boolean)
           : []
     const subActivityIds = selectedIds.length ? selectedIds : existingIds
-    if (!subActivityIds.length) {
-      window.alert('Select at least one specialization before saving.')
-      return
-    }
     const payload = {
       name,
-      coachUserIds: [...selectedCoachIds],
-      defaultPlaceId: defaultPlaceId ? defaultPlaceId : null,
-      subActivityIds,
+      coachUserIds: [...selectedCoachIds].map(String).filter((id) => isValidUuid(id)),
+      defaultPlaceId: isValidUuid(String(defaultPlaceId || '').trim())
+        ? String(defaultPlaceId).trim()
+        : null,
+      subActivityIds: subActivityIds.map(String).filter((id) => isValidUuid(id)),
+    }
+    if (!payload.subActivityIds.length) {
+      window.alert('Select at least one specialization before saving.')
+      return
     }
     if (feeRaw !== '') {
       const n = Number(feeRaw)
@@ -660,7 +667,9 @@ const BatchWorkspacePage = () => {
               Assign coach
             </CButton>
           </CAlert>
-        ) : /place/i.test(mutationError.message) ? (
+        ) : /defaultPlaceId|place is not available/i.test(mutationError.message) ? (
+          <CAlert color="danger">{mutationError.message}</CAlert>
+        ) : /place/i.test(mutationError.message) && /venue|not found|no place/i.test(mutationError.message) ? (
           <CAlert color="warning" className="d-flex justify-content-between align-items-center">
             <span>{mutationError.message || 'No venues set up yet — add a place first, then set it as the batch default.'}</span>
             <Link to="/coach/places/new">
@@ -832,7 +841,10 @@ const BatchWorkspacePage = () => {
                           id="batch-default-place"
                           aria-label="Default place for this batch"
                           value={defaultPlaceId}
-                          onChange={(e) => setDefaultPlaceId(e.target.value)}
+                          onChange={(e) => {
+                            const next = String(e.target.value || '').trim()
+                            setDefaultPlaceId(isValidUuid(next) ? next : '')
+                          }}
                         >
                           <option value="">No default place</option>
                           {places.map((p) => (
