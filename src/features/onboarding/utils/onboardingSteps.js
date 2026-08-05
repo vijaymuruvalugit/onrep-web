@@ -25,7 +25,7 @@ export function normalizeOnboardingDtoFromApi(raw) {
   }
 }
 
-/** Fee collection UX: module picked + setup saved (matches legacy RN FeeCollectionSetupScreen). */
+/** Fee collection UX: module picked + setup saved. */
 export function isFeeCollectionConfigured(onboarding) {
   return !!(onboarding?.payment_module_selected && onboarding?.payment_setup_done)
 }

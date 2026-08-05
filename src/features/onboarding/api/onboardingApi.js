@@ -17,7 +17,8 @@ export const onboardingApi = {
 
   /**
    * Owner-only fee collection setup — matches POST /onboarding/payment-setup.
-   * MANUAL: `{ upiVpa }`; AUTOMATED: `{}`.
+   * One-shot: `{ module, upiVpa }` for Manual / Online+UPI.
+   * Online+bank: `{ module: 'AUTOMATED' }` then PUT /academy/bank-account.
    */
   async postPaymentSetup(payload = {}) {
     const { data } = await http.post('/onboarding/payment-setup', payload)

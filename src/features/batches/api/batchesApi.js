@@ -49,6 +49,34 @@ function parseBatchCoachesJson(batch) {
   return []
 }
 
+function parseBatchSubActivitiesJson(batch) {
+  const raw = batch.batchSubActivities ?? batch.batch_sub_activities
+  if (Array.isArray(raw)) {
+    return raw
+      .map((r) => ({
+        id: String(r.id ?? ''),
+        name: r.name != null ? String(r.name) : '',
+      }))
+      .filter((r) => r.id)
+  }
+  if (raw && typeof raw === 'string') {
+    try {
+      const p = JSON.parse(raw)
+      return Array.isArray(p)
+        ? p
+            .map((r) => ({
+              id: String(r.id ?? ''),
+              name: r.name != null ? String(r.name) : '',
+            }))
+            .filter((r) => r.id)
+        : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 function normalizeBatch(batch) {
   if (!batch) return batch
   const activeScheduleCount = Number(batch.activeScheduleCount ?? batch.active_schedule_count ?? 0)
@@ -67,6 +95,25 @@ function normalizeBatch(batch) {
   const nextSessionSnapshot = batch.nextSessionSnapshot ?? batch.next_session_snapshot ?? null
 
   const batchCoaches = parseBatchCoachesJson(batch)
+  const batchSubActivities = parseBatchSubActivitiesJson(batch)
+  const subActivityIdsRaw = batch.subActivityIds ?? batch.sub_activity_ids
+  let subActivityIds = []
+  if (Array.isArray(subActivityIdsRaw)) {
+    subActivityIds = subActivityIdsRaw.map((id) => String(id)).filter(Boolean)
+  } else if (batchSubActivities.length > 0) {
+    subActivityIds = batchSubActivities.map((s) => s.id)
+  } else if (batch.subActivityId ?? batch.sub_activity_id) {
+    subActivityIds = [String(batch.subActivityId ?? batch.sub_activity_id)]
+  }
+  const subActivityNamesJoined =
+    batch.subActivityNames ??
+    batch.sub_activity_names ??
+    (batchSubActivities.length > 0
+      ? batchSubActivities
+          .map((s) => s.name)
+          .filter(Boolean)
+          .join(', ')
+      : null)
   const coachUserIdsRaw = batch.coachUserIds ?? batch.coach_user_ids
   let coachUserIds = []
   if (Array.isArray(coachUserIdsRaw)) {
@@ -93,7 +140,14 @@ function normalizeBatch(batch) {
   return {
     ...batch,
     activityWorkspaceId: batch.activityWorkspaceId ?? batch.activity_workspace_id ?? null,
-    subActivityName: batch.subActivityName ?? batch.sub_activity_name ?? null,
+    subActivityName:
+      batch.subActivityName ??
+      batch.sub_activity_name ??
+      subActivityNamesJoined ??
+      null,
+    subActivityNames: subActivityNamesJoined,
+    subActivityIds,
+    batchSubActivities,
     subActivitySlug: batch.subActivitySlug ?? batch.sub_activity_slug ?? null,
     studentsCount: batch.studentsCount ?? batch.students_count ?? 0,
     studentIds: batch.studentIds ?? batch.student_ids ?? [],
@@ -141,10 +195,15 @@ export const batchesApi = {
   },
 
   async createBatch(payload) {
-    const { name, feeInr, subActivityId } = payload || {}
+    const { name, feeInr, subActivityId, subActivityIds } = payload || {}
+    const ids = Array.isArray(subActivityIds)
+      ? subActivityIds.map((id) => String(id).trim()).filter(Boolean)
+      : subActivityId
+        ? [String(subActivityId).trim()].filter(Boolean)
+        : []
     const body = {
       name: String(name || '').trim(),
-      subActivityId: String(subActivityId || '').trim(),
+      subActivityIds: ids,
     }
     if (feeInr !== undefined && feeInr !== null && feeInr !== '') {
       const n = Number(feeInr)

@@ -1,43 +1,21 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
-import { useForm } from 'react-hook-form'
-import { yupResolver } from '@hookform/resolvers/yup'
-import {
-  CAlert,
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CForm,
-  CFormInput,
-  CFormLabel,
-  CRow,
-  CSpinner,
-} from '@coreui/react'
+import { CAlert, CButton, CCard, CCardBody, CCol, CRow, CSpinner } from '@coreui/react'
 
 import { refreshSession } from '../../auth/slices/authSlice'
-import onboardingApi from '../api/onboardingApi'
-import normalizeApiError from '../../../api/normalizeApiError'
+import FeePayoutSetupCard from '../../payments/components/coach/FeePayoutSetupCard'
 import { isFeeCollectionConfigured, normalizeOnboardingDtoFromApi } from '../utils/onboardingSteps'
-import { friendlyOnboardingSetupError } from '../utils/mapOnboardingSetupError'
-import { manualPaymentSetupSchema } from '../validations/onboardingSetupSchema'
 import RequireOwner from '../components/RequireOwner'
 
-/**
- * Owner fee collection setup — mirrors legacy RN FeeCollectionSetupScreen (flags, not only current_step).
- */
+/** Owner fee collection — one card: Manual/Online + UPI or bank + Save. */
 function OnboardingSetupContent() {
   const dispatch = useDispatch()
   const user = useSelector((state) => state.auth.user)
   const onboarding = normalizeOnboardingDtoFromApi(user?.onboarding ?? null)
-  const paymentModule = String(
-    user?.payment_module || onboarding?.payment_module || 'MANUAL',
-  ).toUpperCase()
+  const configured = isFeeCollectionConfigured(onboarding)
 
   const [initLoading, setInitLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
   const [banner, setBanner] = useState(null)
 
   useEffect(() => {
@@ -58,82 +36,12 @@ function OnboardingSetupContent() {
     }
   }, [dispatch])
 
-  const load = () => {
-    setBanner(null)
-    setInitLoading(true)
-    void (async () => {
-      try {
-        await dispatch(refreshSession()).unwrap()
-      } catch {
-        setBanner({ color: 'warning', text: 'Could not refresh your academy status. Try again.' })
-      } finally {
-        setInitLoading(false)
-      }
-    })()
-  }
-
-  const needModule = !onboarding?.payment_module_selected
-  const needSetup = Boolean(onboarding?.payment_module_selected && !onboarding?.payment_setup_done)
-  const configured = isFeeCollectionConfigured(onboarding)
-  const automatedAvailable = onboarding?.automated_payments_available === true
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: yupResolver(manualPaymentSetupSchema()),
-    defaultValues: { upiVpa: '' },
-  })
-
-  const pickModule = async (module) => {
-    setBusy(true)
+  const onSaved = async () => {
     setBanner(null)
     try {
-      await onboardingApi.setPaymentModule(module)
       await dispatch(refreshSession()).unwrap()
-    } catch (e) {
-      const n = normalizeApiError(e)
-      setBanner({
-        color: 'danger',
-        text: friendlyOnboardingSetupError(n.message, n.message),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const onManualSetup = async (values) => {
-    setBusy(true)
-    setBanner(null)
-    try {
-      await onboardingApi.postPaymentSetup({ upiVpa: values.upiVpa.trim() })
-      await dispatch(refreshSession()).unwrap()
-    } catch (e) {
-      const n = normalizeApiError(e)
-      setBanner({
-        color: 'danger',
-        text: friendlyOnboardingSetupError(n.message, n.message),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const onAutomatedSetup = async () => {
-    setBusy(true)
-    setBanner(null)
-    try {
-      await onboardingApi.postPaymentSetup({})
-      await dispatch(refreshSession()).unwrap()
-    } catch (e) {
-      const n = normalizeApiError(e)
-      setBanner({
-        color: 'danger',
-        text: friendlyOnboardingSetupError(n.message, n.message),
-      })
-    } finally {
-      setBusy(false)
+    } catch {
+      setBanner({ color: 'warning', text: 'Saved, but status refresh failed. Reload the page.' })
     }
   }
 
@@ -150,10 +58,9 @@ function OnboardingSetupContent() {
     <CRow className="justify-content-center">
       <CCol lg={8} xl={7}>
         <div className="mb-3">
-          <h2 className="mb-1">Collect fees from parents</h2>
+          <h2 className="mb-1">Set up payments</h2>
           <p className="text-body-secondary small mb-0">
-            This is how you record parent fees — separate from your platform subscription. Choose
-            manual (offline / UPI) or automated checkout when available.
+            Choose how parents pay and where the money goes — one save and you&apos;re done.
           </p>
         </div>
 
@@ -162,29 +69,10 @@ function OnboardingSetupContent() {
         {configured ? (
           <CCard className="mb-3">
             <CCardBody>
-              <p className="mb-2 fw-semibold">Fee collection is configured</p>
+              <p className="mb-2 fw-semibold">Payments are set up</p>
               <p className="small text-body-secondary mb-3">
-                You can invite coaches and start adding batches and students. Change fee settings
-                later from Payments when needed.
+                You can update details below anytime, or continue to finish onboarding.
               </p>
-              {paymentModule === 'AUTOMATED' ? (
-                <CAlert color="info" className="py-2 mb-3">
-                  <div className="fw-semibold mb-1">Next: add your payout details</div>
-                  <div className="small mb-2">
-                    OnRep collects fees from parents on your behalf. Add your bank account or UPI ID
-                    in Payment settings so we can settle collected fees to your academy.
-                  </div>
-                  <CButton
-                    color="primary"
-                    variant="outline"
-                    size="sm"
-                    as={Link}
-                    to="/coach/payments/settings"
-                  >
-                    Open Payment settings
-                  </CButton>
-                </CAlert>
-              ) : null}
               <CButton color="primary" as={Link} to="/onboarding/complete">
                 Continue
               </CButton>
@@ -192,103 +80,10 @@ function OnboardingSetupContent() {
           </CCard>
         ) : null}
 
-        {!configured && needModule ? (
-          <CCard className="mb-3">
-            <CCardHeader>How do you collect fees?</CCardHeader>
-            <CCardBody className="d-grid gap-2">
-              <CButton
-                color="primary"
-                variant="outline"
-                disabled={busy}
-                onClick={() => pickModule('MANUAL')}
-              >
-                Manual payments
-                <div className="small fw-normal text-body-secondary">
-                  Parents pay by cash, bank transfer, or UPI. You record or confirm the payment.
-                </div>
-              </CButton>
-              <CButton
-                color="secondary"
-                variant="outline"
-                disabled={busy || !automatedAvailable}
-                onClick={() => pickModule('AUTOMATED')}
-              >
-                Online checkout
-                <div className="small fw-normal text-body-secondary">
-                  {automatedAvailable
-                    ? 'Parents pay online through OnRep. Money is sent to your payout details.'
-                    : 'Online checkout is currently unavailable. Contact OnRep support.'}
-                </div>
-              </CButton>
-              {busy ? (
-                <div className="text-center">
-                  <CSpinner size="sm" />
-                </div>
-              ) : null}
-            </CCardBody>
-          </CCard>
-        ) : null}
-
-        {!configured && needSetup ? (
-          <CCard className="mb-3">
-            <CCardHeader>Payment details</CCardHeader>
-            <CCardBody>
-              {paymentModule === 'MANUAL' ? (
-                <CForm onSubmit={handleSubmit(onManualSetup)}>
-                  <div className="mb-3">
-                    <CFormLabel htmlFor="upiVpa">Academy UPI ID</CFormLabel>
-                    <CFormInput
-                      id="upiVpa"
-                      placeholder="your-academy@upi"
-                      invalid={Boolean(errors.upiVpa)}
-                      autoComplete="off"
-                      {...register('upiVpa')}
-                    />
-                    {errors.upiVpa ? (
-                      <div className="small text-danger mt-1">{errors.upiVpa.message}</div>
-                    ) : null}
-                  </div>
-                  <CButton color="primary" type="submit" disabled={busy}>
-                    {busy ? <CSpinner size="sm" /> : null}
-                    Save
-                  </CButton>
-                </CForm>
-              ) : (
-                <>
-                  <p className="small text-body-secondary mb-2">
-                    Parents pay online through OnRep. You don&apos;t need your own payment gateway
-                    account.
-                  </p>
-                  <p className="small text-body-secondary mb-3">
-                    After enabling, add your <strong>bank account or UPI ID</strong> in Payment
-                    settings so we can transfer collected fees to your academy.
-                  </p>
-                  <CButton color="primary" onClick={() => void onAutomatedSetup()} disabled={busy}>
-                    {busy ? <CSpinner size="sm" /> : null}
-                    Enable online checkout
-                  </CButton>
-                </>
-              )}
-            </CCardBody>
-          </CCard>
-        ) : null}
+        <FeePayoutSetupCard onSaved={onSaved} />
 
         <div className="d-flex flex-wrap gap-2">
-          <CButton
-            color="secondary"
-            variant="outline"
-            size="sm"
-            onClick={() => void load()}
-            disabled={busy}
-          >
-            Refresh status
-          </CButton>
-          <CButton
-            color="link"
-            className="text-decoration-none p-0"
-            as={Link}
-            to="/coach/dashboard"
-          >
+          <CButton color="link" className="text-decoration-none p-0" as={Link} to="/coach/dashboard">
             Skip for now — go to dashboard
           </CButton>
         </div>

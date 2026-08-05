@@ -13,7 +13,7 @@ import {
   CCol,
   CFormInput,
   CFormLabel,
-  CFormSelect,
+  CFormCheck,
   CModal,
   CModalBody,
   CModalFooter,
@@ -386,7 +386,7 @@ const BatchesListPage = () => {
   const [feeInr, setFeeInr] = useState('')
   const [subActivitiesRows, setSubActivitiesRows] = useState([])
   const [subActivitiesLoading, setSubActivitiesLoading] = useState(false)
-  const [selectedSubActivityId, setSelectedSubActivityId] = useState('')
+  const [selectedSubActivityIds, setSelectedSubActivityIds] = useState(() => new Set())
   const [viewMode, setViewMode] = useState(() => {
     try {
       const v = localStorage.getItem(BATCHES_VIEW_STORAGE_KEY)
@@ -443,14 +443,14 @@ const BatchesListPage = () => {
           if (cancelled) return
           setSubActivitiesRows(subActivities)
           if (subActivities.length === 1) {
-            setSelectedSubActivityId(String(subActivities[0].id))
+            setSelectedSubActivityIds(new Set([String(subActivities[0].id)]))
           } else {
-            setSelectedSubActivityId('')
+            setSelectedSubActivityIds(new Set())
           }
         } catch {
           if (!cancelled) {
             setSubActivitiesRows([])
-            setSelectedSubActivityId('')
+            setSelectedSubActivityIds(new Set())
           }
         } finally {
           if (!cancelled) setSubActivitiesLoading(false)
@@ -477,7 +477,7 @@ const BatchesListPage = () => {
     clearErrors()
     setNewName('')
     setFeeInr('')
-    setSelectedSubActivityId('')
+    setSelectedSubActivityIds(new Set())
     setSubActivitiesRows([])
     setAddOpen(true)
   }
@@ -486,10 +486,10 @@ const BatchesListPage = () => {
     const name = newName.trim()
     if (!name) return
     if (!activeActivityId) return
-    const sid = selectedSubActivityId.trim()
-    if (!sid) return
+    const subActivityIds = [...selectedSubActivityIds]
+    if (subActivityIds.length === 0) return
     try {
-      const payload = { name, subActivityId: sid }
+      const payload = { name, subActivityIds }
       if (feeInr !== '') {
         const n = Number(feeInr)
         if (Number.isFinite(n) && n >= 0) payload.feeInr = Math.round(n)
@@ -665,27 +665,34 @@ const BatchesListPage = () => {
             <div className="text-center py-3 mb-3">
               <CSpinner color="primary" size="sm" />
             </div>
-          ) : subActivitiesRows.length > 1 ? (
+          ) : subActivitiesRows.length > 0 ? (
             <div className="mb-3">
-              <CFormLabel htmlFor="batch-sub-activity">Specialization</CFormLabel>
-              <CFormSelect
-                id="batch-sub-activity"
-                value={selectedSubActivityId}
-                onChange={(e) => setSelectedSubActivityId(e.target.value)}
-              >
-                <option value="">Select…</option>
-                {subActivitiesRows.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.displayIcon ? `${s.displayIcon} ` : ''}
-                    {s.name}
-                  </option>
-                ))}
-              </CFormSelect>
+              <CFormLabel className="d-block">Specializations</CFormLabel>
+              <div className="small text-body-secondary mb-2">
+                Select every specialization this batch covers. The first one selected is the primary.
+              </div>
+              <div className="d-flex flex-column gap-2">
+                {subActivitiesRows.map((s) => {
+                  const id = String(s.id)
+                  return (
+                    <CFormCheck
+                      key={id}
+                      id={`batch-create-spec-${id}`}
+                      checked={selectedSubActivityIds.has(id)}
+                      onChange={() => {
+                        setSelectedSubActivityIds((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(id)) next.delete(id)
+                          else next.add(id)
+                          return next
+                        })
+                      }}
+                      label={`${s.displayIcon ? `${s.displayIcon} ` : ''}${s.name}`}
+                    />
+                  )
+                })}
+              </div>
             </div>
-          ) : subActivitiesRows.length === 1 ? (
-            <p className="small text-body-secondary mb-3">
-              Specialization: <strong>{subActivitiesRows[0]?.name}</strong>
-            </p>
           ) : activeActivityId ? (
             <CAlert color="danger" className="mb-3">
               No specializations set up for this practice yet. Ask an owner to add them, or try refreshing.
@@ -732,7 +739,7 @@ const BatchesListPage = () => {
               !newName.trim() ||
               !activeActivityId ||
               subActivitiesLoading ||
-              !selectedSubActivityId.trim() ||
+              selectedSubActivityIds.size === 0 ||
               subActivitiesRows.length === 0
             }
             onClick={handleCreateBatch}

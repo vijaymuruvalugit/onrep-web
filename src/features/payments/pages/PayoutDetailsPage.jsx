@@ -1,15 +1,17 @@
 import React from 'react'
-import PayoutDetailsCard from '../components/coach/PayoutDetailsCard'
+import { Link } from 'react-router-dom'
+import FeePayoutSetupCard from '../components/coach/FeePayoutSetupCard'
 
+/** @deprecated Prefer Payment settings — kept so old nav links still work. */
 export default function PayoutDetailsPage() {
   return (
     <div className="p-4" style={{ maxWidth: 720 }}>
-      <h2 className="mb-2">Payout details</h2>
+      <h2 className="mb-2">Receive payments</h2>
       <p className="text-body-secondary small mb-3">
-        Choose a bank account payout destination. If your academy UPI ID is already correct, you can
-        use that from Payment settings instead.
+        Add a UPI ID or bank account and save once.{' '}
+        <Link to="/coach/payments/settings">Open full payment settings</Link>
       </p>
-      <PayoutDetailsCard />
+      <FeePayoutSetupCard />
     </div>
   )
 }

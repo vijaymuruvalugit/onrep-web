@@ -59,6 +59,7 @@ import { listStaffCoaches } from '../../directory/api/directoryApi'
 import { getCoachUiConfig } from '../../academy/api/academyUiApi'
 import BatchStudentsTab from '../components/batchStudents/BatchStudentsTab'
 import placesApi from '../../places/api/placesApi'
+import { academySubActivitiesApi } from '../../../api/academySubActivitiesApi'
 import './BatchWorkspacePage.scss'
 
 const VALID_TABS = new Set(['schedule', 'students', 'settings'])
@@ -82,6 +83,9 @@ const BatchWorkspacePage = () => {
   const [places, setPlaces] = useState([])
   const [placesLoading, setPlacesLoading] = useState(false)
   const [defaultPlaceId, setDefaultPlaceId] = useState('')
+  const [subActivitiesRows, setSubActivitiesRows] = useState([])
+  const [subActivitiesLoading, setSubActivitiesLoading] = useState(false)
+  const [selectedSubActivityIds, setSelectedSubActivityIds] = useState(() => new Set())
   const [drawerSessionId, setDrawerSessionId] = useState(null)
   const [drawerSeedRow, setDrawerSeedRow] = useState(null)
 
@@ -227,6 +231,40 @@ const BatchWorkspacePage = () => {
   }, [selectedBatch?.id, selectedBatch?.defaultPlaceId, selectedBatch?.default_place_id])
 
   useEffect(() => {
+    const ids = selectedBatch?.subActivityIds
+    if (Array.isArray(ids) && ids.length > 0) {
+      setSelectedSubActivityIds(new Set(ids.map(String)))
+      return
+    }
+    const legacy = selectedBatch?.subActivityId ?? selectedBatch?.sub_activity_id
+    if (legacy) {
+      setSelectedSubActivityIds(new Set([String(legacy)]))
+      return
+    }
+    setSelectedSubActivityIds(new Set())
+  }, [selectedBatch?.id, selectedBatch?.subActivityIds?.join(','), selectedBatch?.subActivityId])
+
+  useEffect(() => {
+    if (!activeActivityId || activeTab !== 'settings') return
+    let cancelled = false
+    setSubActivitiesLoading(true)
+    academySubActivitiesApi
+      .list({ activeOnly: true })
+      .then((rows) => {
+        if (!cancelled) setSubActivitiesRows(Array.isArray(rows) ? rows : [])
+      })
+      .catch(() => {
+        if (!cancelled) setSubActivitiesRows([])
+      })
+      .finally(() => {
+        if (!cancelled) setSubActivitiesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeActivityId, activeTab])
+
+  useEffect(() => {
     if (!activeActivityId) return
     let cancelled = false
     setPlacesLoading(true)
@@ -303,6 +341,16 @@ const BatchWorkspacePage = () => {
     })
   }
 
+  const toggleSubActivitySelection = (subActivityId) => {
+    const sid = String(subActivityId)
+    setSelectedSubActivityIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(sid)) next.delete(sid)
+      else next.add(sid)
+      return next
+    })
+  }
+
   useEffect(() => {
     const tab = (searchParams.get('tab') || '').toLowerCase()
     let next = tab
@@ -354,7 +402,12 @@ const BatchWorkspacePage = () => {
     const wid = selectedBatch?.activityWorkspaceId
     const act = activities.find((a) => String(a.id) === String(wid))
     const actName = stripDemoSuffix(act?.name || '')
-    const sub = stripDemoSuffix(selectedBatch?.subActivityName || '')
+    const sub = stripDemoSuffix(
+      selectedBatch?.subActivityNames ||
+        selectedBatch?.subActivityName ||
+        selectedBatch?.sub_activity_names ||
+        '',
+    )
     const parts = [actName, sub].filter(Boolean)
     return parts.length ? parts.join(' · ') : null
   }, [activities, selectedBatch])
@@ -434,6 +487,7 @@ const BatchWorkspacePage = () => {
       name: String(formData.get('name') || ''),
       coachUserIds: [...selectedCoachIds],
       defaultPlaceId: defaultPlaceId ? defaultPlaceId : null,
+      subActivityIds: [...selectedSubActivityIds],
     }
     if (feeRaw !== '') {
       const n = Number(feeRaw)
@@ -749,6 +803,36 @@ const BatchWorkspacePage = () => {
                     )}
                   </CCol>
                   <CCol xs={12}>
+                    <CFormLabel className="d-block">Specializations</CFormLabel>
+                    <div className="small text-body-secondary mb-2">
+                      Choose every specialization this batch covers.
+                    </div>
+                    {subActivitiesLoading ? (
+                      <div className="py-2">
+                        <CSpinner size="sm" />
+                      </div>
+                    ) : subActivitiesRows.length === 0 ? (
+                      <div className="small text-body-secondary">
+                        No specializations set up for this program yet.
+                      </div>
+                    ) : (
+                      <div className="d-flex flex-column gap-2">
+                        {subActivitiesRows.map((s) => {
+                          const id = String(s.id)
+                          return (
+                            <CFormCheck
+                              key={id}
+                              id={`batch-spec-${id}`}
+                              checked={selectedSubActivityIds.has(id)}
+                              onChange={() => toggleSubActivitySelection(id)}
+                              label={`${s.displayIcon ? `${s.displayIcon} ` : ''}${s.name}`}
+                            />
+                          )
+                        })}
+                      </div>
+                    )}
+                  </CCol>
+                  <CCol xs={12}>
                     <CFormLabel className="d-block">Coaches on this batch</CFormLabel>
                     <div className="small text-body-secondary mb-2">
                       Select everyone who teaches or assists this group. Session scheduling can
@@ -789,7 +873,11 @@ const BatchWorkspacePage = () => {
                 </CRow>
               </form>
               <div className="mt-3 d-flex justify-content-end">
-                <CButton color="primary" disabled={mutationLoading} onClick={handleSettingsSave}>
+                <CButton
+                  color="primary"
+                  disabled={mutationLoading || selectedSubActivityIds.size === 0}
+                  onClick={handleSettingsSave}
+                >
                   {mutationLoading ? 'Saving…' : 'Save settings'}
                 </CButton>
               </div>
