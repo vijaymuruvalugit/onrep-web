@@ -22,10 +22,10 @@ export const COACH_NAV_REGISTRATION = Object.freeze([
   /** Plain path (no ?session=) — day board overview; open a session from a card. */
   { name: 'Live sessions', to: { pathname: '/coach/skating', search: '' }, icon: cilMediaPlay },
   { name: 'Batches', to: '/coach/batches', icon: cilLayers },
+  { name: 'Places', to: '/coach/places', icon: cilLocationPin },
   { name: 'Schedule', to: '/coach/schedule', icon: cilCalendar },
   { name: 'Students', to: '/coach/students', icon: cilPeople },
   { name: 'Parents', to: '/coach/parents', icon: cilUser },
-  { name: 'Places', to: '/coach/places', icon: cilLocationPin },
   { name: 'Academy activities', to: '/coach/activities', icon: cilPuzzle },
   { name: 'Events', to: '/coach/events', icon: cilCalendarCheck },
   { name: 'Communications', to: '/coach/communications', icon: cilChatBubble },

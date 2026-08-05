@@ -108,6 +108,9 @@ export default function PatternEditorDrawer({
   onClose,
   onSubmit, // ({ payload, editMode, effectiveFrom }) => Promise<void>
   onEnsurePlaces,
+  onQuickAddPlace,
+  quickAddSaving = false,
+  quickAddError = null,
   saving,
   mutationError,
 }) {
@@ -136,10 +139,11 @@ export default function PatternEditorDrawer({
     }
     return {
       ...EMPTY_PATTERN,
+      placeId: batch?.defaultPlaceId ?? batch?.default_place_id ?? '',
       sessionPresetId: DEFAULT_SESSION_PRESET_ID,
       phaseOverrides: EMPTY_PHASE_OVERRIDES,
     }
-  }, [isEdit, pattern])
+  }, [isEdit, pattern, batch])
 
   const [name, setName] = useState(seed.name)
   const [days, setDays] = useState(() => apiDaysToUiLabels(seed.daysOfWeek))
@@ -346,6 +350,9 @@ export default function PatternEditorDrawer({
               onChange={setPlaceId}
               disabled={saving}
               loading={placesLoading}
+              onQuickAddPlace={onQuickAddPlace}
+              quickAddSaving={quickAddSaving}
+              quickAddError={quickAddError}
             />
           </div>
           <div className="mb-3">

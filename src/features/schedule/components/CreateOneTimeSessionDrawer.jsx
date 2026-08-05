@@ -23,6 +23,7 @@ import { SESSION_MODE_OPTIONS } from '../../../domain/operationalSessions/consta
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 import SessionPresetSetup from './SessionPresetSetup'
 import { DEFAULT_SESSION_PRESET_ID } from '../constants/sessionPresets'
+import PlaceSelect from '../../places/components/PlaceSelect'
 
 function CoachSelect({ coaches = [], value, onChange, disabled }) {
   return (
@@ -75,6 +76,9 @@ export default function CreateOneTimeSessionDrawer({
   patterns = [],
   onCreated,
   onEnsurePlaces,
+  onQuickAddPlace,
+  quickAddSaving = false,
+  quickAddError = null,
 }) {
   const batchId = batch?.id || batch?._id
   const batchName = stripDemoSuffix(batch?.name || '') || 'Batch'
@@ -387,20 +391,16 @@ export default function CreateOneTimeSessionDrawer({
           ) : null}
           <div className="mb-3">
             <CFormLabel className="small mb-1">Place</CFormLabel>
-            <CFormSelect
+            <PlaceSelect
+              places={places}
               value={placeId}
-              onChange={(e) => setPlaceId(e.target.value)}
-              disabled={busy || placesLoading}
-            >
-              <option value="">
-                {placesLoading && !places.length ? 'Loading places…' : 'Default batch place'}
-              </option>
-              {places.map((p) => (
-                <option key={p.id} value={String(p.id)}>
-                  {stripDemoSuffix(p.name || '')}
-                </option>
-              ))}
-            </CFormSelect>
+              onChange={setPlaceId}
+              disabled={busy}
+              loading={placesLoading}
+              onQuickAddPlace={onQuickAddPlace}
+              quickAddSaving={quickAddSaving}
+              quickAddError={quickAddError}
+            />
           </div>
           {patterns.length > 0 ? (
             <div>

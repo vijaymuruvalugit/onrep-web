@@ -83,7 +83,7 @@ const SchedulePage = () => {
   const activeActivityId = useSelector((s) => s.workspace.activeActivityId)
 
   const { items: batches, fetchBatches } = useBatches()
-  const { activePlaces, fetchPlaces, listLoading: placesLoading } = usePlaces()
+  const { activePlaces, fetchPlaces, listLoading: placesLoading, createPlace } = usePlaces()
   const {
     items,
     loading,
@@ -113,7 +113,8 @@ const SchedulePage = () => {
   const [adjustNextError, setAdjustNextError] = useState(null)
   const [adjustNextBusy, setAdjustNextBusy] = useState(false)
   const [pageNotice, setPageNotice] = useState(null)
-  const [sessionsEmptyHint, setSessionsEmptyHint] = useState(null)
+  const [quickAddPlaceSaving, setQuickAddPlaceSaving] = useState(false)
+  const [quickAddPlaceError, setQuickAddPlaceError] = useState(null)
   const [coaches, setCoaches] = useState([])
   /** Academy/activity calendar "today" from board API; null until first successful load. */
   const [operationalTodayYmd, setOperationalTodayYmd] = useState(null)
@@ -130,6 +131,29 @@ const SchedulePage = () => {
     if (!bootstrapComplete || !activeActivityId) return Promise.resolve()
     return fetchPlaces({ status: 'active', limit: 200 })
   }, [bootstrapComplete, activeActivityId, fetchPlaces])
+
+  const handleQuickAddPlace = useCallback(
+    async ({ name, address }) => {
+      setQuickAddPlaceSaving(true)
+      setQuickAddPlaceError(null)
+      try {
+        const place = await createPlace({
+          name: String(name || '').trim(),
+          address: address ? String(address).trim() : null,
+        }).unwrap()
+        await ensurePlacesLoaded()
+        setPageNotice({ type: 'success', text: `Venue “${place.name}” added.` })
+        return place
+      } catch (e) {
+        const message = e?.message || 'Could not add venue.'
+        setQuickAddPlaceError(message)
+        throw new Error(message)
+      } finally {
+        setQuickAddPlaceSaving(false)
+      }
+    },
+    [createPlace, ensurePlacesLoaded],
+  )
 
   useEffect(() => {
     ensurePlacesLoaded()
@@ -375,6 +399,7 @@ const SchedulePage = () => {
 
   const openAddPattern = useCallback(() => {
     clearErrors()
+    setQuickAddPlaceError(null)
     setPatternDrawerMode('create')
     setPatternDrawerSeed(null)
     setPatternDrawerOpen(true)
@@ -383,6 +408,7 @@ const SchedulePage = () => {
   const openEditPattern = useCallback(
     (pattern) => {
       clearErrors()
+      setQuickAddPlaceError(null)
       setPatternDrawerMode('edit')
       setPatternDrawerSeed(pattern)
       setPatternDrawerOpen(true)
@@ -734,6 +760,9 @@ const SchedulePage = () => {
         onClose={() => setCreateOneTimeOpen(false)}
         onCreated={refreshAll}
         onEnsurePlaces={ensurePlacesLoaded}
+        onQuickAddPlace={handleQuickAddPlace}
+        quickAddSaving={quickAddPlaceSaving}
+        quickAddError={quickAddPlaceError}
       />
 
       <PatternEditorDrawer
@@ -746,6 +775,9 @@ const SchedulePage = () => {
         coaches={coaches}
         onClose={() => setPatternDrawerOpen(false)}
         onEnsurePlaces={ensurePlacesLoaded}
+        onQuickAddPlace={handleQuickAddPlace}
+        quickAddSaving={quickAddPlaceSaving}
+        quickAddError={quickAddPlaceError}
         onSubmit={handleSavePattern}
         saving={saving}
         mutationError={mutationError}
