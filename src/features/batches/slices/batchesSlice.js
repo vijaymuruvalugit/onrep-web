@@ -188,8 +188,9 @@ const batchesSlice = createSlice({
         state.mutationLoading = false
         if (action.payload) {
           state.selectedBatch = action.payload
+          const savedId = String(action.payload.id || action.payload._id || '')
           state.items = state.items.map((batch) =>
-            batch.id === action.payload.id ? action.payload : batch,
+            String(batch.id || batch._id) === savedId ? action.payload : batch,
           )
         }
       })

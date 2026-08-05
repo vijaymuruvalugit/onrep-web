@@ -234,8 +234,15 @@ const BatchWorkspacePage = () => {
 
   useEffect(() => {
     const ids = selectedBatch?.subActivityIds
-    if (Array.isArray(ids) && ids.length > 0) {
-      setSelectedSubActivityIds(new Set(ids.map(String)))
+    const snakeIds = selectedBatch?.sub_activity_ids
+    const fromList =
+      Array.isArray(ids) && ids.length > 0
+        ? ids
+        : Array.isArray(snakeIds) && snakeIds.length > 0
+          ? snakeIds
+          : null
+    if (fromList) {
+      setSelectedSubActivityIds(new Set(fromList.map(String).filter(Boolean)))
       return
     }
     const legacy = selectedBatch?.subActivityId ?? selectedBatch?.sub_activity_id
@@ -244,7 +251,15 @@ const BatchWorkspacePage = () => {
       return
     }
     setSelectedSubActivityIds(new Set())
-  }, [selectedBatch?.id, selectedBatch?.subActivityIds?.join(','), selectedBatch?.subActivityId])
+  }, [
+    selectedBatch?.id,
+    selectedBatch?.subActivityIds?.join(','),
+    Array.isArray(selectedBatch?.sub_activity_ids)
+      ? selectedBatch.sub_activity_ids.join(',')
+      : selectedBatch?.sub_activity_ids,
+    selectedBatch?.subActivityId,
+    selectedBatch?.sub_activity_id,
+  ])
 
   useEffect(() => {
     const programId =

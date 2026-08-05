@@ -216,7 +216,8 @@ export const batchesApi = {
 
   async updateBatch(batchId, payload) {
     const { data } = await http.patch(`/batches/${encodeURIComponent(batchId)}`, payload)
-    return data || {}
+    const raw = data?.batch
+    return { ...(data || {}), batch: raw ? normalizeBatch(raw) : null }
   },
 
   async deleteBatch(batchId) {
