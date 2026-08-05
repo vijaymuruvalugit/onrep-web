@@ -273,8 +273,8 @@ export default function SubscriptionPaywallPage() {
 
         <p className="small text-body-secondary mt-4 mb-0">
           Need help? Email{' '}
-          <a href="mailto:support@onrep.in" className="text-decoration-none">
-            support@onrep.in
+          <a href="mailto:hi@onrep.in" className="text-decoration-none">
+            hi@onrep.in
           </a>
           .
         </p>

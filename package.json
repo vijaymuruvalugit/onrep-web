@@ -22,7 +22,8 @@
     "test:watch": "vitest",
     "serve": "vite preview",
     "start": "vite",
-    "deploy:firebase": "npm run build && firebase deploy --only hosting"
+    "deploy:firebase": "npm run build && firebase deploy --only hosting",
+    "deploy:pages": "npm run build && wrangler pages deploy build --project-name=onrep-admin"
   },
   "dependencies": {
     "@onrep/contracts": "file:../packages/onrep-contracts",
