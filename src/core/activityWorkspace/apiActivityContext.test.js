@@ -40,4 +40,18 @@ describe('apiActivityContext', () => {
     expect(requestRequiresActivityWorkspace('/places/autocomplete')).toBe(false)
     expect(requestRequiresActivityWorkspace('/places/details')).toBe(false)
   })
+
+  it('sends activity header for student participation summary', () => {
+    expect(
+      requestSkipsActivityHeader('/students/2752ef07-4cd4-4159-b855-c76495efd8e5/participation-summary'),
+    ).toBe(false)
+    expect(
+      requestRequiresActivityWorkspace(
+        '/students/2752ef07-4cd4-4159-b855-c76495efd8e5/participation-summary',
+      ),
+    ).toBe(true)
+    expect(
+      requestSkipsActivityHeader('/students/2752ef07-4cd4-4159-b855-c76495efd8e5/attendance-percent'),
+    ).toBe(false)
+  })
 })

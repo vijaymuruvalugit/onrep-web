@@ -37,6 +37,7 @@ export const API_CLASSIFICATION = Object.freeze({
     '/skating',
     '/sessions',
     '/attendance-percent',
+    '/participation-summary',
     '/sub-activities',
   ]),
 })
@@ -50,11 +51,16 @@ function isStudentImportExempt(pathname) {
 }
 
 function isStudentsExempt(pathname) {
+  // Activity-scoped student ops still need x-activity-id (same as attendance-percent).
+  const activityScopedStudentPath =
+    pathname.includes('/attendance-percent') ||
+    pathname.includes('/participation-summary') ||
+    pathname.includes('/observations')
   return (
     isStudentImportExempt(pathname) ||
     pathname === '/students' ||
     pathname.startsWith('/students?') ||
-    (pathname.startsWith('/students/') && !pathname.includes('/attendance-percent'))
+    (pathname.startsWith('/students/') && !activityScopedStudentPath)
   )
 }
 
