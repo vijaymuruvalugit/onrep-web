@@ -23,6 +23,8 @@ import {
 import CIcon from '@coreui/icons-react'
 import { cilPeople, cilReload, cilSend } from '@coreui/icons'
 
+import IndiaPhoneField from '../../../components/IndiaPhoneField'
+import { isValidIndiaLocal, toE164India } from '../../../utils/indiaPhone'
 import useCoachInvites from '../hooks/useCoachInvites'
 import { hasAcademyAdminCapability, isLegalAcademyOwner } from '../../auth/utils/academyAdminAccess'
 
@@ -139,14 +141,13 @@ const CoachInvitesPage = () => {
     }
   }, [resendSuccess, loadCoachInvites, loadAcademyStaff])
 
-  const E164_RE = /^\+[1-9]\d{6,14}$/
   const onSubmit = async (e) => {
     e.preventDefault()
     clearSubmitState()
     const em = email.trim().toLowerCase()
     const nm = name.trim()
-    const ph = phone.trim()
-    if (!em || !nm || !ph || !E164_RE.test(ph)) return
+    const ph = toE164India(phone)
+    if (!em || !nm || !ph || !isValidIndiaLocal(phone)) return
     const result = await sendCoachInvite({ email: em, name: nm, phoneNumber: ph })
     if (result.meta.requestStatus === 'fulfilled') {
       setEmail('')
@@ -331,19 +332,14 @@ const CoachInvitesPage = () => {
                 />
               </CCol>
               <CCol md={6}>
-                <CFormLabel htmlFor="coach-invite-phone">Phone number</CFormLabel>
-                <CFormInput
+                <IndiaPhoneField
                   id="coach-invite-phone"
-                  type="tel"
-                  autoComplete="tel"
                   value={phone}
-                  onChange={(ev) => setPhone(ev.target.value)}
-                  placeholder="+919876543210"
+                  onChange={setPhone}
                   required
+                  className="mb-0"
+                  hint="The coach will use this for mobile sign in."
                 />
-                <small className="text-body-secondary">
-                  E.164 format with country code. The coach will use this for mobile sign in.
-                </small>
               </CCol>
               <CCol xs={12}>
                 <CButton type="submit" color="primary" disabled={submitLoading}>

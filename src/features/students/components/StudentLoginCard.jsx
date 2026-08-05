@@ -6,8 +6,6 @@ import {
   CCard,
   CCardBody,
   CCardHeader,
-  CFormInput,
-  CFormLabel,
   CModal,
   CModalBody,
   CModalFooter,
@@ -15,6 +13,8 @@ import {
   CModalTitle,
   CSpinner,
 } from '@coreui/react'
+import IndiaPhoneField from '../../../components/IndiaPhoneField'
+import { toE164India } from '../../../utils/indiaPhone'
 import studentsApi from '../api/studentsApi'
 
 export default function StudentLoginCard({ studentId, studentName }) {
@@ -38,8 +38,11 @@ export default function StudentLoginCard({ studentId, studentName }) {
   useEffect(() => { loadStatus() }, [loadStatus])
 
   const handleEnable = async () => {
-    const ph = phone.trim()
-    if (!ph) { setError('Phone number is required'); return }
+    const ph = toE164India(phone)
+    if (!ph) {
+      setError('Enter a 10-digit mobile number')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -119,13 +122,11 @@ export default function StudentLoginCard({ studentId, studentName }) {
           <p className="text-body-secondary mb-3">
             Enter the student's phone number. They will use this to sign in with OTP on the mobile app.
           </p>
-          <CFormLabel htmlFor="student-login-phone">Phone number</CFormLabel>
-          <CFormInput
+          <IndiaPhoneField
             id="student-login-phone"
-            type="tel"
-            placeholder="+91 98765 43210"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={setPhone}
+            className="mb-0"
           />
           {error && <CAlert color="danger" className="mt-3 mb-0">{error}</CAlert>}
         </CModalBody>

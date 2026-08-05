@@ -13,6 +13,8 @@ import {
   CModalTitle,
   CSpinner,
 } from '@coreui/react'
+import IndiaPhoneField from '../../../components/IndiaPhoneField'
+import { isValidIndiaLocal, toE164India } from '../../../utils/indiaPhone'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -27,8 +29,6 @@ const ExpiryOptions = [
  * set-state-in-effect pattern (we don't need an effect to clear fields when
  * the modal opens — a fresh mount gives fresh state).
  */
-const E164_RE = /^\+[1-9]\d{6,14}$/
-
 const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }) => {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
@@ -38,20 +38,20 @@ const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }
 
   const trimmedEmail = email.trim().toLowerCase()
   const trimmedName = name.trim()
-  const trimmedPhone = phone.trim()
+  const phoneE164 = toE164India(phone)
   const emailValid = EMAIL_RE.test(trimmedEmail)
-  const phoneValid = !!trimmedPhone && E164_RE.test(trimmedPhone)
+  const phoneValid = isValidIndiaLocal(phone)
   const canSubmit = emailValid && phoneValid && !submitting
 
   const handleSubmit = (event) => {
     event.preventDefault()
     setTouched(true)
-    if (!canSubmit) return
+    if (!canSubmit || !phoneE164) return
     onSubmit({
       email: trimmedEmail,
       name: trimmedName,
       expiresInDays,
-      phoneNumber: trimmedPhone,
+      phoneNumber: phoneE164,
     })
   }
 
@@ -103,29 +103,17 @@ const InviteParentForm = ({ studentName, submitting, error, onCancel, onSubmit }
           </small>
         </div>
 
-        <div className="mb-3">
-          <CFormLabel htmlFor="invite-parent-phone">
-            Phone number <span className="text-danger">*</span>
-          </CFormLabel>
-          <CFormInput
-            id="invite-parent-phone"
-            type="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(ev) => setPhone(ev.target.value)}
-            onBlur={() => setTouched(true)}
-            placeholder="+919876543210"
-            invalid={touched && !phoneValid}
-            required
-          />
-          {touched && !phoneValid ? (
-            <small className="text-danger">Include country code, e.g. +919876543210</small>
-          ) : (
-            <small className="text-body-secondary">
-              Required — the parent will use this to sign in via OTP on the mobile app.
-            </small>
-          )}
-        </div>
+        <IndiaPhoneField
+          id="invite-parent-phone"
+          value={phone}
+          onChange={(next) => {
+            setPhone(next)
+            setTouched(true)
+          }}
+          required
+          invalid={touched && !phoneValid}
+          hint="Required — the parent will use this to sign in via OTP on the mobile app."
+        />
 
         <div className="mb-1">
           <CFormLabel htmlFor="invite-parent-expiry">Invite expires after</CFormLabel>
