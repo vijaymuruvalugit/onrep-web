@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   CAlert,
@@ -25,26 +25,24 @@ const PaymentsHubPage = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const data = await paymentsHubApi.getHub()
-        if (!cancelled) setHub(data)
-      } catch (e) {
-        if (!cancelled) setError(e)
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
-    return () => {
-      cancelled = true
+  const loadHub = useCallback(async ({ quiet = false } = {}) => {
+    if (!quiet) setLoading(true)
+    setError(null)
+    try {
+      const data = await paymentsHubApi.getHub()
+      setHub(data)
+    } catch (e) {
+      if (!quiet) setError(e)
+    } finally {
+      if (!quiet) setLoading(false)
     }
-  }, [role, user?.activeRole])
+  }, [])
 
-  if (loading) {
+  useEffect(() => {
+    void loadHub()
+  }, [loadHub, role, user?.activeRole])
+
+  if (loading && !hub) {
     return (
       <div className="text-center py-5">
         <CSpinner color="primary" />
@@ -52,7 +50,7 @@ const PaymentsHubPage = () => {
     )
   }
 
-  if (error) {
+  if (error && !hub) {
     return <CAlert color="warning">{error.message || 'Could not load payments.'}</CAlert>
   }
 
@@ -62,7 +60,7 @@ const PaymentsHubPage = () => {
     return (
       <>
         <AdminPaymentsOverview hub={hub} />
-        <CoachPaymentsPage />
+        <CoachPaymentsPage onDataChanged={() => void loadHub({ quiet: true })} />
       </>
     )
   }

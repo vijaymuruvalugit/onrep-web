@@ -22,7 +22,7 @@ import BulkMarkPaidModal from '../components/BulkMarkPaidModal'
  * Operational payments — fees are generated automatically from academy due-day
  * settings, batch fees, and optional student overrides when this page loads.
  */
-const CoachPaymentsPage = () => {
+const CoachPaymentsPage = ({ onDataChanged } = {}) => {
   const dispatch = useDispatch()
   const [searchParams] = useSearchParams()
   const studentId = searchParams.get('studentId') || null
@@ -43,13 +43,16 @@ const CoachPaymentsPage = () => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
   }, [])
 
-  const reload = useCallback(() => {
-    dispatch(fetchObligations({ studentId }))
-    dispatch(fetchPendingParentReports())
-  }, [dispatch, studentId])
+  const reload = useCallback(async () => {
+    await Promise.all([
+      dispatch(fetchObligations({ studentId })),
+      dispatch(fetchPendingParentReports()),
+    ])
+    onDataChanged?.()
+  }, [dispatch, studentId, onDataChanged])
 
   useEffect(() => {
-    reload()
+    void reload()
   }, [reload])
 
   const validSelectedIds = useMemo(() => {
@@ -120,9 +123,9 @@ const CoachPaymentsPage = () => {
       }
       pushToast('Payment recorded.', 'success')
       setPayModal(null)
-      await dispatch(fetchObligations({ studentId }))
+      await reload()
     },
-    [dispatch, payModal, pushToast, studentId],
+    [dispatch, payModal, pushToast, reload],
   )
 
   const handleBulkConfirm = useCallback(async () => {
@@ -135,8 +138,8 @@ const CoachPaymentsPage = () => {
     pushToast(`Marked ${validSelectedIds.length} fee(s) as paid.`, 'success')
     setBulkOpen(false)
     setSelectedIds([])
-    await dispatch(fetchObligations({ studentId }))
-  }, [dispatch, pushToast, studentId, validSelectedIds])
+    await reload()
+  }, [dispatch, pushToast, reload, validSelectedIds])
 
   const handleConfirmReport = useCallback(
     async (transactionId) => {
@@ -146,12 +149,9 @@ const CoachPaymentsPage = () => {
         return
       }
       pushToast('Report confirmed — balance updated.', 'success')
-      await Promise.all([
-        dispatch(fetchPendingParentReports()),
-        dispatch(fetchObligations({ studentId })),
-      ])
+      await reload()
     },
-    [dispatch, pushToast, studentId],
+    [dispatch, pushToast, reload],
   )
 
   const handleRejectReport = useCallback(
@@ -162,9 +162,9 @@ const CoachPaymentsPage = () => {
         return
       }
       pushToast('Report rejected.', 'success')
-      await dispatch(fetchPendingParentReports())
+      await reload()
     },
-    [dispatch, pushToast],
+    [dispatch, pushToast, reload],
   )
 
   return (
