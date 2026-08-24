@@ -11,6 +11,7 @@ export const scheduleApi = {
     const { data } = await http.post(
       `/batch-schedules/${encodeURIComponent(batchId)}/materialize`,
       { fromDate, toDate },
+      { timeout: 90000 },
     )
     return data || {}
   },
@@ -24,7 +25,7 @@ export const scheduleApi = {
   },
 
   async createSchedule(payload) {
-    const { data } = await http.post('/batch-schedules', payload)
+    const { data } = await http.post('/batch-schedules', payload, { timeout: 60000 })
     return data || {}
   },
 

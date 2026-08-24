@@ -437,9 +437,17 @@ const SchedulePage = () => {
             presetVersion: payload.presetVersion,
             effectiveFrom: effectiveFrom || undefined,
           }).unwrap()
+          const matStatus = created?.materialization?.status
           const generated = Number(created?.materialization?.created ?? 0)
           const slotsSkipped = Number(created?.materialization?.slotsSkipped ?? 0)
-          if (generated < 1 && slotsSkipped > 0) {
+          if (matStatus === 'started' || created?.materialization?.idempotent) {
+            setPageNotice({
+              type: 'success',
+              text: created?.materialization?.idempotent
+                ? 'That recurring session was already saved. Refreshing calendar sessions…'
+                : 'Recurring session added. Generating calendar sessions…',
+            })
+          } else if (generated < 1 && slotsSkipped > 0) {
             setPageNotice({
               type: 'warning',
               text: 'Schedule saved, but those times are already taken on the calendar. Cancel conflicting sessions or refresh to reclaim slots from deleted schedules.',
@@ -476,8 +484,29 @@ const SchedulePage = () => {
         setPatternDrawerOpen(false)
         await refreshAll()
       } catch (err) {
+        const msg = String(err?.message || '').toLowerCase()
+        const isTimeout =
+          err?.code === 'ECONNABORTED' ||
+          msg.includes('timeout') ||
+          msg.includes('exceeded')
+        const isDup =
+          err?.status === 409 &&
+          (msg.includes('identical') || msg.includes('already exists'))
+        if (patternDrawerMode === 'create' && (isTimeout || isDup)) {
+          setPatternDrawerOpen(false)
+          await refreshAll()
+          setPageNotice({
+            type: 'success',
+            text: isDup
+              ? 'That recurring session was already saved (often from a previous attempt that timed out). Calendar is refreshing.'
+              : 'Save may still be finishing on the server. Refreshing — if the pattern appears, sessions will follow shortly.',
+          })
+          return
+        }
         const saved =
-          err?.raw?.schedule && typeof err.raw.schedule === 'object' ? err.raw.schedule : null
+          (err?.raw?.schedule && typeof err.raw.schedule === 'object' && err.raw.schedule) ||
+          (err?.raw?.pattern && typeof err.raw.pattern === 'object' && err.raw.pattern) ||
+          null
         if (patternDrawerMode === 'create' && saved?.id) {
           setPatternDrawerOpen(false)
           await refreshAll()
