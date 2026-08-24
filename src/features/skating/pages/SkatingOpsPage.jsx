@@ -46,6 +46,10 @@ import { deriveSessionLifecycle, formatElapsedLiveLabel } from '../utils/session
 import { bumpSkatingOpsMetric } from '../utils/skatingOpsInternalMetrics'
 import { computeSessionSummary } from '../utils/sessionTodaySummary'
 import operationalSessionsApi from '../../../domain/operationalSessions/operationalSessionsApi'
+import {
+  tryEndSession,
+  tryStartSession,
+} from '../../../domain/operationalSessions/helpers/runEndSession'
 import { operationalStateToLegacyOpsState } from '../../../domain/operationalSessions/helpers/stateLabels'
 import { isOperationalSessionCancelled } from '../../../domain/operationalSessions/helpers/sessionActions'
 import { devLogEmptyDayBoard } from '../../../domain/operationalSessions/helpers/devDayBoardLog'
@@ -1033,7 +1037,12 @@ const SkatingOpsPage = () => {
     clearPendingObsAdvance()
     advancePauseRhythmRef.current = 0
     setObsReturnSkater(null)
-    await operationalSessionsApi.endSession(selectedSessionId)
+    const result = await tryEndSession(operationalSessionsApi.endSession, selectedSessionId)
+    if (!result.ok) {
+      setLapError(result.message)
+      return
+    }
+    setLapError('')
     bumpSkatingOpsMetric('sessionEnded')
     await loadBundle(selectedSessionId)
     await loadDayBoard()
@@ -1041,7 +1050,12 @@ const SkatingOpsPage = () => {
 
   const startSession = async () => {
     if (!selectedSessionId || isOperationalSessionCancelled(selSession)) return
-    await operationalSessionsApi.startSession(selectedSessionId)
+    const result = await tryStartSession(operationalSessionsApi.startSession, selectedSessionId)
+    if (!result.ok) {
+      setLapError(result.message)
+      return
+    }
+    setLapError('')
     bumpSkatingOpsMetric('sessionStartedOnIce')
     await loadBundle(selectedSessionId)
     await loadDayBoard()
