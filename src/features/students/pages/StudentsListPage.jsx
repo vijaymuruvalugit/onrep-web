@@ -3,6 +3,7 @@ import { CAlert, CCard, CCardBody, CPagination, CPaginationItem } from '@coreui/
 import { useStudents } from '../hooks/useStudents'
 import StudentsFilters from '../components/StudentsFilters'
 import StudentsTable from '../components/StudentsTable'
+import { getStudentParent } from '../utils/studentMappers'
 
 const CLIENT_FILTER_LIMIT = 200
 
@@ -48,7 +49,7 @@ const StudentsListPage = () => {
         String(student.full_name || '')
           .toLowerCase()
           .includes(search) ||
-        String(student.parent_guardian_name || '')
+        String(getStudentParent(student) || '')
           .toLowerCase()
           .includes(search)
       const byStatus =

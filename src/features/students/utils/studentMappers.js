@@ -20,13 +20,17 @@ export function getStudentBatch(student) {
   return 'Not assigned'
 }
 
-// Soft display label for the Students list "Parent" column. Real per-student
-// parent management lives on the detail page; the list-level GET /students
-// endpoint doesn't currently include a count of linked parents, so we fall
-// back to legacy parent_guardian_name (still populated for older students)
-// and otherwise show an em-dash so the column doesn't read "Not linked"
-// for every newly-created student.
+// Prefer approved linked guardian accounts over legacy parent_guardian_* profile fields.
+// Those legacy columns are often stale after invite/claim (e.g. import name vs linked user).
 export function getStudentParent(student) {
+  const linked =
+    student?.linked_parent_names ||
+    student?.linkedParentNames ||
+    student?.linkedParents
+  if (Array.isArray(linked) && linked.length > 0) {
+    const names = linked.map((x) => (typeof x === 'string' ? x : x?.name)).filter(Boolean)
+    if (names.length > 0) return names.join(', ')
+  }
   return student?.parent_guardian_name || student?.parentName || '—'
 }
 
