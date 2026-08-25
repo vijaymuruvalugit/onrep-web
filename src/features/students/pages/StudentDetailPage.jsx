@@ -16,6 +16,7 @@ import StudentStatusBadge from '../components/StudentStatusBadge'
 import StudentParentsCard from '../components/StudentParentsCard'
 import StudentLoginCard from '../components/StudentLoginCard'
 import StudentSkatingSnapshotCard from '../../skating/components/StudentSkatingSnapshotCard'
+import StudentCoachingActivityCard from '../components/StudentCoachingActivityCard'
 import { getStudentActivity, getStudentBatch, getStudentDisplayName } from '../utils/studentMappers'
 import { sanitizeStudentNotesForDisplay } from '../../batches/utils/batchDisplayUtils'
 import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
@@ -133,6 +134,9 @@ const StudentDetailPage = () => {
       <CRow className="g-3">
         <CCol xs={12}>
           <StudentSkatingSnapshotCard studentId={studentId} />
+        </CCol>
+        <CCol xs={12}>
+          <StudentCoachingActivityCard studentId={studentId} />
         </CCol>
         <CCol lg={6}>
           <CCard>

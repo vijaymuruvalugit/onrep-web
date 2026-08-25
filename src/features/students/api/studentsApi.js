@@ -19,6 +19,20 @@ export const studentsApi = {
     return data || {}
   },
 
+  async getStudentObservations(studentId, params = {}) {
+    const { data } = await http.get(`/students/${encodeURIComponent(studentId)}/observations`, {
+      params: { limit: 20, ...params },
+    })
+    return data?.observations || []
+  },
+
+  async getCoachingPriority(studentId) {
+    const { data } = await http.get(
+      `/students/${encodeURIComponent(studentId)}/coaching-priority`,
+    )
+    return data?.priority ?? null
+  },
+
   async createStudent(payload) {
     const { data } = await http.post('/students', payload)
     return data || {}
