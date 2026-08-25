@@ -108,6 +108,14 @@ export default function CompactSessionRow({
                 Cancelled
               </CBadge>
             ) : null}
+            {!row.isCancelled &&
+            (row.attendanceMarked ||
+              String(row.operationalState || '').toLowerCase() === 'completed' ||
+              String(row.status || '').toLowerCase() === 'completed') ? (
+              <CBadge color="success" className="rounded-pill fw-normal px-2 py-0">
+                Completed
+              </CBadge>
+            ) : null}
             {hasActual ? (
               <CBadge color="light" className="text-dark border rounded-pill fw-normal px-2 py-0">
                 Timing adjusted

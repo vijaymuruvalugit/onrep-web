@@ -99,14 +99,16 @@ function uniqueCoachOptions(options = []) {
  */
 export default function PatternEditorDrawer({
   visible,
-  mode, // 'create' | 'edit'
+  mode, // 'create' | 'edit' — create path prefers RecurringSetupWizard
   pattern, // current row when editing
   batch,
   places = [],
   placesLoading = false,
   coaches = [],
   onClose,
-  onSubmit, // ({ payload, editMode, effectiveFrom }) => Promise<void>
+  onSubmit, // ({ payload, editMode, effectiveFrom, occurrenceCutoverDate }) => Promise<void>
+  /** YYYY-MM-DD of the selected occurrence for this-and-future (update_upcoming). */
+  occurrenceCutoverDate = null,
   onEnsurePlaces,
   onQuickAddPlace,
   quickAddSaving = false,
@@ -253,6 +255,13 @@ export default function PatternEditorDrawer({
             phaseOverrides: seed.phaseOverrides,
           }),
     }
+    const cutover =
+      isEdit &&
+      editMode === RECURRING_PATTERN_EDIT_MODE.UPDATE_UPCOMING &&
+      occurrenceCutoverDate &&
+      /^\d{4}-\d{2}-\d{2}$/.test(String(occurrenceCutoverDate))
+        ? String(occurrenceCutoverDate).slice(0, 10)
+        : undefined
     await onSubmit({
       payload: basePayload,
       editMode,
@@ -261,6 +270,7 @@ export default function PatternEditorDrawer({
           ? effectiveFromDate
           : tomorrowYmd()
         : undefined,
+      occurrenceCutoverDate: cutover,
     })
   }
 
@@ -442,7 +452,9 @@ export default function PatternEditorDrawer({
                 <span>
                   <strong>Update upcoming sessions</strong>
                   <span className="d-block small text-body-secondary">
-                    Applies from tomorrow. Past sessions stay on the old schedule.
+                    {occurrenceCutoverDate
+                      ? `Applies from ${occurrenceCutoverDate} for this pattern only. Past sessions stay on the old schedule.`
+                      : 'Applies from tomorrow for this pattern only. Past sessions stay on the old schedule.'}
                   </span>
                 </span>
               }

@@ -45,7 +45,10 @@ function buildBatchRowModel(batch, todayIso) {
   const students = getBatchStudentCount(batch)
   const needSchedule = batchNeedsSchedule(batch)
   const needCoach = batchNeedsCoach(batch)
-  const summary = batch.weeklySummary
+  const patternLines = Array.isArray(batch.weeklyPatternLines)
+    ? batch.weeklyPatternLines.filter(Boolean)
+    : []
+  const summary = patternLines.length > 0 ? patternLines.join(' · ') : batch.weeklySummary
   const coachLabel = batch.coachName ?? batch.coach_name
   const rawPlace = batch.location || batch.placeName
   const placeLabel = rawPlace ? stripDemoSuffix(rawPlace) : ''
@@ -81,8 +84,7 @@ function buildBatchRowModel(batch, todayIso) {
     }
   }
 
-  const coachDisplay =
-    coachLabel || todaySnap?.coachName || nextSnap?.coachName || null
+  const coachDisplay = coachLabel || todaySnap?.coachName || nextSnap?.coachName || null
 
   return {
     id,
@@ -93,6 +95,7 @@ function buildBatchRowModel(batch, todayIso) {
     students,
     placeLabel,
     summary,
+    patternLines,
     needSchedule,
     needCoach,
     needsAttention,
@@ -184,6 +187,12 @@ function BatchTileCard({ m, onDelete }) {
                   Add schedule
                 </Link>
               </>
+            ) : m.patternLines?.length > 0 ? (
+              <div className="d-flex flex-column gap-1">
+                {m.patternLines.map((line) => (
+                  <span key={line}>{line}</span>
+                ))}
+              </div>
             ) : (
               <span>{m.summary || '—'}</span>
             )}
@@ -222,8 +231,10 @@ function BatchTileCard({ m, onDelete }) {
                   Assign
                 </Link>
               </>
+            ) : m.coachDisplay ? (
+              <span>{m.coachDisplay}</span>
             ) : (
-              <span>{m.coachDisplay || '—'}</span>
+              <span className="text-body-secondary">—</span>
             )}
           </div>
         </div>
@@ -295,6 +306,14 @@ function BatchListRow({ m, onDelete }) {
               Add schedule
             </Link>
           </>
+        ) : m.patternLines?.length > 0 ? (
+          <div className="d-flex flex-column gap-1">
+            {m.patternLines.map((line) => (
+              <span key={line} className="small">
+                {line}
+              </span>
+            ))}
+          </div>
         ) : (
           <span className="small">{m.summary || '—'}</span>
         )}
@@ -312,9 +331,7 @@ function BatchListRow({ m, onDelete }) {
         {d.variant === 'today' || d.variant === 'next' ? (
           <div>
             <div className="small fw-semibold">{d.when}</div>
-            {d.place ? (
-              <div className="small text-body-secondary">{d.place}</div>
-            ) : null}
+            {d.place ? <div className="small text-body-secondary">{d.place}</div> : null}
           </div>
         ) : (
           <span className="small text-body-secondary">None scheduled</span>
@@ -327,8 +344,10 @@ function BatchListRow({ m, onDelete }) {
           <Link to={`${m.base}?tab=settings`} className="small text-primary text-decoration-none">
             Assign coach
           </Link>
+        ) : m.coachDisplay ? (
+          <span className="small">{m.coachDisplay}</span>
         ) : (
-          <span className="small">{m.coachDisplay || '—'}</span>
+          <span className="small text-body-secondary">—</span>
         )}
       </div>
 
@@ -521,7 +540,11 @@ const BatchesListPage = () => {
         <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3">
           <strong className="onrep-batches-toolbar__title fs-5">Batches</strong>
           <div className="d-flex flex-wrap align-items-center gap-2 justify-content-md-end">
-            <CButtonGroup role="group" aria-label="Batches layout" className="onrep-batches-view-toggle">
+            <CButtonGroup
+              role="group"
+              aria-label="Batches layout"
+              className="onrep-batches-view-toggle"
+            >
               <CButton
                 type="button"
                 color="secondary"
@@ -552,7 +575,9 @@ const BatchesListPage = () => {
               type="button"
               onClick={openAddModal}
               disabled={!activeActivityId}
-              title={!activeActivityId ? 'Choose where you’re working in the header first' : undefined}
+              title={
+                !activeActivityId ? 'Choose where you’re working in the header first' : undefined
+              }
             >
               Add batch
             </CButton>
@@ -633,7 +658,11 @@ const BatchesListPage = () => {
               </div>
               <div className="onrep-batch-list-body">
                 {rowModels.map((m) => (
-                  <BatchListRow key={m.id} m={m} onDelete={(id, name) => setDeleteTarget({ id, name })} />
+                  <BatchListRow
+                    key={m.id}
+                    m={m}
+                    onDelete={(id, name) => setDeleteTarget({ id, name })}
+                  />
                 ))}
               </div>
             </div>
@@ -669,7 +698,8 @@ const BatchesListPage = () => {
             <div className="mb-3">
               <CFormLabel className="d-block">Specializations</CFormLabel>
               <div className="small text-body-secondary mb-2">
-                Select every specialization this batch covers. The first one selected is the primary.
+                Select every specialization this batch covers. The first one selected is the
+                primary.
               </div>
               <div className="d-flex flex-column gap-2">
                 {subActivitiesRows.map((s) => {
@@ -695,7 +725,8 @@ const BatchesListPage = () => {
             </div>
           ) : activeActivityId ? (
             <CAlert color="danger" className="mb-3">
-              No specializations set up for this practice yet. Ask an owner to add them, or try refreshing.
+              No specializations set up for this practice yet. Ask an owner to add them, or try
+              refreshing.
             </CAlert>
           ) : null}
           <div className="mb-3">
@@ -755,11 +786,7 @@ const BatchesListPage = () => {
         </CModalFooter>
       </CModal>
 
-      <CModal
-        visible={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        alignment="center"
-      >
+      <CModal visible={!!deleteTarget} onClose={() => setDeleteTarget(null)} alignment="center">
         <CModalHeader>
           <CModalTitle>Delete batch</CModalTitle>
         </CModalHeader>
@@ -770,7 +797,8 @@ const BatchesListPage = () => {
             </CAlert>
           ) : null}
           <p>
-            Delete <strong>{deleteTarget?.name}</strong>? This will remove the batch, its coach assignments, and student enrolments. Sessions and payments are not affected.
+            Delete <strong>{deleteTarget?.name}</strong>? This will remove the batch, its coach
+            assignments, and student enrolments. Sessions and payments are not affected.
           </p>
         </CModalBody>
         <CModalFooter>
@@ -778,7 +806,14 @@ const BatchesListPage = () => {
             Cancel
           </CButton>
           <CButton color="danger" disabled={mutationLoading} onClick={handleDeleteConfirm}>
-            {mutationLoading ? <><CSpinner size="sm" className="me-2" />Deleting…</> : 'Delete batch'}
+            {mutationLoading ? (
+              <>
+                <CSpinner size="sm" className="me-2" />
+                Deleting…
+              </>
+            ) : (
+              'Delete batch'
+            )}
           </CButton>
         </CModalFooter>
       </CModal>

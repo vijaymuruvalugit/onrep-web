@@ -16,6 +16,7 @@ import usePlaces from '../../places/hooks/usePlaces'
 import { useSchedule } from '../hooks/useSchedule'
 import RecurringPatternsList from '../components/RecurringPatternsList'
 import PatternEditorDrawer from '../components/PatternEditorDrawer'
+import RecurringSetupWizard from '../components/RecurringSetupWizard'
 import AdjustNextSessionModal from '../components/AdjustNextSessionModal'
 import ScheduleBatchSwitcher from '../components/ScheduleBatchSwitcher'
 import CreateOneTimeSessionDrawer from '../components/CreateOneTimeSessionDrawer'
@@ -23,6 +24,7 @@ import SessionDetailDrawer from '../components/SessionDetailDrawer'
 import CompactSessionRow from '../components/CompactSessionRow'
 import {
   compareOperationalSessionsChronological,
+  effectiveOperationalSessionDateYmd,
   isOperationalSessionStillUpcoming,
   normalizeSessionDateYmd,
   parseSessionLocalDate,
@@ -91,7 +93,6 @@ const SchedulePage = () => {
     error,
     mutationError,
     fetchSchedule,
-    createSchedule,
     updatePattern,
     deactivatePattern,
     clearErrors,
@@ -302,17 +303,29 @@ const SchedulePage = () => {
     )
   }, [sortedSessionRows, todayIso])
 
-  const mergedTimelineRaw = sortedSessionRows
+  /** Main timeline: keep completed/cancelled on academy-local dates (do not drop via still-upcoming). */
+  const boardTimelineRows = useMemo(() => {
+    const today = String(todayIso).slice(0, 10)
+    return sortedSessionRows.filter((r) => {
+      const ymd =
+        effectiveOperationalSessionDateYmd(r) ||
+        normalizeSessionDateYmd(r.sessionDate ?? r.session_date)
+      if (today && ymd && ymd < today) return false
+      return true
+    })
+  }, [sortedSessionRows, todayIso])
+
+  const mergedTimelineRaw = boardTimelineRows
 
   const mergedTimeline = useMemo(() => {
     if (sessionKindFilter === 'cancelled') {
       return sortedSessionRows.filter((r) => r.isCancelled)
     }
-    const base = upcomingSessionRows
+    const base = boardTimelineRows
     if (sessionKindFilter === 'one_off') return base.filter((r) => isOperationalOneOff(r))
     if (sessionKindFilter === 'regular') return base.filter((r) => isOperationalRecurring(r))
     return base
-  }, [sortedSessionRows, upcomingSessionRows, sessionKindFilter])
+  }, [sortedSessionRows, boardTimelineRows, sessionKindFilter])
 
   // Per-pattern "next session" map for the kebab menu (Skip next / Adjust next).
   // Uses the same merged timeline but groups by `schedule_id` so each pattern's
@@ -417,119 +430,98 @@ const SchedulePage = () => {
     [clearErrors],
   )
 
+  const editOccurrenceCutoverDate = useMemo(() => {
+    if (!patternDrawerSeed?.id) return null
+    const row = nextSessionByPatternId[String(patternDrawerSeed.id)]
+    return (
+      effectiveOperationalSessionDateYmd(row) ||
+      normalizeSessionDateYmd(row?.sessionDate ?? row?.session_date) ||
+      null
+    )
+  }, [patternDrawerSeed, nextSessionByPatternId])
+
   const handleSavePattern = useCallback(
-    async ({ payload, editMode, effectiveFrom }) => {
-      if (!effectiveBatchId) return
+    async ({ payload, editMode, effectiveFrom, occurrenceCutoverDate }) => {
+      if (!effectiveBatchId || !patternDrawerSeed?.id) return
       try {
-        if (patternDrawerMode === 'create') {
-          const created = await createSchedule({
-            batchId: effectiveBatchId,
-            daysOfWeek: payload.daysOfWeek,
-            startTime: payload.startTime,
-            endTime: payload.endTime || undefined,
-            slotName: payload.name,
-            placeId: payload.placeId || undefined,
-            coachId: payload.coachId || undefined,
-            sessionFocus: payload.sessionFocus || undefined,
-            sessionMode: payload.sessionMode || undefined,
-            sessionPresetId: payload.sessionPresetId,
-            phaseOverrides: payload.phaseOverrides,
-            presetVersion: payload.presetVersion,
-            effectiveFrom: effectiveFrom || undefined,
-          }).unwrap()
-          const matStatus = created?.materialization?.status
-          const generated = Number(created?.materialization?.created ?? 0)
-          const slotsSkipped = Number(created?.materialization?.slotsSkipped ?? 0)
-          if (matStatus === 'started' || created?.materialization?.idempotent) {
-            setPageNotice({
-              type: 'success',
-              text: created?.materialization?.idempotent
-                ? 'That recurring session was already saved. Refreshing calendar sessions…'
-                : 'Recurring session added. Generating calendar sessions…',
-            })
-          } else if (generated < 1 && slotsSkipped > 0) {
-            setPageNotice({
-              type: 'warning',
-              text: 'Schedule saved, but those times are already taken on the calendar. Cancel conflicting sessions or refresh to reclaim slots from deleted schedules.',
-            })
-          } else if (generated < 1) {
-            setPageNotice({
-              type: 'warning',
-              text: 'Schedule saved. Tap Refresh to load generated sessions, or add students to this batch if none are enrolled.',
-            })
-          } else {
-            setPageNotice({
-              type: 'success',
-              text: `Recurring session added. ${generated} session${generated === 1 ? '' : 's'} added to the calendar.`,
-            })
-          }
-        } else if (patternDrawerSeed?.id) {
-          const response = await updatePattern({
-            patternId: patternDrawerSeed.id,
-            mode: editMode,
-            effectiveFrom:
-              editMode === RECURRING_PATTERN_EDIT_MODE.NEW_FROM ? effectiveFrom : undefined,
-            changes: payload,
-          }).unwrap()
-          const deleted = response?.deletedFutureSessions ?? 0
-          const kept = response?.keptFutureSessions ?? 0
-          const generated = response?.generatedFutureSessions ?? 0
-          setPageNotice({
-            type: 'success',
-            text: `Schedule updated. ${generated} upcoming regenerated, ${kept} past kept on the old schedule${
-              deleted ? `, ${deleted} planned removed` : ''
-            }.`,
-          })
-        }
+        const response = await updatePattern({
+          patternId: patternDrawerSeed.id,
+          mode: editMode,
+          effectiveFrom:
+            editMode === RECURRING_PATTERN_EDIT_MODE.NEW_FROM ? effectiveFrom : undefined,
+          occurrenceCutoverDate:
+            editMode === RECURRING_PATTERN_EDIT_MODE.UPDATE_UPCOMING
+              ? occurrenceCutoverDate || undefined
+              : undefined,
+          changes: payload,
+        }).unwrap()
+        const deleted = response?.deletedFutureSessions ?? 0
+        const kept = response?.keptFutureSessions ?? 0
+        const generated = response?.generatedFutureSessions ?? 0
+        setPageNotice({
+          type: 'success',
+          text: `Schedule updated. ${generated} upcoming regenerated, ${kept} past kept on the old schedule${
+            deleted ? `, ${deleted} planned removed` : ''
+          }.`,
+        })
         setPatternDrawerOpen(false)
         await refreshAll()
       } catch (err) {
-        const msg = String(err?.message || '').toLowerCase()
-        const isTimeout =
-          err?.code === 'ECONNABORTED' ||
-          msg.includes('timeout') ||
-          msg.includes('exceeded')
-        const isDup =
-          err?.status === 409 &&
-          (msg.includes('identical') || msg.includes('already exists'))
-        if (patternDrawerMode === 'create' && (isTimeout || isDup)) {
-          setPatternDrawerOpen(false)
-          await refreshAll()
-          setPageNotice({
-            type: 'success',
-            text: isDup
-              ? 'That recurring session was already saved (often from a previous attempt that timed out). Calendar is refreshing.'
-              : 'Save may still be finishing on the server. Refreshing — if the pattern appears, sessions will follow shortly.',
-          })
-          return
-        }
-        const saved =
-          (err?.raw?.schedule && typeof err.raw.schedule === 'object' && err.raw.schedule) ||
-          (err?.raw?.pattern && typeof err.raw.pattern === 'object' && err.raw.pattern) ||
-          null
-        if (patternDrawerMode === 'create' && saved?.id) {
-          setPatternDrawerOpen(false)
-          await refreshAll()
-          setPageNotice({
-            type: 'warning',
-            text:
-              typeof err?.message === 'string' && err.message
-                ? `${err.message} The schedule was saved — tap Refresh if sessions are still missing.`
-                : 'Schedule saved with conflicts on some dates. Tap Refresh to regenerate sessions.',
-          })
-          return
-        }
         // mutationError surfaces via the drawer alert
+        void err
       }
     },
-    [
-      effectiveBatchId,
-      patternDrawerMode,
-      patternDrawerSeed,
-      createSchedule,
-      updatePattern,
-      refreshAll,
-    ],
+    [effectiveBatchId, patternDrawerSeed, updatePattern, refreshAll],
+  )
+
+  const handleWizardCreated = useCallback(
+    async (result, { patternCount } = {}) => {
+      const count =
+        Number(patternCount) || (Array.isArray(result?.patterns) ? result.patterns.length : 1)
+      const matStatus = result?.materialization?.status
+      const generated = Number(result?.materialization?.created ?? 0)
+      const slotsSkipped = Number(result?.materialization?.slotsSkipped ?? 0)
+      if (result?.idempotent || result?.materialization?.idempotent) {
+        setPageNotice({
+          type: 'success',
+          text: 'That recurring session was already saved. Refreshing calendar sessions…',
+        })
+      } else if (matStatus === 'started') {
+        setPageNotice({
+          type: 'success',
+          text:
+            count > 1
+              ? `${count} recurring patterns added. Generating calendar sessions…`
+              : 'Recurring session added. Generating calendar sessions…',
+        })
+      } else if (generated < 1 && slotsSkipped > 0) {
+        setPageNotice({
+          type: 'warning',
+          text: 'Schedule saved, but those times are already taken on the calendar. Cancel conflicting sessions or refresh to reclaim slots from deleted schedules.',
+        })
+      } else if (generated < 1 && matStatus == null) {
+        setPageNotice({
+          type: 'success',
+          text:
+            count > 1
+              ? `${count} recurring patterns added. Refreshing calendar…`
+              : 'Recurring session added. Refreshing calendar…',
+        })
+      } else if (generated < 1) {
+        setPageNotice({
+          type: 'warning',
+          text: 'Schedule saved. Tap Refresh to load generated sessions, or add students to this batch if none are enrolled.',
+        })
+      } else {
+        setPageNotice({
+          type: 'success',
+          text: `Recurring session added. ${generated} session${generated === 1 ? '' : 's'} added to the calendar.`,
+        })
+      }
+      setPatternDrawerOpen(false)
+      await refreshAll()
+    },
+    [refreshAll],
   )
 
   const handleDeactivatePattern = useCallback(
@@ -707,8 +699,20 @@ const SchedulePage = () => {
               </CAlert>
             ) : null}
             {sessionsError ? (
-              <CAlert color="warning" className="py-2">
-                {sessionsError}
+              <CAlert
+                color="danger"
+                className="py-2 d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2"
+              >
+                <span>Could not load sessions. {sessionsError}</span>
+                <CButton
+                  size="sm"
+                  color="danger"
+                  variant="outline"
+                  className="align-self-sm-center"
+                  onClick={() => loadSessions()}
+                >
+                  Retry
+                </CButton>
               </CAlert>
             ) : null}
             {sessionsEmptyHint && !sessionsError ? (
@@ -721,7 +725,7 @@ const SchedulePage = () => {
                 <CSpinner size="sm" />
               </div>
             ) : null}
-            {!sessionsLoading && !mergedTimeline.length && !sessionsEmptyHint && !sessionsError ? (
+            {!sessionsLoading && !sessionsError && !mergedTimeline.length && !sessionsEmptyHint ? (
               <div className="onrep-type-muted small">
                 {mergedTimelineRaw.length
                   ? 'No sessions match this filter.'
@@ -755,9 +759,9 @@ const SchedulePage = () => {
                   />
                 )
               })}
-            {!sessionsLoading && mergedTimeline.length > 0 ? (
+            {!sessionsLoading && !sessionsError && mergedTimeline.length > 0 ? (
               <div className="onrep-type-muted small mt-2">
-                Showing next {displayedUpcoming.length} of {mergedTimeline.length} upcoming session
+                Showing next {displayedUpcoming.length} of {mergedTimeline.length} session
                 {mergedTimeline.length === 1 ? '' : 's'}
               </div>
             ) : null}
@@ -795,23 +799,41 @@ const SchedulePage = () => {
         quickAddError={quickAddPlaceError}
       />
 
-      <PatternEditorDrawer
-        visible={patternDrawerOpen}
-        mode={patternDrawerMode}
-        pattern={patternDrawerSeed}
-        batch={selectedBatch}
-        places={activePlaces}
-        placesLoading={placesLoading}
-        coaches={coaches}
-        onClose={() => setPatternDrawerOpen(false)}
-        onEnsurePlaces={ensurePlacesLoaded}
-        onQuickAddPlace={handleQuickAddPlace}
-        quickAddSaving={quickAddPlaceSaving}
-        quickAddError={quickAddPlaceError}
-        onSubmit={handleSavePattern}
-        saving={saving}
-        mutationError={mutationError}
-      />
+      {patternDrawerMode === 'create' ? (
+        <RecurringSetupWizard
+          visible={patternDrawerOpen}
+          batch={selectedBatch}
+          batchId={effectiveBatchId}
+          places={activePlaces}
+          placesLoading={placesLoading}
+          coaches={coaches}
+          onClose={() => setPatternDrawerOpen(false)}
+          onCreated={handleWizardCreated}
+          onEnsurePlaces={ensurePlacesLoaded}
+          onQuickAddPlace={handleQuickAddPlace}
+          quickAddSaving={quickAddPlaceSaving}
+          quickAddError={quickAddPlaceError}
+        />
+      ) : (
+        <PatternEditorDrawer
+          visible={patternDrawerOpen}
+          mode="edit"
+          pattern={patternDrawerSeed}
+          batch={selectedBatch}
+          places={activePlaces}
+          placesLoading={placesLoading}
+          coaches={coaches}
+          occurrenceCutoverDate={editOccurrenceCutoverDate}
+          onClose={() => setPatternDrawerOpen(false)}
+          onEnsurePlaces={ensurePlacesLoaded}
+          onQuickAddPlace={handleQuickAddPlace}
+          quickAddSaving={quickAddPlaceSaving}
+          quickAddError={quickAddPlaceError}
+          onSubmit={handleSavePattern}
+          saving={saving}
+          mutationError={mutationError}
+        />
+      )}
 
       <AdjustNextSessionModal
         visible={adjustNextOpen}

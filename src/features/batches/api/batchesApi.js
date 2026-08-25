@@ -21,6 +21,28 @@ function formatListScheduleSnapshot(snap) {
   return [dayPart, timePart].filter(Boolean).join(' · ') || null
 }
 
+/** One line for a weekly pattern, optionally prefixed with slot name. */
+function formatWeeklyPatternLine(snap) {
+  const cadence = formatListScheduleSnapshot(snap)
+  if (!cadence) return null
+  const name = String(snap?.name ?? snap?.slotName ?? snap?.slot_name ?? '').trim()
+  return name ? `${name}: ${cadence}` : cadence
+}
+
+function normalizeWeeklyPatterns(raw) {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw.filter((p) => p && typeof p === 'object')
+  if (typeof raw === 'string') {
+    try {
+      const p = JSON.parse(raw)
+      return Array.isArray(p) ? p.filter((row) => row && typeof row === 'object') : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 function parseBatchCoachesJson(batch) {
   const raw = batch.batchCoaches ?? batch.batch_coaches
   if (Array.isArray(raw)) {
@@ -86,7 +108,12 @@ function normalizeBatch(batch) {
   const snap = batch.listScheduleSnapshot ?? batch.list_schedule_snapshot
   const fromSnapshot = formatListScheduleSnapshot(snap)
 
-  const weeklySummary = batch.weeklySummary ?? batch.weekly_summary ?? fromSnapshot ?? null
+  const weeklyPatterns = normalizeWeeklyPatterns(batch.weeklyPatterns ?? batch.weekly_patterns)
+  const weeklyPatternLines = weeklyPatterns.map(formatWeeklyPatternLine).filter(Boolean)
+  const weeklySummary =
+    weeklyPatternLines.length > 0
+      ? weeklyPatternLines.join(' · ')
+      : (batch.weeklySummary ?? batch.weekly_summary ?? fromSnapshot ?? null)
 
   const hasUpcomingClass =
     Boolean(batch.hasUpcomingClass ?? batch.has_upcoming_class) || upcomingSessionsCount > 0
@@ -141,10 +168,7 @@ function normalizeBatch(batch) {
     ...batch,
     activityWorkspaceId: batch.activityWorkspaceId ?? batch.activity_workspace_id ?? null,
     subActivityName:
-      batch.subActivityName ??
-      batch.sub_activity_name ??
-      subActivityNamesJoined ??
-      null,
+      batch.subActivityName ?? batch.sub_activity_name ?? subActivityNamesJoined ?? null,
     subActivityNames: subActivityNamesJoined,
     subActivityIds,
     batchSubActivities,
@@ -170,6 +194,8 @@ function normalizeBatch(batch) {
     activeScheduleCount,
     upcomingSessionsCount,
     listScheduleSnapshot: snap ?? null,
+    weeklyPatterns,
+    weeklyPatternLines,
     weeklySummary,
     hasUpcomingClass,
     todaySessionSnapshot,

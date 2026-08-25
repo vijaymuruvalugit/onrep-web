@@ -35,13 +35,47 @@ export const scheduleApi = {
   },
 
   /**
+   * Dry-run occurrence expansion. Returns count, first/last, warnings, and
+   * `previewFingerprint` required by bulk create.
+   *
+   * @param {string} batchId
+   * @param {{ patterns: object[], effectiveFrom?: string, effectiveUntil?: string,
+   *   placeId?: string, coachId?: string, sessionMode?: string }} body
+   */
+  async previewRecurringPatterns(batchId, body) {
+    const { data } = await http.post(
+      `/batches/${encodeURIComponent(batchId)}/recurring-patterns/preview`,
+      body,
+    )
+    return data || {}
+  },
+
+  /**
+   * Create one or more patterns in one transaction. Requires
+   * `clientMutationId` + `previewFingerprint`.
+   *
+   * @param {string} batchId
+   * @param {{ patterns: object[], effectiveFrom?: string, effectiveUntil?: string,
+   *   clientMutationId: string, previewFingerprint: string,
+   *   placeId?: string, coachId?: string, sessionMode?: string }} body
+   */
+  async bulkCreateRecurringPatterns(batchId, body) {
+    const { data } = await http.post(
+      `/batches/${encodeURIComponent(batchId)}/recurring-patterns/bulk`,
+      body,
+      { timeout: 60000 },
+    )
+    return data || {}
+  },
+
+  /**
    * Audit-safe pattern edit. Body matches {@link UpdateRecurringPatternRequest}
    * in `@onrep/contracts/recurring-patterns`. Always end-and-replace under the
    * hood — preserves historical session links.
    *
    * @param {string} patternId
    * @param {{ mode: 'update_upcoming' | 'new_from', effectiveFrom?: string,
-   *   horizonDays?: number, changes: object }} payload
+   *   occurrenceCutoverDate?: string, horizonDays?: number, changes: object }} payload
    */
   async patchRecurringPattern(patternId, payload) {
     const { data } = await http.patch(
