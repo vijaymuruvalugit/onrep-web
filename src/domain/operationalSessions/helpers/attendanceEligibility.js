@@ -1,14 +1,21 @@
 /**
- * Coach may mark attendance only while a session is live (active) or after it is closed (completed).
- * @param {{ operationalState?: string|null, state?: string|null, status?: string|null, isCancelled?: boolean, attendanceEnabled?: boolean, attendance_enabled?: boolean, actualStartTime?: string|null, actual_start_time?: string|null }} row
+ * Coach may mark attendance while a session is live (active).
+ * Completed sessions are Correction mode: only when canCorrectCompleted is true
+ * (academy owner/admin — matches API assertCompletedAttendanceCorrectionAuthorized).
+ *
+ * @param {object} row
+ * @param {{ canCorrectCompleted?: boolean }} [opts]
  */
-export function canMarkSessionAttendance(row) {
+export function canMarkSessionAttendance(row, opts = {}) {
   if (!row) return false
   if (row.isCancelled || String(row.status || '').toUpperCase() === 'CANCELLED') return false
   if (row.attendanceEnabled === false || row.attendance_enabled === false) return false
 
   const op = String(row.operationalState ?? row.state ?? '').toLowerCase()
-  if (op === 'active' || op === 'completed') return true
+  if (op === 'active') return true
+  if (op === 'completed') {
+    return Boolean(opts.canCorrectCompleted ?? row.canCorrectCompleted)
+  }
   if (
     op === 'cancelled' ||
     op === 'scheduled' ||
@@ -23,9 +30,10 @@ export function canMarkSessionAttendance(row) {
 }
 
 /**
- * @param {{ operationalState?: string|null, state?: string|null, status?: string|null, isCancelled?: boolean, actualStartTime?: string|null, actual_start_time?: string|null }} row
+ * @param {object} row
+ * @param {{ canCorrectCompleted?: boolean }} [opts]
  */
-export function sessionAttendanceIneligibleMessage(row) {
+export function sessionAttendanceIneligibleMessage(row, opts = {}) {
   if (!row) return 'Session not found.'
   if (row.isCancelled || String(row.status || '').toUpperCase() === 'CANCELLED') {
     return 'Session participation cannot be recorded for a cancelled session.'
@@ -40,6 +48,10 @@ export function sessionAttendanceIneligibleMessage(row) {
   }
   if (op === 'archived') {
     return 'Roster check-in is only available while a session is active or after it is closed. This session is archived.'
+  }
+  const canCorrect = Boolean(opts.canCorrectCompleted ?? row.canCorrectCompleted)
+  if (op === 'completed' && !canCorrect) {
+    return 'Completed-session attendance corrections require an academy owner or administrator.'
   }
   if (op && op !== 'active' && op !== 'completed') {
     return 'Roster check-in is only available while a session is active or after it is closed.'

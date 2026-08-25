@@ -65,6 +65,7 @@ import { usePhaseEntryAutosave } from '../hooks/usePhaseEntryAutosave'
 import { phaseCaptureApi } from '../../../domain/phaseCapture/phaseCaptureApi'
 import attendanceApi from '../../attendance/api/attendanceApi'
 import { canMarkSessionAttendance } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
+import { hasAcademyAdminCapability } from '../../auth/utils/academyAdminAccess'
 import SessionPhaseSetupModal from '../components/phaseCapture/SessionPhaseSetupModal'
 import EditSessionPhasesModal from '../components/sessionWorkspace/EditSessionPhasesModal'
 import { sessionPhasesApi } from '../../../domain/sessionPhases/sessionPhasesApi'
@@ -1136,13 +1137,16 @@ const SkatingOpsPage = () => {
         selSession?.actual_start_time ??
         selSession?.started_at ??
         syncPrimitives.sessionStartedAt,
+      canCorrectCompleted: hasAcademyAdminCapability(auth?.user),
     }),
-    [opsState, selSession, sessionCancelled, syncPrimitives.sessionStartedAt],
+    [opsState, selSession, sessionCancelled, syncPrimitives.sessionStartedAt, auth?.user],
   )
 
   const rosterCheckInEnabled =
     rosterParticipationEligible &&
-    canMarkSessionAttendance(sessionForParticipationEligibility) &&
+    canMarkSessionAttendance(sessionForParticipationEligibility, {
+      canCorrectCompleted: hasAcademyAdminCapability(auth?.user),
+    }) &&
     !uiPaused
 
   const { queueEntry: queuePhaseEntry } = usePhaseEntryAutosave({
