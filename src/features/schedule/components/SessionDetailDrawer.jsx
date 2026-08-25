@@ -15,6 +15,7 @@ import {
   CSpinner,
 } from '@coreui/react'
 import batchesApi from '../../batches/api/batchesApi'
+import skatingOpsApi from '../../skating/api/skatingOpsApi'
 import { normalizeTrainingSessionRow } from '../../classes/utils/sessionRow'
 import {
   formatActualSessionRange,
@@ -106,6 +107,9 @@ export default function SessionDetailDrawer({
   const [timeOverrideReasonDraft, setTimeOverrideReasonDraft] = useState(
     seedNormalized?.timeOverrideReason ? String(seedNormalized.timeOverrideReason) : '',
   )
+  const [raceResults, setRaceResults] = useState([])
+  const [raceResultsLoading, setRaceResultsLoading] = useState(false)
+  const [raceResultsError, setRaceResultsError] = useState(null)
 
   const load = useCallback(async () => {
     if (!sessionId) return
@@ -129,11 +133,27 @@ export default function SessionDetailDrawer({
     }
   }, [sessionId])
 
+  const loadRaceResults = useCallback(async () => {
+    if (!sessionId) return
+    setRaceResultsLoading(true)
+    setRaceResultsError(null)
+    try {
+      const rows = await skatingOpsApi.listRaceResults(sessionId)
+      setRaceResults(Array.isArray(rows) ? rows : [])
+    } catch (e) {
+      setRaceResults([])
+      setRaceResultsError(e?.response?.data?.error || e?.message || 'Could not load race results.')
+    } finally {
+      setRaceResultsLoading(false)
+    }
+  }, [sessionId])
+
   useEffect(() => {
     if (!visible || !sessionId) return
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load() begins session fetch when drawer opens
     load()
-  }, [visible, sessionId, load])
+    loadRaceResults()
+  }, [visible, sessionId, load, loadRaceResults])
 
   const mergeSessionResponse = useCallback(
     (payload) => {
@@ -491,6 +511,53 @@ export default function SessionDetailDrawer({
                     </div>
                   </CCollapse>
                 </>
+              )}
+            </section>
+
+            <section className="mt-3">
+              <div className="onrep-type-label mb-2">Confirmed race results</div>
+              {raceResultsLoading ? (
+                <div className="small text-body-secondary">
+                  <CSpinner size="sm" className="me-2" />
+                  Loading results…
+                </div>
+              ) : raceResultsError ? (
+                <CAlert color="warning" className="small mb-0">
+                  {raceResultsError}
+                </CAlert>
+              ) : raceResults.length === 0 ? (
+                <div className="small text-body-secondary fst-italic">
+                  No confirmed race results for this session.
+                </div>
+              ) : (
+                <div className="border border-light-subtle rounded-3 p-2">
+                  {raceResults.map((r, idx) => {
+                    const officialMs = r.timeMs ?? r.time_ms
+                    const capturedMs = r.meta?.captured_time_ms ?? r.meta?.capturedTimeMs
+                    const rank = r.finishRank ?? r.finish_rank
+                    return (
+                      <div
+                        key={r.id || `${r.studentId}-${idx}`}
+                        className="d-flex align-items-center gap-2 py-2 border-bottom border-light-subtle small"
+                      >
+                        <span className="fw-semibold text-body-secondary" style={{ width: 28 }}>
+                          {rank != null ? `#${rank}` : '—'}
+                        </span>
+                        <span className="flex-grow-1">
+                          {r.studentName || r.student_full_name || r.studentId || 'Athlete'}
+                        </span>
+                        <span className="text-body-secondary">
+                          {officialMs != null ? `${(officialMs / 1000).toFixed(2)}s` : '—'}
+                        </span>
+                        {capturedMs != null && capturedMs !== officialMs ? (
+                          <span className="text-body-secondary" title="Captured time">
+                            cap {(capturedMs / 1000).toFixed(2)}s
+                          </span>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </section>
 

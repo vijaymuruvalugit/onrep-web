@@ -11,9 +11,19 @@ import {
   appendProgressEventPack,
   computeProgressMetrics,
 } from '../utils/progressionPayload'
+import {
+  createVersionedPatchQueue,
+  normalizeFinishMarksCompat,
+  reconcileFinishMarks,
+} from '../utils/adminRaceDraftSync'
 import { useProgressionStateMachine, RUN_STATES } from './useProgressionStateMachine'
 
 const PATCH_DEBOUNCE_MS = 400
+
+function newMutationId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  return `mut-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
 
 function buildRaceMetaPatch(payload, extras = {}) {
   const meta = payload?.race_meta || {}
@@ -51,10 +61,65 @@ export function useProgressionRun({
     buildRunPayload(runType, { heat_number: heatNumber }),
   )
   const [runId, setRunId] = useState(null)
+  const [runVersion, setRunVersion] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [resumed, setResumed] = useState(false)
   const patchTimer = useRef(null)
+  const runIdRef = useRef(null)
+  const runVersionRef = useRef(0)
+  const patchQueueRef = useRef(null)
+
+  const setVersionBoth = useCallback((v) => {
+    const n = Math.round(Number(v) || 0)
+    runVersionRef.current = n
+    setRunVersion(n)
+  }, [])
+
+  const ensurePatchQueue = useCallback(() => {
+    if (patchQueueRef.current) return patchQueueRef.current
+    patchQueueRef.current = createVersionedPatchQueue({
+      getVersion: () => runVersionRef.current,
+      setVersion: setVersionBoth,
+      patchFn: async (body) => {
+        const id = runIdRef.current
+        if (!id) return null
+        return sessionRunsApi.updateRun(id, body)
+      },
+      reconcilePayload: (requestBody, serverRun) => {
+        const localPayload = requestBody?.runPayload || {}
+        const serverPayload = serverRun?.runPayload || {}
+        const localMarks =
+          localPayload?.race_meta?.finish_marks ||
+          localPayload?.race_meta?.finish_events ||
+          []
+        const serverMarks =
+          serverPayload?.race_meta?.finish_marks ||
+          serverPayload?.race_meta?.finish_events ||
+          []
+        const { marks, conflicts } = reconcileFinishMarks(localMarks, serverMarks)
+        if (conflicts.length) {
+          setError(
+            `Finish conflict on ${conflicts.map((c) => c.id).join(', ')} — server captured times kept`,
+          )
+        }
+        const next = normalizeProgressionPayload({
+          ...serverPayload,
+          ...localPayload,
+          race_meta: {
+            ...(serverPayload.race_meta || {}),
+            ...(localPayload.race_meta || {}),
+            finish_marks: marks,
+            finish_events: marks,
+            currentFinishes: marks.filter((m) => !m?.voided).length,
+          },
+        })
+        setPayload(next)
+        return next
+      },
+    })
+    return patchQueueRef.current
+  }, [setVersionBoth])
 
   const targetCount =
     payload?.progression_config?.target_progress_count ??
@@ -67,30 +132,44 @@ export function useProgressionRun({
 
   const flushPatch = useCallback(
     async (nextPayload) => {
-      if (!runId) return
+      if (!runIdRef.current) return null
       setSaving(true)
       try {
-        await sessionRunsApi.updateRun(runId, {
+        const queue = ensurePatchQueue()
+        const run = await queue.flush({
           runPayload: normalizeProgressionPayload(nextPayload),
           partial: true,
         })
+        return run
       } catch (e) {
-        setError(e?.message || 'Could not save progress')
+        setError(e?.response?.data?.error || e?.message || 'Could not save progress')
+        return null
       } finally {
         setSaving(false)
       }
     },
-    [runId],
+    [ensurePatchQueue],
   )
 
   const schedulePatch = useCallback(
     (nextPayload) => {
       if (patchTimer.current) clearTimeout(patchTimer.current)
       patchTimer.current = setTimeout(() => {
-        void flushPatch(nextPayload)
+        if (!runIdRef.current) return
+        setSaving(true)
+        const queue = ensurePatchQueue()
+        void queue
+          .flush({
+            runPayload: normalizeProgressionPayload(nextPayload),
+            partial: true,
+          })
+          .catch((e) => {
+            setError(e?.response?.data?.error || e?.message || 'Could not save progress')
+          })
+          .finally(() => setSaving(false))
       }, PATCH_DEBOUNCE_MS)
     },
-    [flushPatch],
+    [ensurePatchQueue],
   )
 
   const setTargetProgressCount = useCallback((count) => {
@@ -143,9 +222,12 @@ export function useProgressionRun({
         const run = await sessionRunsApi.createRun(operationalSessionId, {
           runType,
           phaseId,
+          clientMutationId: newMutationId(),
           runPayload: startPayload,
         })
         setRunId(run?.id ?? null)
+        runIdRef.current = run?.id ?? null
+        setVersionBoth(run?.runVersion != null ? Number(run.runVersion) : 0)
         setPayload(startPayload)
         sm.startRun()
         setResumed(false)
@@ -168,6 +250,7 @@ export function useProgressionRun({
       participantIds,
       heatNumber,
       targetCount,
+      setVersionBoth,
     ],
   )
 
@@ -175,7 +258,19 @@ export function useProgressionRun({
     (run) => {
       if (!run?.id) return
       const p = normalizeProgressionPayload(run.runPayload || {})
+      if (p.race_meta?.finish_marks || p.race_meta?.finish_events) {
+        const marks = normalizeFinishMarksCompat(
+          p.race_meta.finish_marks || p.race_meta.finish_events || [],
+        )
+        p.race_meta = {
+          ...p.race_meta,
+          finish_marks: marks,
+          finish_events: marks,
+        }
+      }
       setRunId(run.id)
+      runIdRef.current = run.id
+      setVersionBoth(run.runVersion != null ? Number(run.runVersion) : 0)
       setPayload(p)
       setResumed(true)
 
@@ -195,7 +290,7 @@ export function useProgressionRun({
         sm.startRun()
       }
     },
-    [sm, targetCount],
+    [sm, targetCount, setVersionBoth],
   )
 
   const applyCapture = useCallback(
@@ -305,19 +400,28 @@ export function useProgressionRun({
 
       let nextPayload = payload
       setPayload((prev) => {
-        const marks = Array.isArray(prev.race_meta?.finish_marks) ? prev.race_meta.finish_marks : []
+        const marks = Array.isArray(prev.race_meta?.finish_marks)
+          ? prev.race_meta.finish_marks
+          : Array.isArray(prev.race_meta?.finish_events)
+            ? prev.race_meta.finish_events
+            : []
+        const seq = marks.filter((m) => !m?.voided).length + 1
         const nextMark = {
-          id: `finish-${Date.now()}-${marks.length + 1}`,
-          finish_order: marks.length + 1,
+          id: newMutationId(),
+          captured_sequence: seq,
+          captured_elapsed_ms: metrics.cumulative_time_ms,
+          finish_order: seq,
           time_ms: metrics.cumulative_time_ms,
           captured_at: new Date().toISOString(),
         }
+        const nextMarks = [...marks, nextMark]
         const next = {
           ...prev,
           race_meta: {
             ...(prev.race_meta || {}),
-            currentFinishes: marks.length + 1,
-            finish_marks: [...marks, nextMark],
+            currentFinishes: nextMarks.filter((m) => !m?.voided).length,
+            finish_marks: nextMarks,
+            finish_events: nextMarks,
           },
         }
         nextPayload = next
@@ -351,18 +455,22 @@ export function useProgressionRun({
         const run = await sessionRunsApi.updateRun(runId, {
           runPayload: merged,
           partial: false,
+          confirm: true,
+          confirmClientMutationId: newMutationId(),
+          expectedVersion: runVersionRef.current,
         })
+        if (run?.runVersion != null) setVersionBoth(Number(run.runVersion))
         setPayload(merged)
         sm.completeRun()
         return run
       } catch (e) {
-        setError(e?.message || 'Could not save race')
+        setError(e?.response?.data?.error || e?.message || 'Could not save race')
         return null
       } finally {
         setSaving(false)
       }
     },
-    [runId, payload, sm],
+    [runId, payload, sm, setVersionBoth],
   )
 
   const abandonRun = useCallback(async () => {
@@ -379,27 +487,34 @@ export function useProgressionRun({
             },
           },
           partial: true,
+          expectedVersion: runVersionRef.current,
         })
       } catch (e) {
-        setError(e?.message || 'Could not reset race')
+        setError(e?.response?.data?.error || e?.message || 'Could not reset race')
       } finally {
         setSaving(false)
       }
     }
     setRunId(null)
+    runIdRef.current = null
+    setVersionBoth(0)
+    patchQueueRef.current = null
     setPayload(buildRunPayload(runType, { heat_number: heatNumber }))
     sm.resetRun()
     setResumed(false)
-  }, [runId, payload, runType, heatNumber, sm])
+  }, [runId, payload, runType, heatNumber, sm, setVersionBoth])
 
   const resetAll = useCallback(() => {
     if (patchTimer.current) clearTimeout(patchTimer.current)
     setRunId(null)
+    runIdRef.current = null
+    setVersionBoth(0)
+    patchQueueRef.current = null
     setPayload(buildRunPayload(runType, { heat_number: heatNumber }))
     sm.resetRun()
     setResumed(false)
     setError('')
-  }, [runType, heatNumber, sm])
+  }, [runType, heatNumber, sm, setVersionBoth])
 
   return {
     ...sm,
@@ -407,6 +522,7 @@ export function useProgressionRun({
     payload,
     setPayload,
     runId,
+    runVersion,
     saving,
     error,
     resumed,

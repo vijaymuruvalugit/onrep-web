@@ -124,6 +124,14 @@ export const skatingOpsApi = {
     )
     return data?.leaderboard ?? null
   },
+
+  async listRaceResults(sessionId, params = {}) {
+    const { data } = await http.get(
+      `${BASE}/sessions/${encodeURIComponent(sessionId)}/race-results`,
+      { params },
+    )
+    return data?.results ?? []
+  },
 }
 
 export default skatingOpsApi

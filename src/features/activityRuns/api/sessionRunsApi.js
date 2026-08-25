@@ -16,7 +16,7 @@ export const sessionRunsApi = {
       `${BASE}/session-runs/${encodeURIComponent(runId)}`,
       body,
     )
-    return data?.run ?? null
+    return data?.run ?? data
   },
 
   async listRuns(sessionId, params = {}) {
