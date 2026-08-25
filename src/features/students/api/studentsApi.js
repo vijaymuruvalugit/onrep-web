@@ -33,6 +33,25 @@ export const studentsApi = {
     return data?.priority ?? null
   },
 
+  async getStudentFollowUps(studentId) {
+    const { data } = await http.get(`/students/${encodeURIComponent(studentId)}/follow-ups`)
+    return data?.followUps || []
+  },
+
+  async getStudentProgressCards(studentId, params = {}) {
+    const { data } = await http.get(`/students/${encodeURIComponent(studentId)}/progress-cards`, {
+      params: { limit: 30, ...params },
+    })
+    return data?.cards || []
+  },
+
+  async revokeProgressCard(cardId, clientMutationId) {
+    const { data } = await http.post(`/progress-cards/${encodeURIComponent(cardId)}/revoke`, {
+      clientMutationId,
+    })
+    return data?.card ?? null
+  },
+
   async createStudent(payload) {
     const { data } = await http.post('/students', payload)
     return data || {}

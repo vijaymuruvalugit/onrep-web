@@ -132,6 +132,35 @@ export const skatingOpsApi = {
     )
     return data?.results ?? []
   },
+
+  async listSessionProgressCards(sessionId) {
+    const { data } = await http.get(
+      `/operational-sessions/${encodeURIComponent(sessionId)}/progress-cards`,
+    )
+    return data?.cards ?? []
+  },
+
+  async getSessionReview(sessionId) {
+    const { data } = await http.get(
+      `/operational-sessions/${encodeURIComponent(sessionId)}/review`,
+    )
+    return data
+  },
+
+  async correctRaceResult(runId, body) {
+    const { data } = await http.post(
+      `/operational-sessions/session-runs/${encodeURIComponent(runId)}/corrections`,
+      body,
+    )
+    return data
+  },
+
+  async revokeProgressCard(cardId, clientMutationId) {
+    const { data } = await http.post(`/progress-cards/${encodeURIComponent(cardId)}/revoke`, {
+      clientMutationId,
+    })
+    return data?.card ?? null
+  },
 }
 
 export default skatingOpsApi

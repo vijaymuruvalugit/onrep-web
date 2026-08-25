@@ -29,6 +29,8 @@ import {
   canMarkSessionAttendance,
   sessionAttendanceIneligibleMessage,
 } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
+import { hasAcademyAdminCapability } from '../../auth/utils/academyAdminAccess'
+import { useSelector } from 'react-redux'
 
 function toDatetimeLocalValue(iso) {
   if (!iso) return ''
@@ -110,6 +112,14 @@ export default function SessionDetailDrawer({
   const [raceResults, setRaceResults] = useState([])
   const [raceResultsLoading, setRaceResultsLoading] = useState(false)
   const [raceResultsError, setRaceResultsError] = useState(null)
+  const [progressCards, setProgressCards] = useState([])
+  const [progressCardsError, setProgressCardsError] = useState(null)
+  const [sessionReview, setSessionReview] = useState(null)
+  const [sessionReviewError, setSessionReviewError] = useState(null)
+  const [sessionReviewLoading, setSessionReviewLoading] = useState(false)
+  const [correctDraft, setCorrectDraft] = useState(null)
+  const authUser = useSelector((s) => s.auth?.user)
+  const canRevokeCards = hasAcademyAdminCapability(authUser)
 
   const load = useCallback(async () => {
     if (!sessionId) return
@@ -137,17 +147,84 @@ export default function SessionDetailDrawer({
     if (!sessionId) return
     setRaceResultsLoading(true)
     setRaceResultsError(null)
+    setProgressCardsError(null)
+    setSessionReviewError(null)
+    setSessionReviewLoading(true)
     try {
-      const rows = await skatingOpsApi.listRaceResults(sessionId)
+      const [rows, cards, review] = await Promise.all([
+        skatingOpsApi.listRaceResults(sessionId),
+        skatingOpsApi.listSessionProgressCards(sessionId).catch((e) => {
+          setProgressCardsError(
+            e?.response?.data?.error || e?.message || 'Could not load progress cards.',
+          )
+          return []
+        }),
+        skatingOpsApi.getSessionReview(sessionId).catch((e) => {
+          setSessionReviewError(
+            e?.response?.data?.error || e?.message || 'Could not load session review.',
+          )
+          return null
+        }),
+      ])
       setRaceResults(Array.isArray(rows) ? rows : [])
+      setProgressCards(Array.isArray(cards) ? cards : [])
+      setSessionReview(review)
     } catch (e) {
       setRaceResults([])
       setRaceResultsError(e?.response?.data?.error || e?.message || 'Could not load race results.')
     } finally {
       setRaceResultsLoading(false)
+      setSessionReviewLoading(false)
     }
   }, [sessionId])
 
+  const cardByStudent = useMemo(() => {
+    const m = new Map()
+    for (const c of progressCards) {
+      m.set(String(c.studentId), c)
+    }
+    return m
+  }, [progressCards])
+
+  const handleRevokeCard = async (cardId) => {
+    if (!canRevokeCards || !cardId) return
+    setBusy(true)
+    try {
+      await skatingOpsApi.revokeProgressCard(cardId, crypto.randomUUID())
+      await loadRaceResults()
+    } catch (e) {
+      setError(e?.response?.data?.error || e?.message || 'Revoke failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleCorrectSubmit = async () => {
+    if (!correctDraft?.runId || !correctDraft?.studentId) return
+    setBusy(true)
+    setError(null)
+    try {
+      await skatingOpsApi.correctRaceResult(correctDraft.runId, {
+        studentId: correctDraft.studentId,
+        officialTimeMs: Math.round(Number(correctDraft.officialSeconds) * 1000),
+        reason: correctDraft.reason,
+        expectedResultVersion: Number(correctDraft.expectedResultVersion || 1),
+        clientMutationId: crypto.randomUUID(),
+      })
+      setCorrectDraft(null)
+      await loadRaceResults()
+    } catch (e) {
+      const msg = e?.response?.data?.error || e?.message || 'Correction failed'
+      const currentVersion = e?.response?.data?.currentVersion
+      setError(
+        currentVersion != null
+          ? `${msg} (current version ${currentVersion})`
+          : msg,
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
   useEffect(() => {
     if (!visible || !sessionId) return
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load() begins session fetch when drawer opens
@@ -515,6 +592,63 @@ export default function SessionDetailDrawer({
             </section>
 
             <section className="mt-3">
+              <div className="onrep-type-label mb-2">Session review</div>
+              {sessionReviewLoading ? (
+                <div className="d-flex align-items-center gap-2 small text-body-secondary mb-3">
+                  <CSpinner size="sm" /> Loading review…
+                </div>
+              ) : null}
+              {sessionReviewError ? (
+                <CAlert color="warning" className="small mb-3">
+                  {sessionReviewError}
+                </CAlert>
+              ) : null}
+              {!sessionReviewLoading && !sessionReviewError ? (
+                <div className="border rounded-3 p-3 mb-3 small">
+                  <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <CBadge
+                      color={
+                        !sessionReview?.review || sessionReview.review.status === 'not_reviewed'
+                          ? 'secondary'
+                          : sessionReview.review.status === 'completed_with_unresolved'
+                            ? 'warning'
+                            : sessionReview.review.status === 'completed'
+                              ? 'success'
+                              : 'info'
+                      }
+                    >
+                      {sessionReview?.review?.status || 'not_reviewed'}
+                    </CBadge>
+                    {sessionReview?.review?.completedByName ? (
+                      <span className="text-body-secondary">
+                        by {sessionReview.review.completedByName}
+                        {sessionReview.review.completedAt
+                          ? ` · ${new Date(sessionReview.review.completedAt).toLocaleString()}`
+                          : ''}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-body-secondary">
+                    Open follow-ups: {sessionReview?.openFollowUpCount ?? 0}
+                    {sessionReview?.coverage?.attendance
+                      ? ` · Present ${sessionReview.coverage.attendance.present}/Late ${sessionReview.coverage.attendance.late}/Unmarked ${sessionReview.coverage.attendance.unmarked}`
+                      : ''}
+                    {sessionReview?.coverage?.confirmedRaces != null
+                      ? ` · Confirmed races ${sessionReview.coverage.confirmedRaces}`
+                      : ''}
+                    {sessionReview?.coverage?.publishedCards != null
+                      ? ` · Published cards ${sessionReview.coverage.publishedCards}`
+                      : ''}
+                  </div>
+                  {canRevokeCards && sessionReview?.review?.internalNote ? (
+                    <div className="mt-2">
+                      <span className="fw-semibold">Internal note:</span>{' '}
+                      {sessionReview.review.internalNote}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <div className="onrep-type-label mb-2">Confirmed race results</div>
               {raceResultsLoading ? (
                 <div className="small text-body-secondary">
@@ -535,30 +669,142 @@ export default function SessionDetailDrawer({
                     const officialMs = r.timeMs ?? r.time_ms
                     const capturedMs = r.meta?.captured_time_ms ?? r.meta?.capturedTimeMs
                     const rank = r.finishRank ?? r.finish_rank
+                    const studentId = String(r.studentId || r.student_id || '')
+                    const card = cardByStudent.get(studentId)
+                    const runId = r.meta?.run_id || r.meta?.runId || null
+                    const resultVersion = r.meta?.result_version ?? r.meta?.resultVersion ?? 1
                     return (
                       <div
-                        key={r.id || `${r.studentId}-${idx}`}
-                        className="d-flex align-items-center gap-2 py-2 border-bottom border-light-subtle small"
+                        key={r.id || `${studentId}-${idx}`}
+                        className="py-2 border-bottom border-light-subtle small"
                       >
-                        <span className="fw-semibold text-body-secondary" style={{ width: 28 }}>
-                          {rank != null ? `#${rank}` : '—'}
-                        </span>
-                        <span className="flex-grow-1">
-                          {r.studentName || r.student_full_name || r.studentId || 'Athlete'}
-                        </span>
-                        <span className="text-body-secondary">
-                          {officialMs != null ? `${(officialMs / 1000).toFixed(2)}s` : '—'}
-                        </span>
-                        {capturedMs != null && capturedMs !== officialMs ? (
-                          <span className="text-body-secondary" title="Captured time">
-                            cap {(capturedMs / 1000).toFixed(2)}s
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="fw-semibold text-body-secondary" style={{ width: 28 }}>
+                            {rank != null ? `#${rank}` : '—'}
                           </span>
-                        ) : null}
+                          <span className="flex-grow-1">
+                            {r.studentName || r.student_full_name || studentId || 'Athlete'}
+                          </span>
+                          <span className="text-body-secondary">
+                            {officialMs != null ? `${(officialMs / 1000).toFixed(2)}s` : '—'}
+                          </span>
+                          {capturedMs != null && capturedMs !== officialMs ? (
+                            <span className="text-body-secondary" title="Captured time">
+                              cap {(capturedMs / 1000).toFixed(2)}s
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="d-flex flex-wrap align-items-center gap-2 mt-1 ps-4">
+                          {card ? (
+                            <>
+                              <CBadge
+                                color={
+                                  card.stale
+                                    ? 'warning'
+                                    : card.state === 'published'
+                                      ? 'success'
+                                      : card.state === 'revoked'
+                                        ? 'danger'
+                                        : 'secondary'
+                                }
+                              >
+                                {card.stale ? 'Card stale' : `Card ${card.state}`}
+                              </CBadge>
+                              {card.publishedByName ? (
+                                <span className="text-body-secondary">
+                                  by {card.publishedByName}
+                                </span>
+                              ) : null}
+                              {canRevokeCards && card.state === 'published' ? (
+                                <CButton
+                                  color="danger"
+                                  size="sm"
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() => handleRevokeCard(card.id)}
+                                >
+                                  Revoke
+                                </CButton>
+                              ) : null}
+                            </>
+                          ) : (
+                            <span className="text-body-secondary">No progress card</span>
+                          )}
+                          {runId && studentId ? (
+                            <CButton
+                              color="secondary"
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              onClick={() =>
+                                setCorrectDraft({
+                                  runId,
+                                  studentId,
+                                  expectedResultVersion: resultVersion,
+                                  officialSeconds:
+                                    officialMs != null ? (officialMs / 1000).toFixed(2) : '',
+                                  reason: '',
+                                })
+                              }
+                            >
+                              Correct time
+                            </CButton>
+                          ) : null}
+                        </div>
                       </div>
                     )
                   })}
                 </div>
               )}
+              {progressCardsError ? (
+                <CAlert color="warning" className="small mt-2 mb-0">
+                  {progressCardsError}
+                </CAlert>
+              ) : null}
+              {correctDraft ? (
+                <div className="border rounded-3 p-2 mt-2 small">
+                  <div className="fw-semibold mb-2">Correct official time</div>
+                  <CFormLabel className="small mb-0">New official seconds</CFormLabel>
+                  <CFormInput
+                    size="sm"
+                    className="mb-2"
+                    value={correctDraft.officialSeconds}
+                    onChange={(e) =>
+                      setCorrectDraft((d) => ({ ...d, officialSeconds: e.target.value }))
+                    }
+                  />
+                  <CFormLabel className="small mb-0">Reason (required)</CFormLabel>
+                  <CFormTextarea
+                    rows={2}
+                    className="mb-2"
+                    value={correctDraft.reason}
+                    onChange={(e) =>
+                      setCorrectDraft((d) => ({ ...d, reason: e.target.value }))
+                    }
+                  />
+                  <div className="text-body-secondary mb-2">
+                    Expected version: {correctDraft.expectedResultVersion}
+                  </div>
+                  <div className="d-flex gap-2">
+                    <CButton
+                      color="primary"
+                      size="sm"
+                      disabled={busy || !correctDraft.reason.trim()}
+                      onClick={() => void handleCorrectSubmit()}
+                    >
+                      Save correction
+                    </CButton>
+                    <CButton
+                      color="secondary"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setCorrectDraft(null)}
+                    >
+                      Cancel
+                    </CButton>
+                  </div>
+                </div>
+              ) : null}
             </section>
 
             <section className="mt-auto pt-2 border-top border-light-subtle">

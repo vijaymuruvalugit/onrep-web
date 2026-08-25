@@ -17,6 +17,7 @@ import StudentParentsCard from '../components/StudentParentsCard'
 import StudentLoginCard from '../components/StudentLoginCard'
 import StudentSkatingSnapshotCard from '../../skating/components/StudentSkatingSnapshotCard'
 import StudentCoachingActivityCard from '../components/StudentCoachingActivityCard'
+import StudentProgressCardsCard from '../components/StudentProgressCardsCard'
 import { getStudentActivity, getStudentBatch, getStudentDisplayName } from '../utils/studentMappers'
 import { sanitizeStudentNotesForDisplay } from '../../batches/utils/batchDisplayUtils'
 import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
@@ -137,6 +138,9 @@ const StudentDetailPage = () => {
         </CCol>
         <CCol xs={12}>
           <StudentCoachingActivityCard studentId={studentId} />
+        </CCol>
+        <CCol xs={12}>
+          <StudentProgressCardsCard studentId={studentId} />
         </CCol>
         <CCol lg={6}>
           <CCard>
