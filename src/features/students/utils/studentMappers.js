@@ -59,7 +59,17 @@ export function getEnrollmentStatus(student) {
 }
 
 export function getPaymentStatus(student) {
-  return student?.coach_monthly_fee_status || student?.payment_status || 'Pending'
+  // Slice 1I: feeSnapshot is canonical. Missing snapshot = load/mapping defect, not "Not configured".
+  if (student?.feeSnapshot?.label) return student.feeSnapshot.label
+  if (student?.feeSnapshot?.state) {
+    const s = String(student.feeSnapshot.state)
+    if (s === 'not_configured') return 'Not configured'
+    if (s === 'no_fee') return 'No fee'
+    if (s === 'settled') return 'No outstanding fees'
+    if (s === 'partially_paid') return 'Partially paid'
+    return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ')
+  }
+  return 'Fee status unavailable'
 }
 
 export function getAttendanceSummary(student) {

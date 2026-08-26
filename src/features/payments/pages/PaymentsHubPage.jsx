@@ -17,6 +17,7 @@ import { paymentsHubApi } from '../api/paymentsHubApi'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { resolveUserRole } from '../../auth/utils/roleRedirect'
 import CoachPaymentsPage from './CoachPaymentsPage'
+import { formatMoney } from '../utils/formatInr'
 
 const PaymentsHubPage = () => {
   const { user } = useAuth()
@@ -93,8 +94,25 @@ function AdminPaymentsOverview({ hub }) {
       <CCol xs={6} md={3}>
         <CCard className="shadow-sm">
           <CCardBody>
-            <div className="small text-body-secondary">Collected this month</div>
-            <div className="fs-5 fw-semibold">{o.collectedThisMonth ?? '—'}</div>
+            <div className="small text-body-secondary">Gross collected (month)</div>
+            <div className="fs-5 fw-semibold">
+              {formatMoney(o.grossCollectedThisMonth ?? o.collectedThisMonth)}
+            </div>
+          </CCardBody>
+        </CCard>
+      </CCol>
+      <CCol xs={6} md={3}>
+        <CCard className="shadow-sm">
+          <CCardBody>
+            <div className="small text-body-secondary">Net collected (month)</div>
+            <div className="fs-5 fw-semibold">
+              {formatMoney(o.netCollectedThisMonth ?? o.collectedThisMonth)}
+            </div>
+            {o.refundsThisMonth != null && Number(o.refundsThisMonth) > 0 ? (
+              <div className="small text-body-secondary">
+                Refunds {formatMoney(o.refundsThisMonth)}
+              </div>
+            ) : null}
           </CCardBody>
         </CCard>
       </CCol>
@@ -111,14 +129,6 @@ function AdminPaymentsOverview({ hub }) {
           <CCardBody>
             <div className="small text-body-secondary">Overdue</div>
             <div className="fs-5 fw-semibold">{o.overdueCount ?? '—'}</div>
-          </CCardBody>
-        </CCard>
-      </CCol>
-      <CCol xs={6} md={3}>
-        <CCard className="shadow-sm">
-          <CCardBody>
-            <div className="small text-body-secondary">Upcoming renewals</div>
-            <div className="fs-5 fw-semibold">{o.upcomingRenewals ?? '—'}</div>
           </CCardBody>
         </CCard>
       </CCol>

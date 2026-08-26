@@ -213,7 +213,16 @@ const StudentDetailPage = () => {
               </div>
               <div className="mb-2">
                 <strong>Payment summary:</strong>{' '}
-                {selectedStudent.coach_monthly_fee_status || 'Pending'}
+                {selectedStudent.feeSnapshot?.label ||
+                  (selectedStudent.feeSnapshot
+                    ? String(selectedStudent.feeSnapshot.state || '')
+                    : 'Fee status unavailable')}
+                {selectedStudent.feeSnapshot?.outstandingAmount != null &&
+                selectedStudent.feeSnapshot.outstandingAmount !== '0.00' ? (
+                  <span className="text-body-secondary small ms-2">
+                    Outstanding ₹{selectedStudent.feeSnapshot.outstandingAmount}
+                  </span>
+                ) : null}
               </div>
               <div className="mb-0">
                 <strong>Created:</strong>{' '}

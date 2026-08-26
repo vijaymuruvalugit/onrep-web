@@ -247,11 +247,25 @@ const OwnerDashboard = () => {
           </CCol>
           <CCol xs={6} xl={2}>
             <DashboardStatCard
-              title="Collected (month)"
+              title="Gross collected (month)"
               value={
-                summary?.collectedThisMonthInr != null
-                  ? `₹${formatInr(summary.collectedThisMonthInr)}`
+                summary?.grossCollectedThisMonth != null || summary?.collectedThisMonthInr != null
+                  ? `₹${formatInr(summary.grossCollectedThisMonth ?? summary.collectedThisMonthInr)}`
                   : '—'
+              }
+              loading={loading && !summary}
+              accentClass="border-start border-4 border-success"
+            />
+          </CCol>
+          <CCol xs={6} xl={2}>
+            <DashboardStatCard
+              title="Net collected (month)"
+              value={
+                summary?.netCollectedThisMonth != null
+                  ? `₹${formatInr(summary.netCollectedThisMonth)}`
+                  : summary?.collectedThisMonthInr != null
+                    ? `₹${formatInr(summary.collectedThisMonthInr)}`
+                    : '—'
               }
               loading={loading && !summary}
               accentClass="border-start border-4 border-success"
