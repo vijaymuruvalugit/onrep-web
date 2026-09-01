@@ -2,8 +2,30 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import { Routes, Route } from 'react-router-dom'
-import { renderWithProviders } from 'src/test-utils/renderWithProviders'
+import { renderWithProviders, createTestStore } from 'src/test-utils/renderWithProviders'
 import SkatingOpsPage from './SkatingOpsPage'
+
+const SKATING_ACTIVITY_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+
+function skatingTestStore() {
+  return createTestStore({
+    workspace: {
+      activeActivityId: SKATING_ACTIVITY_ID,
+      activities: [
+        {
+          id: SKATING_ACTIVITY_ID,
+          name: 'Skating',
+          type: 'skating',
+          label: 'Skating',
+          icon: '',
+          capabilities: { skating: true },
+        },
+      ],
+      status: 'ready',
+      error: null,
+    },
+  })
+}
 
 vi.mock('../api/skatingOpsApi', () => ({
   skatingOpsApi: {
@@ -61,6 +83,22 @@ vi.mock('../../places/api/placesApi', () => ({
   },
 }))
 
+vi.mock('../../../domain/phaseCapture/phaseCaptureApi', () => ({
+  phaseCaptureApi: {
+    getSessionPhases: vi
+      .fn()
+      .mockResolvedValue({ phases: [], entries: [], sessionObservations: [] }),
+    getCoachDefaults: vi.fn().mockResolvedValue({}),
+    setCaptureMode: vi.fn(),
+  },
+}))
+
+vi.mock('../../attendance/api/attendanceApi', () => ({
+  default: {
+    getClassRoster: vi.fn().mockResolvedValue({ students: [], attendanceEligible: false }),
+  },
+}))
+
 vi.mock('../api/skatingIntelligenceApi', () => ({
   skatingIntelligenceApi: {
     getSkillCatalog: vi.fn().mockResolvedValue({
@@ -82,7 +120,7 @@ describe('SkatingOpsPage (operational command center)', () => {
       <Routes>
         <Route path="/coach/skating" element={<SkatingOpsPage />} />
       </Routes>,
-      { initialEntries: ['/coach/skating'] },
+      { store: skatingTestStore(), initialEntries: ['/coach/skating'] },
     )
     await waitFor(() => {
       expect(screen.getByTestId('skating-ops-page')).toBeInTheDocument()
@@ -93,9 +131,8 @@ describe('SkatingOpsPage (operational command center)', () => {
   })
 
   it('does not auto-open a session when the day board has sessions', async () => {
-    const { default: operationalSessionsApi } = await import(
-      '../../../domain/operationalSessions/operationalSessionsApi'
-    )
+    const { default: operationalSessionsApi } =
+      await import('../../../domain/operationalSessions/operationalSessionsApi')
     operationalSessionsApi.getDayBoard.mockResolvedValue({
       date: '2026-05-18',
       sessions: [
@@ -120,7 +157,7 @@ describe('SkatingOpsPage (operational command center)', () => {
       <Routes>
         <Route path="/coach/skating" element={<SkatingOpsPage />} />
       </Routes>,
-      { initialEntries: ['/coach/skating'] },
+      { store: skatingTestStore(), initialEntries: ['/coach/skating'] },
     )
 
     await waitFor(() => {
@@ -138,9 +175,8 @@ describe('SkatingOpsPage (operational command center)', () => {
   })
 
   it('shows block list when a session workspace is open', async () => {
-    const { default: operationalSessionsApi } = await import(
-      '../../../domain/operationalSessions/operationalSessionsApi'
-    )
+    const { default: operationalSessionsApi } =
+      await import('../../../domain/operationalSessions/operationalSessionsApi')
     const { sessionBlocksApi } = await import('../../../domain/sessionBlocks/sessionBlocksApi')
 
     operationalSessionsApi.getDayBoard.mockResolvedValue({
@@ -178,12 +214,12 @@ describe('SkatingOpsPage (operational command center)', () => {
 
     renderWithProviders(
       <Routes>
-        <Route
-          path="/coach/skating"
-          element={<SkatingOpsPage />}
-        />
+        <Route path="/coach/skating" element={<SkatingOpsPage />} />
       </Routes>,
-      { initialEntries: ['/coach/skating?session=22222222-2222-2222-2222-222222222222'] },
+      {
+        store: skatingTestStore(),
+        initialEntries: ['/coach/skating?session=22222222-2222-2222-2222-222222222222'],
+      },
     )
 
     await waitFor(() => {
@@ -192,18 +228,20 @@ describe('SkatingOpsPage (operational command center)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('coach-live-session-view')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('phase-mode-strip')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('phase-mode-strip')).toBeInTheDocument()
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId('phase-mode-chip-b1')).toBeInTheDocument()
+    })
     expect(screen.getByTestId('athlete-card-strip')).toBeInTheDocument()
     expect(screen.queryByText('Laps stay in main panel.')).not.toBeInTheDocument()
-    expect(sessionBlocksApi.listBlocks).toHaveBeenCalledWith(
-      '22222222-2222-2222-2222-222222222222',
-    )
+    expect(sessionBlocksApi.listBlocks).toHaveBeenCalledWith('22222222-2222-2222-2222-222222222222')
   })
 
   it('shows unified live layout before session is started (upcoming)', async () => {
-    const { default: operationalSessionsApi } = await import(
-      '../../../domain/operationalSessions/operationalSessionsApi'
-    )
+    const { default: operationalSessionsApi } =
+      await import('../../../domain/operationalSessions/operationalSessionsApi')
     const { sessionBlocksApi } = await import('../../../domain/sessionBlocks/sessionBlocksApi')
     const { skatingOpsApi } = await import('../api/skatingOpsApi')
 
@@ -244,7 +282,10 @@ describe('SkatingOpsPage (operational command center)', () => {
       <Routes>
         <Route path="/coach/skating" element={<SkatingOpsPage />} />
       </Routes>,
-      { initialEntries: ['/coach/skating?session=33333333-3333-3333-3333-333333333333'] },
+      {
+        store: skatingTestStore(),
+        initialEntries: ['/coach/skating?session=33333333-3333-3333-3333-333333333333'],
+      },
     )
 
     await waitFor(() => {
@@ -254,16 +295,13 @@ describe('SkatingOpsPage (operational command center)', () => {
       expect(screen.getByTestId('phase-mode-strip')).toBeInTheDocument()
     })
     expect(screen.getByTestId('phase-mode-chip-b1')).toBeInTheDocument()
-    expect(sessionBlocksApi.listBlocks).toHaveBeenCalledWith(
-      '33333333-3333-3333-3333-333333333333',
-    )
+    expect(sessionBlocksApi.listBlocks).toHaveBeenCalledWith('33333333-3333-3333-3333-333333333333')
     expect(screen.queryByText('Laps stay in main panel.')).not.toBeInTheDocument()
   })
 
   it('renders live shell before background session sync completes', async () => {
-    const { default: operationalSessionsApi } = await import(
-      '../../../domain/operationalSessions/operationalSessionsApi'
-    )
+    const { default: operationalSessionsApi } =
+      await import('../../../domain/operationalSessions/operationalSessionsApi')
     const { skatingOpsApi } = await import('../api/skatingOpsApi')
 
     operationalSessionsApi.getDayBoard.mockResolvedValue({
@@ -304,7 +342,10 @@ describe('SkatingOpsPage (operational command center)', () => {
       <Routes>
         <Route path="/coach/skating" element={<SkatingOpsPage />} />
       </Routes>,
-      { initialEntries: ['/coach/skating?session=44444444-4444-4444-4444-444444444444'] },
+      {
+        store: skatingTestStore(),
+        initialEntries: ['/coach/skating?session=44444444-4444-4444-4444-444444444444'],
+      },
     )
 
     await waitFor(() => {

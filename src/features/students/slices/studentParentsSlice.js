@@ -84,10 +84,10 @@ export const revokeStudentParentInvite = createAsyncThunk(
 
 export const unlinkStudentParent = createAsyncThunk(
   'studentParents/unlink',
-  async ({ studentId, parentUserId }, thunkApi) => {
+  async ({ studentId, guardianIdentityId }, thunkApi) => {
     try {
-      await studentParentsApi.unlinkParent(studentId, parentUserId)
-      return { studentId, parentUserId }
+      await studentParentsApi.unlinkParent(studentId, guardianIdentityId)
+      return { studentId, guardianIdentityId }
     } catch (error) {
       return thunkApi.rejectWithValue(normalizeApiError(error))
     }
@@ -185,14 +185,17 @@ const studentParentsSlice = createSlice({
       })
 
       .addCase(unlinkStudentParent.pending, (state, action) => {
-        state.actionId = action.meta.arg.parentUserId
+        state.actionId = action.meta.arg.guardianIdentityId
         state.actionError = null
       })
       .addCase(unlinkStudentParent.fulfilled, (state, action) => {
         state.actionId = null
         const entry = state.byStudent[action.payload.studentId]
         if (entry) {
-          entry.linked = entry.linked.filter((p) => p.userId !== action.payload.parentUserId)
+          const gid = action.payload.guardianIdentityId
+          entry.linked = entry.linked.filter(
+            (p) => (p.guardianIdentityId || p.identityId) !== gid,
+          )
         }
       })
       .addCase(unlinkStudentParent.rejected, (state, action) => {

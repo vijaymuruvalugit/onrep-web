@@ -6,7 +6,7 @@ import http from '../../../api/http'
  *   POST   /invites                          (multi-parent: accepts { studentId, email, name, expiresInDays })
  *   POST   /invites/parent/:inviteId/resend
  *   DELETE /invites/parent/:inviteId
- *   DELETE /students/:id/parents/:parentUserId
+ *   DELETE /students/:id/parents/:guardianIdentityId
  */
 export const studentParentsApi = {
   async listParents(studentId) {
@@ -42,9 +42,9 @@ export const studentParentsApi = {
     return data || {}
   },
 
-  async unlinkParent(studentId, parentUserId) {
+  async unlinkParent(studentId, guardianIdentityId) {
     const { data } = await http.delete(
-      `/students/${encodeURIComponent(studentId)}/parents/${encodeURIComponent(parentUserId)}`,
+      `/students/${encodeURIComponent(studentId)}/parents/${encodeURIComponent(guardianIdentityId)}`,
     )
     return data || {}
   },

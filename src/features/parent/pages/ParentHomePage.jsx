@@ -294,9 +294,6 @@ const ParentHomePage = () => {
                   ))}
                 </ul>
               )}
-              <div className="small text-body-secondary mt-2">
-                <Link to="/parent/competitions">Competitions</Link>
-              </div>
             </CCardBody>
           </CCard>
         </CCol>

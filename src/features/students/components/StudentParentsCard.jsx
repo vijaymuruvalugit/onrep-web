@@ -145,7 +145,7 @@ const StudentParentsCard = ({ studentId, studentName }) => {
     if (result?.meta?.requestStatus === 'fulfilled') reload()
   }
 
-  const handleUnlink = async (parentUserId, name) => {
+  const handleUnlink = async (guardianIdentityId, name) => {
     if (
       !window.confirm(
         `Remove ${name || 'this parent'}'s access to ${studentName || 'this student'}? They'll no longer see fees, attendance, or updates for this child.`,
@@ -153,7 +153,7 @@ const StudentParentsCard = ({ studentId, studentName }) => {
     )
       return
     clearActionError()
-    await unlink(parentUserId)
+    await unlink(guardianIdentityId)
   }
 
   const handleCopyCode = async (rowId, code) => {
@@ -180,7 +180,7 @@ const StudentParentsCard = ({ studentId, studentName }) => {
   const renderRowActions = (row) => {
     // Compare against the id this row owns; both null sides would otherwise
     // match a cleared `actionId === null` and falsely mark every row busy.
-    const rowActionId = row.kind === 'linked' ? row.userId : row.inviteId
+    const rowActionId = row.kind === 'linked' ? row.guardianIdentityId || row.identityId : row.inviteId
     const busy = actionId != null && rowActionId != null && actionId === rowActionId
 
     if (row.kind === 'linked') {
@@ -190,7 +190,7 @@ const StudentParentsCard = ({ studentId, studentName }) => {
           variant="outline"
           size="sm"
           disabled={busy}
-          onClick={() => handleUnlink(row.userId, row.name)}
+          onClick={() => handleUnlink(row.guardianIdentityId || row.identityId, row.name)}
           title="Remove parent's access to this student"
         >
           {busy ? (

@@ -117,17 +117,31 @@ describe('studentParentsSlice', () => {
   it('unlinkStudentParent removes the user from the linked list', async () => {
     studentParentsApi.listParents.mockResolvedValue({
       linked: [
-        { userId: 'u1', name: 'Mom', email: 'mom@example.com', status: 'approved' },
-        { userId: 'u2', name: 'Dad', email: 'dad@example.com', status: 'approved' },
+        {
+          userId: 'u1',
+          guardianIdentityId: 'id-1',
+          identityId: 'id-1',
+          name: 'Mom',
+          email: 'mom@example.com',
+          status: 'approved',
+        },
+        {
+          userId: 'u2',
+          guardianIdentityId: 'id-2',
+          identityId: 'id-2',
+          name: 'Dad',
+          email: 'dad@example.com',
+          status: 'approved',
+        },
       ],
       invites: [],
     })
     studentParentsApi.unlinkParent.mockResolvedValue({ ok: true })
     const store = newStore()
     await store.dispatch(fetchStudentParents(STUDENT_ID))
-    await store.dispatch(unlinkStudentParent({ studentId: STUDENT_ID, parentUserId: 'u1' }))
+    await store.dispatch(unlinkStudentParent({ studentId: STUDENT_ID, guardianIdentityId: 'id-1' }))
     const entry = store.getState().studentParents.byStudent[STUDENT_ID]
-    expect(entry.linked.map((p) => p.userId)).toEqual(['u2'])
+    expect(entry.linked.map((p) => p.guardianIdentityId)).toEqual(['id-2'])
   })
 
   it('resendStudentParentInvite tracks actionId during request', async () => {

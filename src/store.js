@@ -12,7 +12,6 @@ import uiReducer from './features/ui/uiSlice'
 import batchesReducer from './features/batches/slices/batchesSlice'
 import scheduleReducer from './features/schedule/slices/scheduleSlice'
 import classesReducer from './features/classes/slices/classesSlice'
-import attendanceReducer from './features/attendance/slices/attendanceSlice'
 import placesReducer from './features/places/slices/placesSlice'
 import parentReducer from './features/parent/slices/parentSlice'
 import coachParentsReducer from './features/coach/slices/coachParentsSlice'
@@ -30,7 +29,6 @@ const store = configureStore({
     batches: batchesReducer,
     schedule: scheduleReducer,
     classes: classesReducer,
-    attendance: attendanceReducer,
     places: placesReducer,
     parent: parentReducer,
     coachParents: coachParentsReducer,

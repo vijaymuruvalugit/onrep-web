@@ -28,19 +28,6 @@ export const parentApi = {
     const { data } = await http.get('/parent/notifications', { params })
     return data || {}
   },
-
-  async getCompetitions(params = {}) {
-    const { data } = await http.get('/parent/competitions', { params })
-    return data || {}
-  },
-
-  async getCompetitionLeaderboard(competitionId, params = {}) {
-    const { data } = await http.get(
-      `/parent/competitions/${encodeURIComponent(competitionId)}/leaderboard`,
-      { params },
-    )
-    return data || {}
-  },
 }
 
 export default parentApi

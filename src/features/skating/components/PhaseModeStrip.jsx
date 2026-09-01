@@ -88,7 +88,10 @@ export default function PhaseModeStrip({
 
   if (!blocks?.length) {
     return (
-      <div className="phase-mode-strip phase-mode-strip--empty small text-body-secondary py-2">
+      <div
+        className="phase-mode-strip phase-mode-strip--empty small text-body-secondary py-2"
+        data-testid="phase-mode-strip"
+      >
         {loading ? 'Loading phases…' : 'No phases'}
       </div>
     )

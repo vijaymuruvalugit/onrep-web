@@ -72,9 +72,4 @@ export const ONREP_ROUTE_DEFS = [
   { path: '/student/payments', name: 'Payments', exact: true },
   { path: '/student/schedule', name: 'Schedule', exact: true },
   { path: '/student/attendance', name: 'Participation', exact: true },
-  { path: '/student/progress', name: 'Progress', exact: true },
-  { path: '/student/competitions', name: 'Competitions', exact: true },
-  { path: '/student/competitions/leaderboard', name: 'Leaderboard', exact: true },
-  { path: '/student/notifications', name: 'Notifications', exact: true },
-  { path: '/student/profile', name: 'Profile', exact: true },
 ]

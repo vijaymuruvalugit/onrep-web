@@ -65,9 +65,9 @@ export function useStudentParents(studentId) {
   )
 
   const unlink = useCallback(
-    (parentUserId) => {
-      if (!studentId || !parentUserId) return undefined
-      return dispatch(unlinkStudentParent({ studentId, parentUserId }))
+    (guardianIdentityId) => {
+      if (!studentId || !guardianIdentityId) return undefined
+      return dispatch(unlinkStudentParent({ studentId, guardianIdentityId }))
     },
     [dispatch, studentId],
   )

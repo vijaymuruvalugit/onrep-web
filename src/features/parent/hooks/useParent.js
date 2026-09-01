@@ -1,10 +1,7 @@
 import { useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import {
-  clearParentLeaderboard,
   fetchParentAttendance,
-  fetchParentCompetitionLeaderboard,
-  fetchParentCompetitions,
   fetchParentDashboard,
   fetchParentFees,
   fetchParentNotifications,
@@ -28,16 +25,6 @@ export default function useParent() {
     (params) => dispatch(fetchParentNotifications(params)),
     [dispatch],
   )
-  const loadCompetitions = useCallback(
-    (params) => dispatch(fetchParentCompetitions(params)),
-    [dispatch],
-  )
-  const loadLeaderboard = useCallback(
-    (competitionId, params) =>
-      dispatch(fetchParentCompetitionLeaderboard({ competitionId, params })),
-    [dispatch],
-  )
-  const resetLeaderboard = useCallback(() => dispatch(clearParentLeaderboard()), [dispatch])
 
   return {
     ...parent,
@@ -47,8 +34,5 @@ export default function useParent() {
     loadAttendance,
     loadFees,
     loadNotifications,
-    loadCompetitions,
-    loadLeaderboard,
-    resetLeaderboard,
   }
 }

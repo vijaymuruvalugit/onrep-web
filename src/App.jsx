@@ -22,9 +22,6 @@ import { CSpinner } from '@coreui/react'
 import { useOnrepColorModes, ONREP_COLOR_MODE_STORAGE_KEY } from './hooks/useOnrepColorModes'
 import './scss/style.scss'
 
-// We use those styles to show code examples, you should remove them in your application.
-import './scss/examples.scss'
-
 // Containers
 const DefaultLayout = React.lazy(() => import('./layout/DefaultLayout'))
 const RequireAuth = React.lazy(() => import('./layouts/RequireAuth'))

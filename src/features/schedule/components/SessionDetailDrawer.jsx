@@ -31,6 +31,11 @@ import {
 } from '../../../domain/operationalSessions/helpers/attendanceEligibility'
 import { hasAcademyAdminCapability } from '../../auth/utils/academyAdminAccess'
 import { useSelector } from 'react-redux'
+import {
+  formatRacePlaceLabel,
+  racePlaceAmbiguityNote,
+  resolveConfirmedRaceResultsPanelState,
+} from '../utils/confirmedRaceResultsDisplay.js'
 
 function toDatetimeLocalValue(iso) {
   if (!iso) return ''
@@ -216,11 +221,7 @@ export default function SessionDetailDrawer({
     } catch (e) {
       const msg = e?.response?.data?.error || e?.message || 'Correction failed'
       const currentVersion = e?.response?.data?.currentVersion
-      setError(
-        currentVersion != null
-          ? `${msg} (current version ${currentVersion})`
-          : msg,
-      )
+      setError(currentVersion != null ? `${msg} (current version ${currentVersion})` : msg)
     } finally {
       setBusy(false)
     }
@@ -650,29 +651,45 @@ export default function SessionDetailDrawer({
               ) : null}
 
               <div className="onrep-type-label mb-2">Confirmed race results</div>
-              {raceResultsLoading ? (
-                <div className="small text-body-secondary">
-                  <CSpinner size="sm" className="me-2" />
-                  Loading results…
-                </div>
-              ) : raceResultsError ? (
-                <CAlert color="warning" className="small mb-0">
-                  {raceResultsError}
-                </CAlert>
-              ) : raceResults.length === 0 ? (
-                <div className="small text-body-secondary fst-italic">
-                  No confirmed race results for this session.
-                </div>
-              ) : (
+              {(() => {
+                const panel = resolveConfirmedRaceResultsPanelState({
+                  loading: raceResultsLoading,
+                  error: raceResultsError,
+                  rows: raceResults,
+                })
+                if (panel === 'loading') {
+                  return (
+                    <div className="small text-body-secondary">
+                      <CSpinner size="sm" className="me-2" />
+                      Loading results…
+                    </div>
+                  )
+                }
+                if (panel === 'error') {
+                  return (
+                    <CAlert color="warning" className="small mb-0">
+                      {raceResultsError}
+                    </CAlert>
+                  )
+                }
+                if (panel === 'empty') {
+                  return (
+                    <div className="small text-body-secondary fst-italic">
+                      No confirmed race results for this session.
+                    </div>
+                  )
+                }
+                return (
                 <div className="border border-light-subtle rounded-3 p-2">
                   {raceResults.map((r, idx) => {
                     const officialMs = r.timeMs ?? r.time_ms
                     const capturedMs = r.meta?.captured_time_ms ?? r.meta?.capturedTimeMs
-                    const rank = r.finishRank ?? r.finish_rank
                     const studentId = String(r.studentId || r.student_id || '')
                     const card = cardByStudent.get(studentId)
                     const runId = r.meta?.run_id || r.meta?.runId || null
                     const resultVersion = r.meta?.result_version ?? r.meta?.resultVersion ?? 1
+                    const placeLabel = formatRacePlaceLabel(r)
+                    const ambiguityNote = racePlaceAmbiguityNote(r)
                     return (
                       <div
                         key={r.id || `${studentId}-${idx}`}
@@ -680,10 +697,13 @@ export default function SessionDetailDrawer({
                       >
                         <div className="d-flex align-items-center gap-2">
                           <span className="fw-semibold text-body-secondary" style={{ width: 28 }}>
-                            {rank != null ? `#${rank}` : '—'}
+                            {placeLabel}
                           </span>
                           <span className="flex-grow-1">
                             {r.studentName || r.student_full_name || studentId || 'Athlete'}
+                            {ambiguityNote ? (
+                              <span className="text-body-secondary ms-2">{ambiguityNote}</span>
+                            ) : null}
                           </span>
                           <span className="text-body-secondary">
                             {officialMs != null ? `${(officialMs / 1000).toFixed(2)}s` : '—'}
@@ -755,7 +775,8 @@ export default function SessionDetailDrawer({
                     )
                   })}
                 </div>
-              )}
+                )
+              })()}
               {progressCardsError ? (
                 <CAlert color="warning" className="small mt-2 mb-0">
                   {progressCardsError}
@@ -778,9 +799,7 @@ export default function SessionDetailDrawer({
                     rows={2}
                     className="mb-2"
                     value={correctDraft.reason}
-                    onChange={(e) =>
-                      setCorrectDraft((d) => ({ ...d, reason: e.target.value }))
-                    }
+                    onChange={(e) => setCorrectDraft((d) => ({ ...d, reason: e.target.value }))}
                   />
                   <div className="text-body-secondary mb-2">
                     Expected version: {correctDraft.expectedResultVersion}

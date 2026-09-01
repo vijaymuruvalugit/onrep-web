@@ -22,15 +22,6 @@ const initialState = {
   notifications: [],
   notificationsLoading: false,
   notificationsError: null,
-
-  competitions: [],
-  competitionsLoading: false,
-  competitionsError: null,
-
-  leaderboard: [],
-  leaderboardLoading: false,
-  leaderboardError: null,
-  leaderboardCompetitionId: null,
 }
 
 export const fetchParentDashboard = createAsyncThunk(
@@ -92,42 +83,10 @@ export const fetchParentNotifications = createAsyncThunk(
   },
 )
 
-export const fetchParentCompetitions = createAsyncThunk(
-  'parent/fetchCompetitions',
-  async (params = {}, thunkApi) => {
-    try {
-      const data = await parentApi.getCompetitions(params)
-      return data.competitions || []
-    } catch (error) {
-      return thunkApi.rejectWithValue(normalizeApiError(error))
-    }
-  },
-)
-
-export const fetchParentCompetitionLeaderboard = createAsyncThunk(
-  'parent/fetchCompetitionLeaderboard',
-  async ({ competitionId, params = {} }, thunkApi) => {
-    try {
-      const data = await parentApi.getCompetitionLeaderboard(competitionId, params)
-      const raw = data.leaderboard ?? data.rows ?? data
-      const leaderboard = Array.isArray(raw) ? raw : []
-      return { competitionId, leaderboard }
-    } catch (error) {
-      return thunkApi.rejectWithValue(normalizeApiError(error))
-    }
-  },
-)
-
 const parentSlice = createSlice({
   name: 'parent',
   initialState,
-  reducers: {
-    clearParentLeaderboard(state) {
-      state.leaderboard = []
-      state.leaderboardError = null
-      state.leaderboardCompetitionId = null
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(fetchParentDashboard.pending, (state) => {
@@ -190,33 +149,7 @@ const parentSlice = createSlice({
         state.notificationsLoading = false
         state.notificationsError = action.payload || { message: 'Unable to load notifications.' }
       })
-      .addCase(fetchParentCompetitions.pending, (state) => {
-        state.competitionsLoading = true
-        state.competitionsError = null
-      })
-      .addCase(fetchParentCompetitions.fulfilled, (state, action) => {
-        state.competitionsLoading = false
-        state.competitions = action.payload
-      })
-      .addCase(fetchParentCompetitions.rejected, (state, action) => {
-        state.competitionsLoading = false
-        state.competitionsError = action.payload || { message: 'Unable to load competitions.' }
-      })
-      .addCase(fetchParentCompetitionLeaderboard.pending, (state) => {
-        state.leaderboardLoading = true
-        state.leaderboardError = null
-      })
-      .addCase(fetchParentCompetitionLeaderboard.fulfilled, (state, action) => {
-        state.leaderboardLoading = false
-        state.leaderboardCompetitionId = action.payload.competitionId
-        state.leaderboard = action.payload.leaderboard
-      })
-      .addCase(fetchParentCompetitionLeaderboard.rejected, (state, action) => {
-        state.leaderboardLoading = false
-        state.leaderboardError = action.payload || { message: 'Unable to load leaderboard.' }
-      })
   },
 })
 
-export const { clearParentLeaderboard } = parentSlice.actions
 export default parentSlice.reducer
