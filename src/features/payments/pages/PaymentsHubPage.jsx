@@ -39,6 +39,10 @@ const PaymentsHubPage = () => {
     }
   }, [])
 
+  const handleCoachDataChanged = useCallback(() => {
+    void loadHub({ quiet: true })
+  }, [loadHub])
+
   useEffect(() => {
     void loadHub()
   }, [loadHub, role, user?.activeRole])
@@ -61,7 +65,7 @@ const PaymentsHubPage = () => {
     return (
       <>
         <AdminPaymentsOverview hub={hub} />
-        <CoachPaymentsPage onDataChanged={() => void loadHub({ quiet: true })} />
+        <CoachPaymentsPage onDataChanged={handleCoachDataChanged} />
       </>
     )
   }
