@@ -10,8 +10,10 @@ export const billingApi = {
     const { data } = await http.get('/billing/plans')
     return Array.isArray(data) ? data : []
   },
-  async createLink({ plan }) {
-    const { data } = await http.post('/billing/create-link', { plan })
+  async createLink({ plan, next } = {}) {
+    const body = { plan }
+    if (typeof next === 'string' && next.startsWith('/')) body.next = next.slice(0, 256)
+    const { data } = await http.post('/billing/create-link', body)
     return data || null
   },
   async getPayments({ limit = 12 } = {}) {

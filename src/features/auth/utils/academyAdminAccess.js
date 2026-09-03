@@ -13,6 +13,24 @@ export function hasAcademyAdminCapability(user) {
   return roles.includes('academy_admin')
 }
 
+/**
+ * Academy-admin membership/capability — not UI perspective (`activeRole`).
+ * Used for launch-readiness surfaces that must not treat perspective as authz.
+ */
+export function hasAcademyAdminMembership(user) {
+  if (!user) return false
+  if (user.capabilities?.academyAdmin === true) return true
+  if (user.hasAcademyAdmin === true) return true
+  const roles = Array.isArray(user.roles) ? user.roles.map((r) => String(r).toLowerCase()) : []
+  if (roles.includes('academy_admin')) return true
+  const memberships = Array.isArray(user.memberships) ? user.memberships : []
+  return memberships.some((m) => {
+    const role = String(m?.role || m).toLowerCase()
+    const status = String(m?.status || 'active').toLowerCase()
+    return role === 'academy_admin' && status !== 'revoked'
+  })
+}
+
 /** Legal owner (`users.role = academy_owner`) — can assign/revoke delegated admins. */
 export function isLegalAcademyOwner(user) {
   if (!user) return false

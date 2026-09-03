@@ -17,6 +17,12 @@ import {
 import { useAuth } from '../../auth/hooks/useAuth'
 import { billingApi } from '../api/billingApi'
 import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
+import {
+  getBillingBannerKind,
+  getPlanCheckoutLabel,
+  isTrialingSubscription,
+  subscriptionFromUser,
+} from '../utils/billingSubscriptionUi'
 
 /**
  * Owner-only billing surface (Phase 2.1).
@@ -43,28 +49,35 @@ function fmtDate(d) {
   }
 }
 
-function StatusBanner({ user }) {
-  const status = String(user?.subscription_status || '').toLowerCase()
-  const ent = user?.entitlement || {}
-  if (ent.has_access && status === 'active') {
+function StatusBanner({ subscription }) {
+  const kind = getBillingBannerKind(subscription)
+  if (kind === 'active') {
     return (
       <CAlert color="success">
-        Subscription active. Renews on <strong>{fmtDate(user.subscription_end_date)}</strong>.
+        Subscription active. Renews on <strong>{fmtDate(subscription.subscription_ends_at)}</strong>.
       </CAlert>
     )
   }
-  if (status === 'trial' || ent.in_trial) {
+  if (kind === 'trial') {
     return (
       <CAlert color="info">
-        Free trial — ends on <strong>{fmtDate(user.trial_ends_at)}</strong>.
+        Free trial — ends on <strong>{fmtDate(subscription.trial_ends_at)}</strong>. Subscribe now
+        to convert to a paid plan. Your academy stays on trial until payment confirms.
       </CAlert>
     )
   }
-  if (ent.in_grace) {
+  if (kind === 'grace') {
     return (
       <CAlert color="warning">
-        Subscription expired but you're inside the grace window until{' '}
-        <strong>{fmtDate(user.grace_until)}</strong>. Renew now to keep collecting payments.
+        Subscription expired but you&apos;re inside the grace window until{' '}
+        <strong>{fmtDate(subscription.grace_until)}</strong>. Renew now to keep collecting payments.
+      </CAlert>
+    )
+  }
+  if (kind === 'cancelled') {
+    return (
+      <CAlert color="warning">
+        Your paid subscription has ended. Reactivate below to continue managing your academy.
       </CAlert>
     )
   }
@@ -84,7 +97,8 @@ function PaymentStatusBadge({ status }) {
 }
 
 export default function BillingPage() {
-  const { user, refreshUser } = useAuth()
+  const { user } = useAuth()
+  const subscription = subscriptionFromUser(user)
   const [plans, setPlans] = useState([])
   const [payments, setPayments] = useState([])
   const [loadingPlans, setLoadingPlans] = useState(true)
@@ -122,15 +136,15 @@ export default function BillingPage() {
   }, [])
 
   const currentPlan = useMemo(() => {
-    const p = String(user?.subscription_plan || '').toLowerCase()
+    const p = String(subscription?.plan || '').toLowerCase()
     return plans.find((x) => x.id === p) || null
-  }, [plans, user])
+  }, [plans, subscription])
 
-  const handleRenew = async (planId) => {
+  const handleCheckout = async (planId) => {
     setCreatingPlan(planId)
     setErrorMsg(null)
     try {
-      const r = await billingApi.createLink({ plan: planId })
+      const r = await billingApi.createLink({ plan: planId, next: '/coach/billing' })
       if (r?.url) {
         window.location.assign(r.url)
       } else {
@@ -140,18 +154,19 @@ export default function BillingPage() {
       setErrorMsg(e?.message || 'Failed to start checkout')
     } finally {
       setCreatingPlan(null)
-      try {
-        await refreshUser?.()
-      } catch {
-        /* non-fatal */
-      }
     }
   }
 
   return (
     <div className="p-4">
       <h2 className="mb-3">Billing</h2>
-      <StatusBanner user={user} />
+      <StatusBanner subscription={subscription} />
+      {isTrialingSubscription(subscription) ? (
+        <p className="text-body-secondary small mb-3">
+          Choose a plan below to convert this academy from trial to paid. Razorpay confirms
+          payment; access stays on trial until that confirmation arrives.
+        </p>
+      ) : null}
       {errorMsg ? <CAlert color="danger">{errorMsg}</CAlert> : null}
 
       <CCard className="mb-4">
@@ -182,9 +197,9 @@ export default function BillingPage() {
                     </div>
                     <div className="fs-4 mb-2">{fmtINR(p.price_inr)}</div>
                     <CButton
-                      color={isCurrent ? 'secondary' : 'primary'}
+                      color={isCurrent && !isTrialingSubscription(subscription) ? 'secondary' : 'primary'}
                       disabled={creatingPlan === p.id}
-                      onClick={() => handleRenew(p.id)}
+                      onClick={() => handleCheckout(p.id)}
                       size="sm"
                     >
                       {creatingPlan === p.id ? (
@@ -192,10 +207,8 @@ export default function BillingPage() {
                           <CSpinner size="sm" className="me-2" />
                           Redirecting…
                         </>
-                      ) : isCurrent ? (
-                        'Renew'
                       ) : (
-                        'Switch plan'
+                        getPlanCheckoutLabel({ isCurrentPlan: isCurrent, subscription })
                       )}
                     </CButton>
                   </div>

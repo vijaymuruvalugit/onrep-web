@@ -22,6 +22,7 @@ export function restorePublicHashRoute() {
       '/reset-password': '/auth/reset-password',
       '/accept-invite': '/accept-invite',
       '/accept-parent-invite': '/accept-parent-invite',
+      '/billing': '/coach/billing',
     }
 
     const target = map[stripped]

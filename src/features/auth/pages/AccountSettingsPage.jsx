@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import {
   CCard,
@@ -14,6 +15,12 @@ import { cilPeople, cilSettings, cilStar } from '@coreui/icons'
 import { authApi } from '../api/authApi'
 import { authStorage } from '../../../api/authStorage'
 import { patchCurrentUser } from '../slices/authSlice'
+import {
+  canManagePlatformBilling,
+  isTrialingSubscription,
+  subscriptionFromUser,
+} from '../../payments/utils/billingSubscriptionUi'
+import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 
 const CHOICES = [
   {
@@ -55,6 +62,8 @@ export default function AccountSettingsPage() {
   const memberships = user?.memberships || []
   const isOwner = user?.is_legal_owner === true
   const current = roleLabel(memberships)
+  const subscription = subscriptionFromUser(user)
+  const showBilling = canManagePlatformBilling(user)
 
   const handleSave = async () => {
     setLoading(true)
@@ -98,6 +107,33 @@ export default function AccountSettingsPage() {
           </div>
         </CCardBody>
       </CCard>
+
+      {showBilling ? (
+        <CCard className="mb-4">
+          <CCardHeader className="fw-semibold">Platform subscription</CCardHeader>
+          <CCardBody>
+            <p className="text-medium-emphasis mb-3">
+              {isTrialingSubscription(subscription) ? (
+                <>
+                  Free trial
+                  {subscription?.trial_ends_at ? (
+                    <>
+                      {' '}
+                      until <strong>{formatDisplayDateDmy(subscription.trial_ends_at)}</strong>
+                    </>
+                  ) : null}
+                  . Convert to a paid plan from billing.
+                </>
+              ) : (
+                'Manage your OnRep plan and invoices.'
+              )}
+            </p>
+            <CButton as={Link} to="/coach/billing" color="primary" size="sm">
+              {isTrialingSubscription(subscription) ? 'Subscribe now' : 'Open billing'}
+            </CButton>
+          </CCardBody>
+        </CCard>
+      ) : null}
 
       {isOwner && (
         <CCard>

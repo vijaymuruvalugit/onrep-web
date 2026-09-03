@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useLocation } from 'react-router-dom'
 import { bootstrapWorkspace } from '../slices/workspaceSlice'
 import { useCoachLikeRole } from '../hooks/useCoachLikeRole'
+import { hasAcademyAdminMembership } from '../../auth/utils/academyAdminAccess'
 import {
   coachPathRequiresWorkspace,
   onboardingPathExemptFromWorkspace,
@@ -46,10 +47,13 @@ export default function CoachWorkspaceShell({ children }) {
     bootstrapComplete &&
     status === 'succeeded'
 
-  // Only ask the user to pick when there are genuinely multiple activities and none is selected.
+  // Academy admins with zero activities still need the dashboard launch guide
+  // (enable-activity CTA). Coaches without admin stay on the empty gate.
+  const skipEmptyActivityGate = activities.length === 0 && hasAcademyAdminMembership(user)
   const mustPickWorkspace =
     needsGate &&
     !workspaceFault &&
+    !skipEmptyActivityGate &&
     (activities.length === 0 || (activities.length > 1 && !activeActivityId))
 
   return (

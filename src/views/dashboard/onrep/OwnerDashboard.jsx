@@ -38,6 +38,9 @@ import DashboardEmptyState from '../../../features/dashboard/components/Dashboar
 import DashboardCardSkeleton from '../../../features/dashboard/components/DashboardCardSkeleton'
 import { formatInr } from '../../../features/payments/utils/formatInr'
 import AcademyOperationsInsights from '../../../features/analytics/components/AcademyOperationsInsights'
+import AcademySetupGuide from '../../../features/dashboard/components/AcademySetupGuide'
+import TrialConvertBanner from '../../../features/payments/components/TrialConvertBanner'
+import { shouldShowTrialConvertBanner } from '../../../features/payments/utils/billingSubscriptionUi'
 import { liveSessionPath } from '../../../features/participation/utils/liveSessionPath'
 
 const MAX_ACTIONS = 5
@@ -134,6 +137,15 @@ const OwnerDashboard = () => {
           </CButton>
         </CCol>
       </CRow>
+
+      {shouldShowTrialConvertBanner(authUser) ? (
+        <TrialConvertBanner
+          trialEndsAt={authUser?.subscription?.trial_ends_at}
+          planPriceInr={authUser?.subscription?.plan_price_inr}
+        />
+      ) : null}
+
+      <AcademySetupGuide />
 
       {onboarding && !onboarding.payment_setup_done ? (
         <CAlert

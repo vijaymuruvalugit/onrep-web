@@ -43,7 +43,9 @@ describe('apiActivityContext', () => {
 
   it('sends activity header for student participation summary', () => {
     expect(
-      requestSkipsActivityHeader('/students/2752ef07-4cd4-4159-b855-c76495efd8e5/participation-summary'),
+      requestSkipsActivityHeader(
+        '/students/2752ef07-4cd4-4159-b855-c76495efd8e5/participation-summary',
+      ),
     ).toBe(false)
     expect(
       requestRequiresActivityWorkspace(
@@ -51,7 +53,14 @@ describe('apiActivityContext', () => {
       ),
     ).toBe(true)
     expect(
-      requestSkipsActivityHeader('/students/2752ef07-4cd4-4159-b855-c76495efd8e5/attendance-percent'),
+      requestSkipsActivityHeader(
+        '/students/2752ef07-4cd4-4159-b855-c76495efd8e5/attendance-percent',
+      ),
     ).toBe(false)
+  })
+
+  it('sends activity header for setup-status when available, without requiring a workspace', () => {
+    expect(requestSkipsActivityHeader('/dashboard/setup-status')).toBe(false)
+    expect(requestRequiresActivityWorkspace('/dashboard/setup-status')).toBe(false)
   })
 })
