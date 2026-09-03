@@ -80,6 +80,7 @@ const BatchWorkspacePage = () => {
   const [staffCoaches, setStaffCoaches] = useState([])
   const [coachUiConfig, setCoachUiConfig] = useState({})
   const [directoryLoading, setDirectoryLoading] = useState(false)
+  const [directoryError, setDirectoryError] = useState(null)
   const [selectedCoachIds, setSelectedCoachIds] = useState(() => new Set())
   const [places, setPlaces] = useState([])
   const [placesLoading, setPlacesLoading] = useState(false)
@@ -186,6 +187,7 @@ const BatchWorkspacePage = () => {
     if (!batchId) return
     let cancelled = false
     setDirectoryLoading(true)
+    setDirectoryError(null)
     Promise.all([listStaffCoaches(), getCoachUiConfig()])
       .then(([coaches, cfg]) => {
         if (!cancelled) {
@@ -193,10 +195,11 @@ const BatchWorkspacePage = () => {
           setCoachUiConfig(cfg && typeof cfg === 'object' ? cfg : {})
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!cancelled) {
           setStaffCoaches([])
           setCoachUiConfig({})
+          setDirectoryError(err)
         }
       })
       .finally(() => {
@@ -355,7 +358,7 @@ const BatchWorkspacePage = () => {
   ])
 
   const assignableBatchStaff = useMemo(() => {
-    const roles = new Set(['coach', 'academy_owner', 'admin'])
+    const roles = new Set(['coach', 'academy_owner', 'academy_admin', 'admin'])
     return [...staffCoaches]
       .filter((c) => roles.has(String(c.role).toLowerCase()))
       .sort((a, b) =>
@@ -913,6 +916,11 @@ const BatchWorkspacePage = () => {
                     {directoryLoading ? (
                       <div className="py-2">
                         <CSpinner size="sm" />
+                      </div>
+                    ) : directoryError ? (
+                      <div className="small text-danger">
+                        Could not load coaches. Refresh this page, or open Owner → Coaches and
+                        retry.
                       </div>
                     ) : assignableBatchStaff.length === 0 ? (
                       <div className="small text-body-secondary">
