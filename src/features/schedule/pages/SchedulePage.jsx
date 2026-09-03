@@ -703,7 +703,7 @@ const SchedulePage = () => {
                 color="danger"
                 className="py-2 d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2"
               >
-                <span>Could not load sessions. {sessionsError}</span>
+                <span>{sessionsError}</span>
                 <CButton
                   size="sm"
                   color="danger"

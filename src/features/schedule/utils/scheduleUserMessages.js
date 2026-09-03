@@ -15,6 +15,15 @@ export function friendlyScheduleApiMessage(error) {
   if (!msg) return 'Something went wrong. Please try again.'
 
   const lower = msg.toLowerCase()
+  const looksLikeSql =
+    lower.includes('does not exist') ||
+    lower.includes('syntax error') ||
+    lower.includes('undefined column') ||
+    /\bcolumn\s+\S+/.test(lower) ||
+    /\brelation\s+\S+/.test(lower)
+  if (looksLikeSql) {
+    return 'Could not load this schedule. Check your connection and tap Refresh.'
+  }
   if (lower.includes('max') && lower.includes('days') && lower.includes('materialize')) {
     return 'We could not refresh this batch’s calendar. Tap Refresh to try again.'
   }
@@ -34,7 +43,7 @@ export function friendlyScheduleApiMessage(error) {
     return 'We could not update sessions from your weekly patterns. Tap Refresh to try again.'
   }
   if (lower.includes('unable to load') || lower.includes('failed to load')) {
-    return 'Could not load upcoming sessions. Check your connection and tap Refresh.'
+    return 'Could not load this schedule. Check your connection and tap Refresh.'
   }
 
   return msg

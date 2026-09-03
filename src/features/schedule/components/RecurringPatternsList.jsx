@@ -14,6 +14,7 @@ import {
 import { apiDaysToUiLabels, UI_DAY_LABELS_ORDERED } from '../utils/daysOfWeek'
 import { formatSessionClock } from '../../classes/utils/sessionDisplay'
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
+import { friendlyScheduleApiMessage } from '../utils/scheduleUserMessages'
 
 function formatCadenceForCard(pattern) {
   const labels = apiDaysToUiLabels(pattern.daysOfWeek || [])
@@ -196,7 +197,7 @@ export default function RecurringPatternsList({
 
       {error ? (
         <CAlert color="danger" className="py-2">
-          {error.message || 'Could not load patterns.'}
+          {friendlyScheduleApiMessage(error)}
         </CAlert>
       ) : null}
 
