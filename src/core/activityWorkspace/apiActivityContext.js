@@ -65,7 +65,11 @@ function isStudentsExempt(pathname) {
 }
 
 function isBatchesExempt(pathname) {
-  return pathname.includes('/batches') && !pathname.includes('/batch-schedules')
+  if (!pathname.includes('/batches')) return false
+  if (pathname.includes('/batch-schedules')) return false
+  // Nested under /batches/:id/recurring-patterns — activity-scoped (preview/bulk).
+  if (pathname.includes('/recurring-patterns')) return false
+  return true
 }
 
 function isPlacesLookupExempt(pathname) {

@@ -24,6 +24,13 @@ export function friendlyScheduleApiMessage(error) {
   if (looksLikeSql) {
     return 'Could not load this schedule. Check your connection and tap Refresh.'
   }
+  if (
+    lower.includes('x-activity-id') ||
+    lower.includes('activity context') ||
+    lower.includes('activity_context')
+  ) {
+    return 'Could not preview this schedule. Switch program in the header and try again.'
+  }
   if (lower.includes('max') && lower.includes('days') && lower.includes('materialize')) {
     return 'We could not refresh this batch’s calendar. Tap Refresh to try again.'
   }

@@ -25,6 +25,20 @@ describe('apiActivityContext', () => {
     expect(requestRequiresActivityWorkspace('/recurring-patterns/x')).toBe(true)
   })
 
+  it('sends activity header for nested batch recurring-pattern preview and bulk', () => {
+    const preview =
+      '/batches/2b7f87b1-6f07-4f99-a9f9-aa9c42a56c53/recurring-patterns/preview'
+    const bulk = '/batches/2b7f87b1-6f07-4f99-a9f9-aa9c42a56c53/recurring-patterns/bulk'
+    expect(requestSkipsActivityHeader(preview)).toBe(false)
+    expect(requestRequiresActivityWorkspace(preview)).toBe(true)
+    expect(requestSkipsActivityHeader(bulk)).toBe(false)
+    expect(requestRequiresActivityWorkspace(bulk)).toBe(true)
+    expect(requestSkipsActivityHeader('/batches')).toBe(true)
+    expect(requestSkipsActivityHeader('/batches/2b7f87b1-6f07-4f99-a9f9-aa9c42a56c53')).toBe(
+      true,
+    )
+  })
+
   it('does not require workspace for students list', () => {
     expect(requestRequiresActivityWorkspace('/students')).toBe(false)
   })

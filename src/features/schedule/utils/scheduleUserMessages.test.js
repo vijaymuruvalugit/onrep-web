@@ -19,4 +19,10 @@ describe('friendlyScheduleApiMessage', () => {
   it('maps generic load failures without leaking backend copy', () => {
     expect(friendlyScheduleApiMessage('Failed to load schedules')).not.toBe('Failed to load schedules')
   })
+
+  it('does not surface missing activity-header internals', () => {
+    expect(friendlyScheduleApiMessage('Missing activity context (x-activity-id)')).not.toMatch(
+      /x-activity-id/i,
+    )
+  })
 })
