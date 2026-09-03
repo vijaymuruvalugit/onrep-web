@@ -1,6 +1,9 @@
 /**
  * Launch-readiness checklist — frontend presentation + completion rules.
  * Backend returns facts only; routes live here.
+ *
+ * Order is a prerequisite chain: each step may use items above it, never below.
+ * Places and students come before batches so a batch can pick a venue and roster.
  */
 
 export const ACADEMY_SETUP_CORE_STEPS = Object.freeze([
@@ -21,6 +24,14 @@ export const ACADEMY_SETUP_CORE_STEPS = Object.freeze([
     required: true,
   },
   {
+    id: 'create_places',
+    title: 'Add training venues',
+    haveReady: 'Have ready: venue name and address or location. Batches and schedules use these later.',
+    ctaLabel: 'Add a venue',
+    to: '/coach/places',
+    required: true,
+  },
+  {
     id: 'add_coaches',
     title: 'Add coaches',
     haveReady: 'Have ready: coach name, email or phone, and intended access.',
@@ -29,25 +40,33 @@ export const ACADEMY_SETUP_CORE_STEPS = Object.freeze([
     required: true,
   },
   {
+    id: 'add_students',
+    title: 'Add students',
+    haveReady: 'Have ready: student name and contact details. You can enrol them in a batch after you create one.',
+    ctaLabel: 'Add students',
+    to: '/coach/students/new',
+    required: true,
+  },
+  {
     id: 'create_batches',
     title: 'Create batches',
-    haveReady: 'Have ready: batch name, activity, level/grouping, and capacity where supported.',
+    haveReady: 'Have ready: batch name, activity, a venue from Places, and students already added.',
     ctaLabel: 'Open Batches',
     to: '/coach/batches',
     required: true,
   },
   {
     id: 'enrol_students',
-    title: 'Add and enrol students',
-    haveReady: 'Have ready: student details, guardian contact where available, and intended batch.',
-    ctaLabel: 'Add students',
-    to: '/coach/students/new',
+    title: 'Enrol students in batches',
+    haveReady: 'Have ready: the students and batches from the steps above.',
+    ctaLabel: 'Enrol in batches',
+    to: '/coach/batches',
     required: true,
   },
   {
     id: 'assign_coaches',
     title: 'Assign coaches',
-    haveReady: 'Have ready: which coach runs each batch/session.',
+    haveReady: 'Have ready: which coach from Coaches runs each batch.',
     ctaLabel: 'Assign coaches',
     to: '/coach/batches',
     required: true,
@@ -56,7 +75,7 @@ export const ACADEMY_SETUP_CORE_STEPS = Object.freeze([
     id: 'first_schedule',
     title: 'Create the first schedule',
     haveReady:
-      'Have ready: batch, coach, venue/location, days, start time, academy timezone, recurrence, and start date.',
+      'Have ready: batch, assigned coach, venue, days, start time, academy timezone, recurrence, and start date.',
     ctaLabel: 'Open Schedule',
     to: '/coach/schedule',
     required: true,
@@ -94,8 +113,12 @@ export function isStepComplete(stepId, facts = {}) {
       return facts.academyProfileComplete === true
     case 'enable_activity':
       return Number(facts.enabledActivityCount || 0) >= 1
+    case 'create_places':
+      return Number(facts.activePlaceCount || 0) >= 1
     case 'add_coaches':
       return Number(facts.activeCoachCount || 0) >= 1
+    case 'add_students':
+      return Number(facts.activeStudentCount || 0) >= 1
     case 'create_batches':
       return Number(facts.activeBatchCount || 0) >= 1
     case 'enrol_students':

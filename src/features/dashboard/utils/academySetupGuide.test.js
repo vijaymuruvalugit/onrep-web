@@ -11,7 +11,9 @@ import { DASHBOARD_PAGES } from '../../../routes/dashboardPagesRegistration'
 const CORE_IDS = [
   'academy_details',
   'enable_activity',
+  'create_places',
   'add_coaches',
+  'add_students',
   'create_batches',
   'enrol_students',
   'assign_coaches',
@@ -42,6 +44,8 @@ describe('academySetupGuide', () => {
       expect(DASHBOARD_PAGES[step.to], `missing page for ${step.to}`).toBeDefined()
     }
     expect(DASHBOARD_PAGES['/coach/schedule']).toBeDefined()
+    expect(DASHBOARD_PAGES['/coach/places']).toBeDefined()
+    expect(DASHBOARD_PAGES['/coach/students/new']).toBeDefined()
   })
 
   it('marks the first incomplete required step as next', () => {
@@ -50,7 +54,9 @@ describe('academySetupGuide', () => {
       facts: {
         academyProfileComplete: true,
         enabledActivityCount: 1,
+        activePlaceCount: 0,
         activeCoachCount: 0,
+        activeStudentCount: 0,
         activeBatchCount: 0,
         enrolledStudentCount: 0,
         unstaffedBatchCount: 0,
@@ -60,10 +66,10 @@ describe('academySetupGuide', () => {
       },
     })
     expect(model.coreCompleted).toBe(2)
-    expect(model.coreTotal).toBe(7)
-    expect(model.nextCoreId).toBe('add_coaches')
+    expect(model.coreTotal).toBe(9)
+    expect(model.nextCoreId).toBe('create_places')
     expect(model.coreSteps.find((s) => s.id === 'academy_details').complete).toBe(true)
-    expect(model.coreSteps.find((s) => s.id === 'add_coaches').complete).toBe(false)
+    expect(model.coreSteps.find((s) => s.id === 'create_places').complete).toBe(false)
   })
 
   it('does not treat an owner without coach membership as add-coaches complete', () => {
@@ -71,7 +77,16 @@ describe('academySetupGuide', () => {
     expect(isStepComplete('add_coaches', { activeCoachCount: 1 })).toBe(true)
   })
 
-  it('requires enrolment in a batch, not a standalone student', () => {
+  it('marks add-students complete from standalone students, not batch enrolment', () => {
+    expect(isStepComplete('add_students', { activeStudentCount: 0, enrolledStudentCount: 1 })).toBe(
+      false,
+    )
+    expect(isStepComplete('add_students', { activeStudentCount: 1, enrolledStudentCount: 0 })).toBe(
+      true,
+    )
+  })
+
+  it('requires enrolment in a batch after students and batches exist', () => {
     expect(isStepComplete('enrol_students', { enrolledStudentCount: 0 })).toBe(false)
     expect(isStepComplete('enrol_students', { enrolledStudentCount: 1 })).toBe(true)
   })
@@ -94,7 +109,9 @@ describe('academySetupGuide', () => {
       facts: {
         academyProfileComplete: true,
         enabledActivityCount: 1,
+        activePlaceCount: 1,
         activeCoachCount: 2,
+        activeStudentCount: 4,
         activeBatchCount: 1,
         enrolledStudentCount: 4,
         unstaffedBatchCount: 0,
@@ -104,7 +121,7 @@ describe('academySetupGuide', () => {
       },
     })
     expect(model.readyToRun).toBe(true)
-    expect(model.coreCompleted).toBe(7)
+    expect(model.coreCompleted).toBe(9)
     expect(model.nextCoreId).toBeNull()
     expect(model.recommendedSteps.every((s) => !s.complete)).toBe(true)
   })

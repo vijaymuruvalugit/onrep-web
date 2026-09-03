@@ -13,7 +13,9 @@ function partialModel() {
     facts: {
       academyProfileComplete: true,
       enabledActivityCount: 1,
+      activePlaceCount: 0,
       activeCoachCount: 0,
+      activeStudentCount: 0,
       activeBatchCount: 0,
       enrolledStudentCount: 0,
       unstaffedBatchCount: 0,
@@ -67,7 +69,9 @@ describe('AcademySetupGuideCard', () => {
     expect(steps.map((el) => el.getAttribute('data-testid'))).toEqual([
       'setup-step-academy_details',
       'setup-step-enable_activity',
+      'setup-step-create_places',
       'setup-step-add_coaches',
+      'setup-step-add_students',
       'setup-step-create_batches',
       'setup-step-enrol_students',
       'setup-step-assign_coaches',
@@ -75,18 +79,22 @@ describe('AcademySetupGuideCard', () => {
       'setup-step-set_up_fees',
       'setup-step-connect_guardians',
     ])
-    expect(screen.getByTestId('setup-step-add_coaches')).toHaveAttribute('data-next', 'true')
+    expect(screen.getByTestId('setup-step-create_places')).toHaveAttribute('data-next', 'true')
     expect(screen.getByTestId('setup-next-badge')).toHaveTextContent('Next step')
     expect(screen.getByTestId('setup-step-academy_details')).toHaveAttribute(
       'data-complete',
       'true',
     )
-    expect(screen.getByText('2 of 7 core steps complete')).toBeInTheDocument()
+    expect(screen.getByText('2 of 9 core steps complete')).toBeInTheDocument()
   })
 
   it('uses registered routes for incomplete CTAs', () => {
     renderWithProviders(
       <AcademySetupGuideCard loading={false} model={partialModel()} collapsed={false} />,
+    )
+    expect(screen.getByRole('link', { name: /add a venue/i })).toHaveAttribute(
+      'href',
+      '/coach/places',
     )
     expect(screen.getByRole('link', { name: /open coaches/i })).toHaveAttribute(
       'href',
@@ -96,9 +104,13 @@ describe('AcademySetupGuideCard', () => {
       'href',
       '/coach/batches',
     )
-    expect(screen.getByRole('link', { name: /add students/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^add students$/i })).toHaveAttribute(
       'href',
       '/coach/students/new',
+    )
+    expect(screen.getByRole('link', { name: /enrol in batches/i })).toHaveAttribute(
+      'href',
+      '/coach/batches',
     )
     expect(screen.getByRole('link', { name: /open schedule/i })).toHaveAttribute(
       'href',
@@ -120,7 +132,9 @@ describe('AcademySetupGuideCard', () => {
       facts: {
         academyProfileComplete: true,
         enabledActivityCount: 1,
+        activePlaceCount: 1,
         activeCoachCount: 1,
+        activeStudentCount: 1,
         activeBatchCount: 1,
         enrolledStudentCount: 1,
         unstaffedBatchCount: 0,
