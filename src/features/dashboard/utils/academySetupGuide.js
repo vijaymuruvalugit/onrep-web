@@ -86,7 +86,7 @@ export const ACADEMY_SETUP_RECOMMENDED_STEPS = Object.freeze([
   {
     id: 'set_up_fees',
     title: 'Set up fees',
-    haveReady: 'Have ready: amount, billing period, effective date, and due-date policy.',
+    haveReady: 'Have ready: UPI ID or bank details so parents know how to pay.',
     ctaLabel: 'Set up fees',
     to: '/coach/payments/settings',
     required: false,
@@ -130,7 +130,7 @@ export function isStepComplete(stepId, facts = {}) {
     case 'first_schedule':
       return Number(facts.upcomingSessionCount || 0) >= 1
     case 'set_up_fees':
-      return Number(facts.activeFeeAssignmentCount || 0) >= 1
+      return facts.feePayoutConfigured === true || Number(facts.activeFeeAssignmentCount || 0) >= 1
     case 'connect_guardians':
       return Number(facts.approvedGuardianCount || 0) >= 1
     default:

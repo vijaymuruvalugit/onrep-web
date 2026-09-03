@@ -103,6 +103,14 @@ describe('academySetupGuide', () => {
     )
   })
 
+  it('marks set-up-fees complete when payout is configured even without a fee assignment', () => {
+    expect(isStepComplete('set_up_fees', { activeFeeAssignmentCount: 0 })).toBe(false)
+    expect(
+      isStepComplete('set_up_fees', { feePayoutConfigured: true, activeFeeAssignmentCount: 0 }),
+    ).toBe(true)
+    expect(isStepComplete('set_up_fees', { activeFeeAssignmentCount: 1 })).toBe(true)
+  })
+
   it('core completion yields the ready flag even when recommended steps are open', () => {
     const model = buildAcademySetupGuideModel({
       readyToRun: true,
