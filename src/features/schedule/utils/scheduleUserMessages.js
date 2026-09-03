@@ -46,7 +46,7 @@ export function friendlyScheduleApiMessage(error) {
   if (lower.includes('invalid date')) {
     return 'Could not read the date range. Tap Refresh to try again.'
   }
-  if (lower.includes('failed to materialize') || lower.includes('failed to generate')) {
+  if (lower.includes('failed to materialize') || lower.includes('failed to generate') || lower.includes('failed to preview')) {
     return 'We could not update sessions from your weekly patterns. Tap Refresh to try again.'
   }
   if (lower.includes('unable to load') || lower.includes('failed to load')) {

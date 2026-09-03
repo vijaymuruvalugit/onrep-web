@@ -25,4 +25,10 @@ describe('friendlyScheduleApiMessage', () => {
       /x-activity-id/i,
     )
   })
+
+  it('maps preview 500s to retry copy', () => {
+    expect(friendlyScheduleApiMessage('Failed to preview schedule')).not.toBe(
+      'Failed to preview schedule',
+    )
+  })
 })
