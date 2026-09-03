@@ -38,6 +38,10 @@ export const API_CLASSIFICATION = Object.freeze({
     '/sessions',
     '/attendance-percent',
     '/participation-summary',
+    '/observations',
+    '/coaching-priority',
+    '/follow-ups',
+    '/progress-cards',
     '/sub-activities',
   ]),
 })
@@ -51,16 +55,22 @@ function isStudentImportExempt(pathname) {
 }
 
 function isStudentsExempt(pathname) {
-  // Activity-scoped student ops still need x-activity-id (same as attendance-percent).
-  const activityScopedStudentPath =
-    pathname.includes('/attendance-percent') ||
-    pathname.includes('/participation-summary') ||
-    pathname.includes('/observations')
+  if (isStudentImportExempt(pathname)) return true
+  if (pathname === '/students' || pathname.startsWith('/students?')) return true
+  if (!pathname.startsWith('/students/')) return false
+
+  const afterId = pathname.slice('/students/'.length)
+  const slash = afterId.indexOf('/')
+  if (slash === -1) return true
+
+  const nested = afterId.slice(slash + 1)
+  // Profile-adjacent academy-global reads/writes. Operational nested routes need x-activity-id.
   return (
-    isStudentImportExempt(pathname) ||
-    pathname === '/students' ||
-    pathname.startsWith('/students?') ||
-    (pathname.startsWith('/students/') && !activityScopedStudentPath)
+    nested === 'parents' ||
+    nested.startsWith('parents/') ||
+    nested === 'login-status' ||
+    nested === 'enable-login' ||
+    nested.startsWith('enable-login')
   )
 }
 

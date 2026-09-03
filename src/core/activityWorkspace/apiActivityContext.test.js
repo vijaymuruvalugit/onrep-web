@@ -55,22 +55,26 @@ describe('apiActivityContext', () => {
     expect(requestRequiresActivityWorkspace('/places/details')).toBe(false)
   })
 
-  it('sends activity header for student participation summary', () => {
-    expect(
-      requestSkipsActivityHeader(
-        '/students/2752ef07-4cd4-4159-b855-c76495efd8e5/participation-summary',
-      ),
-    ).toBe(false)
-    expect(
-      requestRequiresActivityWorkspace(
-        '/students/2752ef07-4cd4-4159-b855-c76495efd8e5/participation-summary',
-      ),
-    ).toBe(true)
-    expect(
-      requestSkipsActivityHeader(
-        '/students/2752ef07-4cd4-4159-b855-c76495efd8e5/attendance-percent',
-      ),
-    ).toBe(false)
+  it('sends activity header for student operational nested routes', () => {
+    const id = '2752ef07-4cd4-4159-b855-c76495efd8e5'
+    for (const suffix of [
+      'participation-summary',
+      'attendance-percent',
+      'observations',
+      'coaching-priority',
+      'follow-ups',
+      'progress-cards',
+    ]) {
+      const path = `/students/${id}/${suffix}`
+      expect(requestSkipsActivityHeader(path), path).toBe(false)
+      expect(requestRequiresActivityWorkspace(path), path).toBe(true)
+    }
+    expect(requestSkipsActivityHeader(`/students/${id}`)).toBe(true)
+    expect(requestSkipsActivityHeader(`/students/${id}/parents`)).toBe(true)
+    expect(requestSkipsActivityHeader(`/students/${id}/login-status`)).toBe(true)
+    expect(requestSkipsActivityHeader('/students')).toBe(true)
+    expect(requestSkipsActivityHeader(`/parent/students/${id}/progress-cards`)).toBe(true)
+    expect(requestRequiresActivityWorkspace(`/parent/students/${id}/progress-cards`)).toBe(false)
   })
 
   it('sends activity header for setup-status when available, without requiring a workspace', () => {
