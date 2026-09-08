@@ -1,28 +1,15 @@
 import React, { useMemo, useRef } from 'react'
 import { SESSION_OPS_COPY } from '../constants/sessionOpsCopy'
+import {
+  athleteInitials,
+  shortAthleteLabel,
+} from '../../../utils/athleteDisplayName.js'
 import './AthleteCardStrip.css'
 
 const STATUS_LABEL = {
   resting: 'Resting',
   injured: 'Injured',
   skipped: 'Skipped',
-}
-
-function initials(name) {
-  const parts = String(name || '?')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-  return (parts[0]?.[0] || '?').toUpperCase()
-}
-
-function firstName(name) {
-  return (
-    String(name || 'Athlete')
-      .trim()
-      .split(/\s+/)[0] || 'Athlete'
-  )
 }
 
 /**
@@ -45,9 +32,9 @@ export default function AthleteCardStrip({
 }) {
   const useTiles = variant === 'tiles'
   const lastTapRef = useRef({})
-  const enriched = useMemo(
-    () =>
-      (rows || []).map((r) => {
+  const enriched = useMemo(() => {
+    const names = (rows || []).map((r) => r.full_name)
+    return (rows || []).map((r) => {
         const sid = String(r.id)
         const placement = participationByStudentId[sid]
         const status =
@@ -58,16 +45,15 @@ export default function AthleteCardStrip({
         return {
           sid,
           fullName: r.full_name,
-          shortName: firstName(r.full_name),
+          shortName: shortAthleteLabel(r.full_name, names),
           status,
           statusLabel: STATUS_LABEL[status] || null,
           attendanceStatus,
           present: attendanceStatus === 'present',
           hasSignal: observedStudentIds?.has?.(sid),
         }
-      }),
-    [rows, observedStudentIds, participationByStudentId, attendanceByStudentId],
-  )
+      })
+  }, [rows, observedStudentIds, participationByStudentId, attendanceByStudentId])
 
   if (!enriched.length) {
     return (
@@ -128,7 +114,7 @@ export default function AthleteCardStrip({
             >
               <span className="athlete-card__avatar-wrap">
                 <span className="athlete-card__avatar" aria-hidden>
-                  {initials(a.fullName)}
+                  {athleteInitials(a.fullName)}
                 </span>
                 {showPresentTick ? (
                   <span className="athlete-card__present-tick" title="Present" aria-hidden>

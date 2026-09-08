@@ -44,7 +44,7 @@ export default function SessionCommandHeader({
             </CButton>
           ) : null}
           {canEnd ? (
-            <CButton size="sm" color="dark" variant="outline" onClick={onEnd}>
+            <CButton size="sm" color="danger" onClick={onEnd}>
               End
             </CButton>
           ) : null}

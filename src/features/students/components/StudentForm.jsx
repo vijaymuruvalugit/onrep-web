@@ -185,8 +185,8 @@ const StudentForm = ({ title, subtitle, submitLabel, initialValues, saving, erro
                 <small className="text-danger">{errors.monthlyFeeInr.message}</small>
               ) : (
                 <div className="small text-body-secondary mt-1">
-                  Set to 0 to use the batch fee. Enter an amount only when this student pays
-                  differently.
+                  Set to 0 to use the batch fee. Unpaid fees for the current month update
+                  immediately; already-paid months stay as billed.
                 </div>
               )}
             </CCol>

@@ -1,18 +1,9 @@
 import React from 'react'
-
-function initials(name) {
-  const parts = String(name || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
-function firstName(name) {
-  return String(name || 'Athlete').trim().split(/\s+/)[0] || 'Athlete'
-}
+import {
+  athleteInitials,
+  cohortNamesFromAthletes,
+  shortAthleteLabel,
+} from '../../../utils/athleteDisplayName.js'
 
 export default function AthleteSelectionGrid({
   athletes = [],
@@ -25,6 +16,7 @@ export default function AthleteSelectionGrid({
   const selectedSet = new Set(
     multi ? selectedIds.map(String) : selectedId ? [String(selectedId)] : [],
   )
+  const cohortNames = cohortNamesFromAthletes(athletes)
 
   return (
     <div className="athlete-selection-grid" role={multi ? 'group' : 'list'}>
@@ -39,12 +31,13 @@ export default function AthleteSelectionGrid({
             className={`athlete-selection-grid__chip${active ? ' athlete-selection-grid__chip--selected' : ''}`}
             disabled={disabled}
             aria-pressed={active}
+            aria-label={name}
             onClick={() => onSelect?.(sid)}
           >
             <span className="athlete-selection-grid__avatar" aria-hidden>
-              {initials(name)}
+              {athleteInitials(name)}
             </span>
-            <span className="athlete-selection-grid__name">{firstName(name)}</span>
+            <span className="athlete-selection-grid__name">{shortAthleteLabel(name, cohortNames)}</span>
           </button>
         )
       })}

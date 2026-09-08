@@ -444,7 +444,7 @@ export default function HeatFlow({
               ? 'Race reset. Press Start to restart with these students.'
               : waitingToStart
                 ? 'Select students, then press Start when the race begins.'
-                : 'Tap Record as each student finishes. Save when the clock is stopped or every time is recorded.'}
+                : 'Tap Record finish as each student finishes. Recording stops after the last racer.'}
           </p>
           {waitingToStart ? (
             <div className="race-finish-capture__selection mb-3">
@@ -496,7 +496,7 @@ export default function HeatFlow({
                 }
                 onClick={handleCapture}
               >
-                Record
+                Record finish #{recordedCount + 1} of {selectedIds.length}
               </CButton>
               <FinishMarksList marks={finishMarks} />
               {recordedCount > 0 && !clockStopped ? (

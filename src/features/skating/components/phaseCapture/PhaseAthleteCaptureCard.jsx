@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import PhaseCaptureRenderer from './PhaseCaptureRenderer'
 import { entryValueForField, inlineCaptureItemsForCard } from '../../utils/phaseCaptureDisplay'
+import { athleteNameOf, shortAthleteLabel } from '../../../../utils/athleteDisplayName.js'
 
 /**
  * Fixed-height horizontal athlete row for rink-side capture.
@@ -14,15 +15,13 @@ export default function PhaseAthleteCaptureCard({
   activePhase,
   disabled = false,
   reviewOnly = false,
+  cohortNames = [],
   onValueChange,
   onOpenDetail,
 }) {
   const athleteId = String(athlete?.id ?? athlete?.studentId ?? '')
-  const name =
-    athlete?.full_name ||
-    athlete?.fullName ||
-    [athlete?.first_name, athlete?.last_name].filter(Boolean).join(' ') ||
-    'Athlete'
+  const name = athleteNameOf(athlete) || 'Athlete'
+  const displayName = shortAthleteLabel(name, cohortNames.length ? cohortNames : [name])
 
   const inlineItems = useMemo(
     () =>
@@ -52,7 +51,7 @@ export default function PhaseAthleteCaptureCard({
         className="phase-athlete-card__name"
         onClick={() => onOpenDetail?.(athleteId)}
       >
-        {name.split(' ')[0]}
+        {displayName}
       </button>
       <div className="phase-athlete-card__capture">
         {tagItem ? (

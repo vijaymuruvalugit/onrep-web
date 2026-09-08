@@ -76,7 +76,7 @@ export default function SessionLiveHeader({
                 </CButton>
               ) : null}
               {canEnd ? (
-                <CButton size="sm" color="dark" variant="outline" onClick={onEnd}>
+                <CButton size="sm" color="danger" onClick={onEnd}>
                   {liveLabel('end')}
                 </CButton>
               ) : null}
@@ -151,7 +151,7 @@ export default function SessionLiveHeader({
             </CButton>
           ) : null}
           {canEnd ? (
-            <CButton size="sm" color="dark" variant="outline" onClick={onEnd}>
+            <CButton size="sm" color="danger" onClick={onEnd}>
               {liveLabel('end')}
             </CButton>
           ) : null}

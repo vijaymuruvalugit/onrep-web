@@ -1,5 +1,6 @@
 import React from 'react'
 import ExpandableAthleteCard from './ExpandableAthleteCard'
+import { cohortNamesFromAthletes } from '../../../../utils/athleteDisplayName.js'
 import './phaseCapture.css'
 
 export default function PhaseAthleteCaptureList({
@@ -25,6 +26,8 @@ export default function PhaseAthleteCaptureList({
     )
   }
 
+  const cohortNames = cohortNamesFromAthletes(roster)
+
   return (
     <div className="phase-capture-list" data-testid="phase-athlete-capture-list">
       {roster.map((athlete) => {
@@ -33,6 +36,7 @@ export default function PhaseAthleteCaptureList({
           <ExpandableAthleteCard
             key={athleteId}
             athlete={athlete}
+            cohortNames={cohortNames}
             captureItems={captureItems}
             entries={entries}
             captureMode={captureMode}

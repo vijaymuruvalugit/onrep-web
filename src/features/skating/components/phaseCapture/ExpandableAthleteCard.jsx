@@ -9,6 +9,7 @@ import {
   entryValueForField,
   quickLayerItems,
 } from '../../utils/phaseCaptureDisplay'
+import { athleteNameOf, shortAthleteLabel } from '../../../../utils/athleteDisplayName.js'
 
 /**
  * Quick-layer athlete card — collapsed summary; expanded tags + rating + quick note only.
@@ -23,18 +24,15 @@ export default function ExpandableAthleteCard({
   participationStatus,
   disabled = false,
   reviewOnly = false,
+  cohortNames = [],
   onSelectAthlete,
   onParticipationStatusChange,
   onToggleExpand,
   onValueChange,
 }) {
   const athleteId = String(athlete?.id ?? athlete?.studentId ?? '')
-  const name =
-    athlete?.full_name ||
-    athlete?.fullName ||
-    [athlete?.first_name, athlete?.last_name].filter(Boolean).join(' ') ||
-    'Athlete'
-  const firstName = name.split(' ')[0]
+  const name = athleteNameOf(athlete) || 'Athlete'
+  const displayName = shortAthleteLabel(name, cohortNames.length ? cohortNames : [name])
 
   const quickItems = useMemo(() => quickLayerItems(captureItems), [captureItems])
   const tagItem = quickItems.find((it) => it.fieldType === 'tags')
@@ -67,7 +65,7 @@ export default function ExpandableAthleteCard({
           aria-pressed={selected}
         >
           {showInactive ? <span className="expandable-athlete-card__status-dot" aria-hidden /> : null}
-          {firstName}
+          {displayName}
         </button>
         {onParticipationStatusChange ? (
           <CFormSelect

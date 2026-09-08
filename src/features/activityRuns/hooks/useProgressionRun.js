@@ -400,11 +400,19 @@ export function useProgressionRun({
 
       let nextPayload = payload
       setPayload((prev) => {
+        const participantIds = Array.isArray(prev.race_meta?.participantIds)
+          ? prev.race_meta.participantIds
+          : []
         const marks = Array.isArray(prev.race_meta?.finish_marks)
           ? prev.race_meta.finish_marks
           : Array.isArray(prev.race_meta?.finish_events)
             ? prev.race_meta.finish_events
             : []
+        const activeCount = marks.filter((m) => !m?.voided).length
+        if (participantIds.length > 0 && activeCount >= participantIds.length) {
+          nextPayload = prev
+          return prev
+        }
         const seq = marks.filter((m) => !m?.voided).length + 1
         const nextMark = {
           id: newMutationId(),
