@@ -398,7 +398,9 @@ const SkatingOpsPage = () => {
     place: '',
   })
 
-  const selectedSessionId = sessionParam || ''
+  const selectedSessionId = activeActivityHasSkatingCapability(activeActivity)
+    ? sessionParam || ''
+    : ''
 
   const liveRefresh = useLiveSessionRefresh(selectedSessionId, activeActivityId)
   const {
@@ -502,8 +504,12 @@ const SkatingOpsPage = () => {
 
   const loadDayBoard = useCallback(
     async (opts = {}) => {
-      if (!activeActivityId) {
-        if (!opts.silent) setDayBoard(null)
+      if (!activeActivityId || !activeActivityHasSkatingCapability(activeActivity)) {
+        if (!opts.silent) {
+          setDayBoard(null)
+          setSnapError(null)
+          setSnapLoading(false)
+        }
         return
       }
       const silent = Boolean(opts.silent)
@@ -524,7 +530,7 @@ const SkatingOpsPage = () => {
         if (!silent) setSnapLoading(false)
       }
     },
-    [activeActivityId, dateYmd],
+    [activeActivityId, activeActivity, dateYmd],
   )
 
   const loadBundle = useCallback(
@@ -669,7 +675,7 @@ const SkatingOpsPage = () => {
   }, [activeActivityId])
 
   useEffect(() => {
-    if (!activeActivityId) {
+    if (!activeActivityId || !activeActivityHasSkatingCapability(activeActivity)) {
       setSkaters([])
       return undefined
     }
@@ -685,7 +691,7 @@ const SkatingOpsPage = () => {
     return () => {
       cancelled = true
     }
-  }, [activeActivityId, selectedSessionId])
+  }, [activeActivityId, activeActivity, selectedSessionId])
 
   useEffect(() => {
     try {
@@ -1074,6 +1080,7 @@ const SkatingOpsPage = () => {
     return activeActivity.label || activeActivity.name || null
   }, [activeActivity])
 
+  const skatingCapable = activeActivityHasSkatingCapability(activeActivity)
   const sessionCancelled = isOperationalSessionCancelled(selSession)
   const legacyOpsFromCanonical = selSession?.state
     ? operationalStateToLegacyOpsState(selSession.state)
@@ -1082,7 +1089,7 @@ const SkatingOpsPage = () => {
     ? 'ended'
     : syncPrimitives.sessionOpsState || legacyOpsFromCanonical || 'upcoming'
   /** Session workspace uses unified vertical live coaching (not legacy 3-column). */
-  const unifiedLiveCoaching = Boolean(selectedSessionId) && !sessionCancelled
+  const unifiedLiveCoaching = Boolean(selectedSessionId) && !sessionCancelled && skatingCapable
   const coachSessionActive =
     unifiedLiveCoaching &&
     (syncPrimitives.sessionOpsState === 'active' ||
@@ -2088,7 +2095,7 @@ const SkatingOpsPage = () => {
 
   const inner = (
     <>
-      {!selectedSessionId ? (
+      {!selectedSessionId || !skatingCapable ? (
         <SkatingOpsDayBoard
           dateYmd={dateYmd}
           onDateChange={setDateYmd}

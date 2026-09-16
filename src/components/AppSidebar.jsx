@@ -32,6 +32,7 @@ const AppSidebar = () => {
   const activeRole = useSelector((state) => resolveUserRole(user))
 
   const navigation = useMemo(() => getNavigationForRole(activeRole, user), [activeRole, user])
+
   const brandTo = isSuperAdminUser(user)
     ? '/super-admin/overview'
     : activeRole === 'parent'

@@ -357,4 +357,100 @@ describe('SkatingOpsPage (operational command center)', () => {
       expect(skatingOpsApi.getSessionBundle).toHaveBeenCalled()
     })
   })
+
+  it('Music workspace Live sessions is activity-safe (no floor ops)', async () => {
+    const MUSIC_ID = '1efd1ddd-ad57-4b13-83c6-e2f7072cf5ca'
+    const { default: operationalSessionsApi } =
+      await import('../../../domain/operationalSessions/operationalSessionsApi')
+    operationalSessionsApi.getDayBoard.mockResolvedValue({
+      date: '2026-09-11',
+      sessions: [
+        {
+          id: 'c6035d49-b355-4349-b0f5-334e041dd21e',
+          state: 'active',
+          title: 'MUS-02A started Veena',
+          sessionDate: '2026-09-11',
+        },
+      ],
+    })
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/coach/skating" element={<SkatingOpsPage />} />
+      </Routes>,
+      {
+        store: createTestStore({
+          workspace: {
+            activeActivityId: MUSIC_ID,
+            activities: [
+              {
+                id: MUSIC_ID,
+                name: 'Music',
+                type: 'music',
+                label: 'Music',
+                icon: '',
+                capabilities: {},
+              },
+            ],
+            status: 'ready',
+            error: null,
+          },
+        }),
+        initialEntries: ['/coach/skating'],
+      },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('skating-ops-day-board')).toBeInTheDocument()
+    })
+    expect(screen.getByRole('heading', { name: 'Live sessions' })).toBeInTheDocument()
+    expect(screen.getByText(/Music lessons are run from Home/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open Home' })).toBeInTheDocument()
+    expect(screen.queryByText("Today's skating sessions")).not.toBeInTheDocument()
+    expect(screen.queryByText('MUS-02A started Veena')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('active-session-workspace-shell')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('coach-live-session-view')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Race$/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Heat$/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/\bPB\b/)).not.toBeInTheDocument()
+    expect(operationalSessionsApi.getDayBoard).not.toHaveBeenCalled()
+  })
+
+  it('Music Live sessions does not open floor ops from a session query', async () => {
+    const MUSIC_ID = '1efd1ddd-ad57-4b13-83c6-e2f7072cf5ca'
+    renderWithProviders(
+      <Routes>
+        <Route path="/coach/skating" element={<SkatingOpsPage />} />
+      </Routes>,
+      {
+        store: createTestStore({
+          workspace: {
+            activeActivityId: MUSIC_ID,
+            activities: [
+              {
+                id: MUSIC_ID,
+                name: 'Music',
+                type: 'music',
+                label: 'Music',
+                icon: '',
+                capabilities: {},
+              },
+            ],
+            status: 'ready',
+            error: null,
+          },
+        }),
+        initialEntries: ['/coach/skating?session=c6035d49-b355-4349-b0f5-334e041dd21e'],
+      },
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('skating-ops-day-board')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/Music lessons are run from Home/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('coach-live-session-view')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('active-session-workspace-shell')).not.toBeInTheDocument()
+    const { skatingOpsApi } = await import('../api/skatingOpsApi')
+    expect(skatingOpsApi.getSessionBundle).not.toHaveBeenCalled()
+  })
 })

@@ -43,13 +43,18 @@ bindHttpAuth({
   forceLogout,
 })
 
-registerActivityForbiddenHandler(() => {
+registerActivityForbiddenHandler((errorBody) => {
+  const raw = String(errorBody?.error || errorBody?.message || '')
+  const msg = raw.toLowerCase()
+  const capabilityDenied = msg.includes('capability')
   store.dispatch(
     setWorkspaceFault({
-      code: 'activity_forbidden',
-      message:
-        'You can’t use this activity workspace anymore (inactive, removed, or no access). Pick another workspace.',
-      clearPersistence: true,
+      code: capabilityDenied ? 'activity_capability' : 'activity_forbidden',
+      message: capabilityDenied
+        ? 'This screen is for Skating. Switch to Skating in the header, or use Home / Batches for Music.'
+        : 'You can’t use this activity workspace anymore (inactive, removed, or no access). Pick another workspace.',
+      // Capability mismatch must not wipe Music (or other) selection — only true access loss does.
+      clearPersistence: !capabilityDenied,
     }),
   )
 })

@@ -164,8 +164,37 @@ function normalizeBatch(batch) {
           .join(', ')
       : null
 
+  const musicOffering = batch.musicOffering ?? batch.music_offering ?? null
+  const tradition = batch.tradition ?? musicOffering?.tradition ?? null
+  const discipline = batch.discipline ?? musicOffering?.discipline ?? null
+  const instrument = batch.instrument ?? musicOffering?.instrument ?? null
+  const levelLabel =
+    batch.levelLabel ??
+    batch.level_label ??
+    musicOffering?.levelLabel ??
+    musicOffering?.level_label ??
+    null
+  const format = batch.format ?? musicOffering?.format ?? null
+  const activityType = batch.activityType ?? batch.activity_type ?? null
+
   return {
     ...batch,
+    activityType,
+    tradition,
+    discipline,
+    instrument,
+    levelLabel,
+    format,
+    musicOffering:
+      tradition || discipline || format
+        ? {
+            tradition,
+            discipline,
+            instrument,
+            levelLabel,
+            format,
+          }
+        : musicOffering,
     activityWorkspaceId: batch.activityWorkspaceId ?? batch.activity_workspace_id ?? null,
     subActivityName:
       batch.subActivityName ?? batch.sub_activity_name ?? subActivityNamesJoined ?? null,
@@ -221,7 +250,17 @@ export const batchesApi = {
   },
 
   async createBatch(payload) {
-    const { name, feeInr, subActivityId, subActivityIds } = payload || {}
+    const {
+      name,
+      feeInr,
+      subActivityId,
+      subActivityIds,
+      tradition,
+      discipline,
+      instrument,
+      levelLabel,
+      format,
+    } = payload || {}
     const ids = Array.isArray(subActivityIds)
       ? subActivityIds.map((id) => String(id).trim()).filter(Boolean)
       : subActivityId
@@ -235,6 +274,11 @@ export const batchesApi = {
       const n = Number(feeInr)
       if (Number.isFinite(n) && n >= 0) body.feeInr = Math.round(n)
     }
+    if (tradition != null) body.tradition = tradition
+    if (discipline != null) body.discipline = discipline
+    if (instrument !== undefined) body.instrument = instrument
+    if (levelLabel !== undefined) body.levelLabel = levelLabel
+    if (format != null) body.format = format
     const { data } = await http.post('/batches', body)
     const raw = data?.batch
     return { batch: raw ? normalizeBatch(raw) : null }

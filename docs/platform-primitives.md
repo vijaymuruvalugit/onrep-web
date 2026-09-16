@@ -2,6 +2,8 @@
 
 Shared vocabulary for coach/instructor operational surfaces (Batch Operations, attendance lists, timelines). Activity-specific terms (skating, music, yoga) stay in **activity modules** or localized copy — not in generic API or shared component names.
 
+**Music:** Shared Admin/teacher shell reuses skating labels (Batch / Coach / Session / Live sessions). Do not add a parallel Music nav. Music offering fields sit on the existing Batches screens. Individual offering deactivate/archive is deferred. Skating must not regress.
+
 **AI / onboarding context pack:** [../CONTEXT/README.md](../CONTEXT/README.md) (batches, schedule, start-session flow). **Backend API:** `onrep-backend/CONTEXT/12-operational-sessions-and-batches.md`.
 
 ## Core primitives

@@ -98,6 +98,11 @@ export default function CompactSessionRow({
               mode={row.sessionMode}
               className="rounded-pill fw-normal"
             />
+            {String(row.sessionKind || '').toLowerCase() === 'makeup' ? (
+              <CBadge color="info" className="rounded-pill fw-normal px-2 py-0">
+                Makeup replacement
+              </CBadge>
+            ) : null}
             {typeLabel ? (
               <CBadge color="light" className="text-dark border rounded-pill fw-normal px-2 py-0">
                 {typeLabel}

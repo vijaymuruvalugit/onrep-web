@@ -23,7 +23,7 @@ export default function DayBoardEmptyState({
     title = 'Choose a program workspace'
     body = SKATING_OPS_COPY.emptyNoWorkspace
   } else if (variant === 'wrong_capability') {
-    title = 'Wrong program workspace'
+    title = 'No floor operations in this workspace'
     body = SKATING_OPS_COPY.emptyWrongCapability
   } else if (workspaceName) {
     title = `No sessions on ${dateYmd ? formatDisplayDateDmy(dateYmd) : 'this day'}`
@@ -41,9 +41,15 @@ export default function DayBoardEmptyState({
           {body}
         </p>
         <div className="d-flex flex-wrap justify-content-center gap-2">
-          <CButton as={Link} to="/coach/schedule" color="primary" size="sm">
-            {SKATING_OPS_COPY.emptyCtaSchedule}
-          </CButton>
+          {variant === 'wrong_capability' ? (
+            <CButton as={Link} to="/coach/dashboard" color="primary" size="sm">
+              {SKATING_OPS_COPY.emptyCtaHome}
+            </CButton>
+          ) : (
+            <CButton as={Link} to="/coach/schedule" color="primary" size="sm">
+              {SKATING_OPS_COPY.emptyCtaSchedule}
+            </CButton>
+          )}
         </div>
       </CCardBody>
     </CCard>

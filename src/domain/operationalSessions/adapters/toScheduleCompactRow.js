@@ -30,6 +30,7 @@ export function operationalSessionToScheduleCompactRow(op) {
     isCancelled: Boolean(op.isCancelled) || String(op.state || '').toLowerCase() === 'cancelled',
     attendanceMarked: Boolean(op.attendanceMarked),
     isOneTime: Boolean(op.isOneTime),
+    sessionKind: op.sessionKind ?? null,
     sessionType: null,
     visibilityEnabled: true,
     attendanceEnabled: true,

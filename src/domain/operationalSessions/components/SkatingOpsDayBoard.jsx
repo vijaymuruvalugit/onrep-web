@@ -1,13 +1,5 @@
 import React, { useMemo } from 'react'
-import {
-  CAlert,
-  CButton,
-  CCol,
-  CFormInput,
-  CFormLabel,
-  CRow,
-  CSpinner,
-} from '@coreui/react'
+import { CAlert, CButton, CCol, CFormInput, CFormLabel, CRow, CSpinner } from '@coreui/react'
 import { SKATING_OPS_COPY } from '../../../features/skating/constants/skatingOpsCopy'
 import { sortDayBoardSessions } from '../helpers/sortDayBoardSessions'
 import { isLiveSession } from '../helpers/sessionActions'
@@ -47,16 +39,27 @@ export default function SkatingOpsDayBoard({
 }) {
   const sorted = useMemo(() => sortDayBoardSessions(sessions), [sessions])
   const liveId = useMemo(() => sorted.find((s) => isLiveSession(s))?.id ?? null, [sorted])
+  const activitySafe = emptyVariant === 'wrong_capability' || emptyVariant === 'no_workspace'
 
   return (
     <div className="skating-ops-day-board" data-testid="skating-ops-day-board">
       <header className="op-day-board-header d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
         <div>
-          <h1 className="h4 fw-semibold mb-1">{SKATING_OPS_COPY.pageTitle}</h1>
-          <p className="text-body-secondary small mb-1">{SKATING_OPS_COPY.pageSubtitle}</p>
-          <p className="small text-body-secondary opacity-75 mb-0 fst-italic">
-            {SKATING_OPS_COPY.planVsExecuteNote}
-          </p>
+          <h1 className="h4 fw-semibold mb-1">
+            {activitySafe ? 'Live sessions' : SKATING_OPS_COPY.pageTitle}
+          </h1>
+          {activitySafe ? (
+            <p className="text-body-secondary small mb-0">
+              Session list for this workspace. Floor operations stay in Skating.
+            </p>
+          ) : (
+            <>
+              <p className="text-body-secondary small mb-1">{SKATING_OPS_COPY.pageSubtitle}</p>
+              <p className="small text-body-secondary opacity-75 mb-0 fst-italic">
+                {SKATING_OPS_COPY.planVsExecuteNote}
+              </p>
+            </>
+          )}
         </div>
         <div className="d-flex flex-wrap align-items-center gap-2">
           <CFormLabel className="mb-0 small text-nowrap">{SKATING_OPS_COPY.dayLabel}</CFormLabel>
@@ -67,7 +70,13 @@ export default function SkatingOpsDayBoard({
             className="w-auto"
             aria-label="Session day"
           />
-          <CButton color="secondary" size="sm" variant="outline" onClick={onRefresh} disabled={loading}>
+          <CButton
+            color="secondary"
+            size="sm"
+            variant="outline"
+            onClick={onRefresh}
+            disabled={loading}
+          >
             {SKATING_OPS_COPY.refresh}
           </CButton>
         </div>
@@ -81,7 +90,7 @@ export default function SkatingOpsDayBoard({
         </div>
       ) : null}
 
-      {!loading && sorted.length === 0 ? (
+      {!loading && (emptyVariant !== 'default' || sorted.length === 0) ? (
         <DayBoardEmptyState
           variant={emptyVariant}
           workspaceName={workspaceName}
@@ -89,7 +98,7 @@ export default function SkatingOpsDayBoard({
         />
       ) : null}
 
-      {sorted.length > 0 ? (
+      {emptyVariant === 'default' && sorted.length > 0 ? (
         <CRow className="g-3 g-lg-4">
           {sorted.map((s) => (
             <CCol key={s.id} xs={12} md={6} xl={4}>

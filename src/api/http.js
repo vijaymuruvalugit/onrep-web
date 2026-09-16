@@ -68,7 +68,7 @@ function maybeDispatchWorkspaceFault(errorBody, status) {
   if (!storeRef || status !== 403 || !activityForbiddenHandler) return
   const msg = String(errorBody?.error || errorBody?.message || '').toLowerCase()
   if (msg.includes('activity') || msg.includes('workspace') || msg.includes('partition')) {
-    activityForbiddenHandler()
+    activityForbiddenHandler(errorBody)
   }
 }
 

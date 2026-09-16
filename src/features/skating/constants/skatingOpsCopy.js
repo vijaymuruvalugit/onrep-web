@@ -15,9 +15,9 @@ export const SKATING_OPS_COPY = {
   emptyNoWorkspace:
     'Choose a program workspace in the header to see skating sessions for this day.',
   emptyWrongCapability:
-    'Skating Ops requires the Skating program workspace. Switch workspace in the header to continue.',
+    'Music lessons are run from Home. This page is Skating floor operations and has no Music lesson cards.',
   emptyCtaSchedule: 'Create recurring session',
+  emptyCtaHome: 'Open Home',
   emptyCtaAdHoc: 'Start ad-hoc session',
-  planVsExecuteNote:
-    'Schedule plans future training · Skating Ops runs today on the floor.',
+  planVsExecuteNote: 'Schedule plans future training · Skating Ops runs today on the floor.',
 }

@@ -14,6 +14,7 @@ import {
   CFormInput,
   CFormLabel,
   CFormCheck,
+  CFormSelect,
   CModal,
   CModalBody,
   CModalFooter,
@@ -32,8 +33,18 @@ import { formatOperationalSessionRange } from '../../classes/utils/sessionDispla
 import { todayIsoLocal } from '../utils/batchWorkspaceOperations'
 import { stripDemoSuffix } from '../utils/batchDisplayUtils'
 import { academySubActivitiesApi } from '../../../api/academySubActivitiesApi'
-import { bootstrapWorkspace, setActiveWorkspace } from '../../workspace/slices/workspaceSlice'
+import {
+  bootstrapWorkspace,
+  setActiveWorkspace,
+  selectActiveActivity,
+} from '../../workspace/slices/workspaceSlice'
 import { useCoachLikeRole } from '../../workspace/hooks/useCoachLikeRole'
+import {
+  activityCopy,
+  isMusicActivity,
+  musicSuggestedInstruments,
+  musicSuggestedTraditions,
+} from '../../../core/activityWorkspace/activityCopy'
 import './BatchesListPage.scss'
 
 const BATCHES_VIEW_STORAGE_KEY = 'onrep-batches-view'
@@ -107,12 +118,12 @@ function buildBatchRowModel(batch, todayIso) {
 }
 
 /** Soft inline hints (replaces a dedicated Status column in list view). */
-function BatchAttentionHints({ m }) {
+function BatchAttentionHints({ m, staffLabel = 'Coach' }) {
   const items = []
   if (m.isInactive) items.push({ key: 'inactive', label: 'Inactive', tone: 'muted' })
   if (m.emptyBatch) items.push({ key: 'empty', label: 'No students yet', tone: 'warn' })
   if (m.needSchedule) items.push({ key: 'sched', label: 'Needs schedule', tone: 'info' })
-  if (m.needCoach) items.push({ key: 'coach', label: 'Coach not assigned', tone: 'warn' })
+  if (m.needCoach) items.push({ key: 'coach', label: `${staffLabel} not assigned`, tone: 'warn' })
   if (m.needsAttention) items.push({ key: 'attn', label: 'Sessions need review', tone: 'risk' })
   if (!items.length) return null
   return (
@@ -130,7 +141,7 @@ function stopCardNavigate(e) {
   e.stopPropagation()
 }
 
-function BatchTileCard({ m, onDelete }) {
+function BatchTileCard({ m, onDelete, staffLabel = 'Coach' }) {
   const navigate = useNavigate()
   const d = m.nextSessionDisplay
   const openBatch = () => navigate(`${m.base}?tab=schedule`)
@@ -153,7 +164,7 @@ function BatchTileCard({ m, onDelete }) {
         <div className="onrep-batch-tile__header">
           <div className="onrep-batch-tile__title-block min-w-0">
             <span className="onrep-batch-tile__title text-body">{m.batchNameOnly}</span>
-            <BatchAttentionHints m={m} />
+            <BatchAttentionHints m={m} staffLabel={staffLabel} />
           </div>
         </div>
 
@@ -218,7 +229,7 @@ function BatchTileCard({ m, onDelete }) {
         </div>
 
         <div className="onrep-batch-tile__block onrep-batch-tile__block--last">
-          <div className="onrep-batch-tile__label">Coach</div>
+          <div className="onrep-batch-tile__label">{staffLabel}</div>
           <div className="onrep-batch-tile__value">
             {m.needCoach ? (
               <>
@@ -254,7 +265,7 @@ function BatchTileCard({ m, onDelete }) {
   )
 }
 
-function BatchListRow({ m, onDelete }) {
+function BatchListRow({ m, onDelete, staffLabel = 'Coach' }) {
   const d = m.nextSessionDisplay
   const attention =
     m.isInactive || m.emptyBatch || m.needSchedule || m.needCoach || m.needsAttention
@@ -275,7 +286,7 @@ function BatchListRow({ m, onDelete }) {
         >
           {m.batchNameOnly}
         </Link>
-        <BatchAttentionHints m={m} />
+        <BatchAttentionHints m={m} staffLabel={staffLabel} />
       </div>
 
       <div className="onrep-batch-list-row__detail">
@@ -339,7 +350,7 @@ function BatchListRow({ m, onDelete }) {
       </div>
 
       <div className="onrep-batch-list-row__coach">
-        <span className="onrep-batch-list-row__mobile-label d-lg-none">Coach</span>
+        <span className="onrep-batch-list-row__mobile-label d-lg-none">{staffLabel}</span>
         {m.needCoach ? (
           <Link to={`${m.base}?tab=settings`} className="small text-primary text-decoration-none">
             Assign coach
@@ -387,6 +398,9 @@ const BatchesListPage = () => {
     error: workspaceError,
   } = useSelector((state) => state.workspace)
   const activeActivityId = useSelector((state) => state.workspace.activeActivityId)
+  const activeActivity = useSelector(selectActiveActivity)
+  const musicWorkspace = isMusicActivity(activeActivity)
+  const copy = activityCopy(activeActivity?.type)
   const {
     items,
     listLoading,
@@ -406,6 +420,11 @@ const BatchesListPage = () => {
   const [subActivitiesRows, setSubActivitiesRows] = useState([])
   const [subActivitiesLoading, setSubActivitiesLoading] = useState(false)
   const [selectedSubActivityIds, setSelectedSubActivityIds] = useState(() => new Set())
+  const [musicTradition, setMusicTradition] = useState('Carnatic')
+  const [musicDiscipline, setMusicDiscipline] = useState('instrumental')
+  const [musicInstrument, setMusicInstrument] = useState('Violin')
+  const [musicLevel, setMusicLevel] = useState('')
+  const [musicFormat, setMusicFormat] = useState('private')
   const [viewMode, setViewMode] = useState(() => {
     try {
       const v = localStorage.getItem(BATCHES_VIEW_STORAGE_KEY)
@@ -498,6 +517,11 @@ const BatchesListPage = () => {
     setFeeInr('')
     setSelectedSubActivityIds(new Set())
     setSubActivitiesRows([])
+    setMusicTradition('Carnatic')
+    setMusicDiscipline('instrumental')
+    setMusicInstrument('Violin')
+    setMusicLevel('')
+    setMusicFormat('private')
     setAddOpen(true)
   }
 
@@ -505,6 +529,33 @@ const BatchesListPage = () => {
     const name = newName.trim()
     if (!name) return
     if (!activeActivityId) return
+    if (musicWorkspace) {
+      if (!musicTradition.trim()) return
+      if (musicDiscipline === 'instrumental' && !musicInstrument.trim()) return
+      try {
+        const payload = {
+          name,
+          tradition: musicTradition.trim(),
+          discipline: musicDiscipline,
+          instrument: musicDiscipline === 'instrumental' ? musicInstrument.trim() : null,
+          levelLabel: musicLevel.trim() || null,
+          format: musicFormat,
+        }
+        if (feeInr !== '') {
+          const n = Number(feeInr)
+          if (Number.isFinite(n) && n >= 0) payload.feeInr = Math.round(n)
+        }
+        const batch = await createBatch(payload).unwrap()
+        setAddOpen(false)
+        const id = batch?.id || batch?._id
+        if (id) {
+          navigate(`/coach/batches/${encodeURIComponent(id)}?tab=settings`)
+        }
+      } catch {
+        // mutationError set in slice
+      }
+      return
+    }
     const subActivityIds = [...selectedSubActivityIds]
     if (subActivityIds.length === 0) return
     try {
@@ -538,7 +589,7 @@ const BatchesListPage = () => {
     <CCard className="onrep-batches-shell border-0 shadow-none bg-transparent">
       <CCardHeader className="onrep-batches-toolbar border-0 pb-0 px-0 pt-1 bg-transparent">
         <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-3">
-          <strong className="onrep-batches-toolbar__title fs-5">Batches</strong>
+          <strong className="onrep-batches-toolbar__title fs-5">{copy.offeringPlural}</strong>
           <div className="d-flex flex-wrap align-items-center gap-2 justify-content-md-end">
             <CButtonGroup
               role="group"
@@ -579,7 +630,7 @@ const BatchesListPage = () => {
                 !activeActivityId ? 'Choose where you’re working in the header first' : undefined
               }
             >
-              Add batch
+              {copy.createOffering}
             </CButton>
           </div>
         </div>
@@ -642,7 +693,11 @@ const BatchesListPage = () => {
             <CRow className="g-4 onrep-batch-grid">
               {rowModels.map((m) => (
                 <CCol key={m.id} xs={12} md={6} xl={4}>
-                  <BatchTileCard m={m} onDelete={(id, name) => setDeleteTarget({ id, name })} />
+                  <BatchTileCard
+                    m={m}
+                    staffLabel={copy.staff}
+                    onDelete={(id, name) => setDeleteTarget({ id, name })}
+                  />
                 </CCol>
               ))}
             </CRow>
@@ -653,7 +708,7 @@ const BatchesListPage = () => {
                 <span>Details</span>
                 <span>Weekly pattern</span>
                 <span>Next session</span>
-                <span>Coach</span>
+                <span>{copy.staff}</span>
                 <span className="text-end">Actions</span>
               </div>
               <div className="onrep-batch-list-body">
@@ -661,6 +716,7 @@ const BatchesListPage = () => {
                   <BatchListRow
                     key={m.id}
                     m={m}
+                    staffLabel={copy.staff}
                     onDelete={(id, name) => setDeleteTarget({ id, name })}
                   />
                 ))}
@@ -677,7 +733,7 @@ const BatchesListPage = () => {
         backdrop="static"
       >
         <CModalHeader>
-          <CModalTitle>Add batch</CModalTitle>
+          <CModalTitle>{copy.createOffering}</CModalTitle>
         </CModalHeader>
         <CModalBody>
           {mutationError ? (
@@ -690,62 +746,183 @@ const BatchesListPage = () => {
               Choose where you’re working in the header before creating a batch.
             </CAlert>
           ) : null}
-          {subActivitiesLoading ? (
-            <div className="text-center py-3 mb-3">
-              <CSpinner color="primary" size="sm" />
-            </div>
-          ) : subActivitiesRows.length > 0 ? (
-            <div className="mb-3">
-              <CFormLabel className="d-block">Specializations</CFormLabel>
-              <div className="small text-body-secondary mb-2">
-                Select every specialization this batch covers. The first one selected is the
-                primary.
+          {musicWorkspace ? (
+            <>
+              <div className="mb-3">
+                <CFormLabel htmlFor="batch-name">{copy.offeringName}</CFormLabel>
+                <CFormInput
+                  id="batch-name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Carnatic Violin — Beginners"
+                  autoComplete="off"
+                  autoFocus
+                />
               </div>
-              <div className="d-flex flex-column gap-2">
-                {subActivitiesRows.map((s) => {
-                  const id = String(s.id)
-                  return (
-                    <CFormCheck
-                      key={id}
-                      id={`batch-create-spec-${id}`}
-                      checked={selectedSubActivityIds.has(id)}
-                      onChange={() => {
-                        setSelectedSubActivityIds((prev) => {
-                          const next = new Set(prev)
-                          if (next.has(id)) next.delete(id)
-                          else next.add(id)
-                          return next
-                        })
-                      }}
-                      label={`${s.displayIcon ? `${s.displayIcon} ` : ''}${s.name}`}
-                    />
-                  )
-                })}
+              <div className="mb-3">
+                <CFormLabel htmlFor="music-tradition">Tradition</CFormLabel>
+                <CFormSelect
+                  id="music-tradition"
+                  value={musicTradition}
+                  onChange={(e) => setMusicTradition(e.target.value)}
+                >
+                  {musicSuggestedTraditions().map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                  {!musicSuggestedTraditions().includes(musicTradition) && musicTradition ? (
+                    <option value={musicTradition}>{musicTradition}</option>
+                  ) : null}
+                </CFormSelect>
+                <div className="small text-body-secondary mt-1">
+                  Or type a custom tradition in the batch name context; pilot starts with
+                  Carnatic.
+                </div>
+                <CFormInput
+                  className="mt-2"
+                  value={musicTradition}
+                  onChange={(e) => setMusicTradition(e.target.value)}
+                  placeholder="Tradition (required)"
+                />
               </div>
-            </div>
-          ) : activeActivityId ? (
-            <CAlert color="danger" className="mb-3">
-              No specializations set up for this practice yet. Ask an owner to add them, or try
-              refreshing.
-            </CAlert>
-          ) : null}
-          <div className="mb-3">
-            <CFormLabel htmlFor="batch-name">Batch name</CFormLabel>
-            <CFormInput
-              id="batch-name"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. Morning Squad"
-              autoComplete="off"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  handleCreateBatch()
-                }
-              }}
-            />
-          </div>
+              <div className="mb-3">
+                <CFormLabel htmlFor="music-discipline">Discipline</CFormLabel>
+                <CFormSelect
+                  id="music-discipline"
+                  value={musicDiscipline}
+                  onChange={(e) => {
+                    const d = e.target.value
+                    setMusicDiscipline(d)
+                    if (d === 'vocal') setMusicInstrument('')
+                  }}
+                >
+                  <option value="instrumental">Instrumental</option>
+                  <option value="vocal">Vocal</option>
+                </CFormSelect>
+              </div>
+              {musicDiscipline === 'instrumental' ? (
+                <div className="mb-3">
+                  <CFormLabel htmlFor="music-instrument">Instrument</CFormLabel>
+                  <CFormSelect
+                    id="music-instrument"
+                    value={
+                      musicSuggestedInstruments().includes(musicInstrument)
+                        ? musicInstrument
+                        : '__custom__'
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') setMusicInstrument('')
+                      else setMusicInstrument(e.target.value)
+                    }}
+                  >
+                    {musicSuggestedInstruments().map((i) => (
+                      <option key={i} value={i}>
+                        {i}
+                      </option>
+                    ))}
+                    <option value="__custom__">Other…</option>
+                  </CFormSelect>
+                  <CFormInput
+                    className="mt-2"
+                    value={musicInstrument}
+                    onChange={(e) => setMusicInstrument(e.target.value)}
+                    placeholder="Instrument (required)"
+                  />
+                </div>
+              ) : null}
+              <div className="mb-3">
+                <CFormLabel htmlFor="music-level">Level label (optional)</CFormLabel>
+                <CFormInput
+                  id="music-level"
+                  value={musicLevel}
+                  onChange={(e) => setMusicLevel(e.target.value)}
+                  placeholder="e.g. Beginners, Intermediate"
+                />
+                <div className="small text-body-secondary mt-1">
+                  Academy-defined free text — not a platform grade.
+                </div>
+              </div>
+              <div className="mb-3">
+                <CFormLabel className="d-block">Format</CFormLabel>
+                <CFormCheck
+                  type="radio"
+                  name="music-format"
+                  id="music-format-private"
+                  label="Private lesson"
+                  checked={musicFormat === 'private'}
+                  onChange={() => setMusicFormat('private')}
+                />
+                <CFormCheck
+                  type="radio"
+                  name="music-format"
+                  id="music-format-group"
+                  label="Group class"
+                  checked={musicFormat === 'group'}
+                  onChange={() => setMusicFormat('group')}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              {subActivitiesLoading ? (
+                <div className="text-center py-3 mb-3">
+                  <CSpinner color="primary" size="sm" />
+                </div>
+              ) : subActivitiesRows.length > 0 ? (
+                <div className="mb-3">
+                  <CFormLabel className="d-block">Specializations</CFormLabel>
+                  <div className="small text-body-secondary mb-2">
+                    Select every specialization this batch covers. The first one selected is the
+                    primary.
+                  </div>
+                  <div className="d-flex flex-column gap-2">
+                    {subActivitiesRows.map((s) => {
+                      const id = String(s.id)
+                      return (
+                        <CFormCheck
+                          key={id}
+                          id={`batch-create-spec-${id}`}
+                          checked={selectedSubActivityIds.has(id)}
+                          onChange={() => {
+                            setSelectedSubActivityIds((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(id)) next.delete(id)
+                              else next.add(id)
+                              return next
+                            })
+                          }}
+                          label={`${s.displayIcon ? `${s.displayIcon} ` : ''}${s.name}`}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : activeActivityId ? (
+                <CAlert color="danger" className="mb-3">
+                  No specializations set up for this practice yet. Ask an owner to add them, or try
+                  refreshing.
+                </CAlert>
+              ) : null}
+              <div className="mb-3">
+                <CFormLabel htmlFor="batch-name">{copy.offeringName}</CFormLabel>
+                <CFormInput
+                  id="batch-name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="e.g. Morning Squad"
+                  autoComplete="off"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleCreateBatch()
+                    }
+                  }}
+                />
+              </div>
+            </>
+          )}
           <div className="mb-0">
             <CFormLabel htmlFor="batch-fee">Default fee (INR, optional)</CFormLabel>
             <CFormInput
@@ -769,9 +946,12 @@ const BatchesListPage = () => {
               mutationLoading ||
               !newName.trim() ||
               !activeActivityId ||
-              subActivitiesLoading ||
-              selectedSubActivityIds.size === 0 ||
-              subActivitiesRows.length === 0
+              (musicWorkspace
+                ? !musicTradition.trim() ||
+                  (musicDiscipline === 'instrumental' && !musicInstrument.trim())
+                : subActivitiesLoading ||
+                  selectedSubActivityIds.size === 0 ||
+                  subActivitiesRows.length === 0)
             }
             onClick={handleCreateBatch}
           >
@@ -780,7 +960,7 @@ const BatchesListPage = () => {
                 <CSpinner size="sm" className="me-2" /> Creating…
               </>
             ) : (
-              'Create batch'
+              copy.createOffering
             )}
           </CButton>
         </CModalFooter>

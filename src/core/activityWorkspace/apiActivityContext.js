@@ -26,10 +26,12 @@ export const API_CLASSIFICATION = Object.freeze({
     '/events',
   ]),
   // Transitional explicit exemptions: keep academy-global until contract migration completes.
-  exempt: Object.freeze(['/students', '/student-import', '/batches']),
+  // `/batches` is activity-scoped (MUS-01 Music + Skating workspaces send x-activity-id).
+  exempt: Object.freeze(['/students', '/student-import']),
   scoped: Object.freeze([
     '/dashboard/coach-summary',
     '/dashboard/today',
+    '/batches',
     '/batch-schedules',
     '/operational-sessions',
     '/recurring-patterns',
@@ -75,11 +77,11 @@ function isStudentsExempt(pathname) {
 }
 
 function isBatchesExempt(pathname) {
+  // Batch CRUD is activity-scoped; only keep nested non-batch schedule paths out of this helper.
   if (!pathname.includes('/batches')) return false
   if (pathname.includes('/batch-schedules')) return false
-  // Nested under /batches/:id/recurring-patterns — activity-scoped (preview/bulk).
   if (pathname.includes('/recurring-patterns')) return false
-  return true
+  return false
 }
 
 function isPlacesLookupExempt(pathname) {
