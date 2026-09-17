@@ -48,4 +48,27 @@ describe('hasAcademyAdminCapability (existing dashboard gate)', () => {
       }),
     ).toBe(true)
   })
+
+  it('treats authenticated academy_admin membership role without hasAdmin flag', () => {
+    expect(
+      hasAcademyAdminCapability({
+        role: 'academy_admin',
+        activeRole: 'academy_admin',
+        roles: ['academy_admin'],
+        memberships: [{ role: 'academy_admin', status: 'active' }],
+      }),
+    ).toBe(true)
+    expect(hasAcademyAdminCapability({ role: 'academy_admin' })).toBe(true)
+    expect(hasAcademyAdminCapability({ hasAcademyAdmin: true, role: 'coach' })).toBe(true)
+  })
+
+  it('does not treat coach-only users as academy admin', () => {
+    expect(
+      hasAcademyAdminCapability({
+        role: 'coach',
+        roles: ['coach'],
+        memberships: [{ role: 'coach', status: 'active' }],
+      }),
+    ).toBe(false)
+  })
 })

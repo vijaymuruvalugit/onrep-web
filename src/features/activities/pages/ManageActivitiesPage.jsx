@@ -9,6 +9,7 @@ import {
   CCol,
   CFormLabel,
   CFormSelect,
+  CFormSwitch,
   CRow,
   CSpinner,
 } from '@coreui/react'
@@ -23,12 +24,25 @@ import { getWorkspaceDisplay } from '../../../core/activityWorkspace/activityDis
 import { getRemoveActivityConsequenceMessage } from '../../../core/activityWorkspace/activityDisableWarnings'
 import { listStaffCoaches } from '../../directory/api/directoryApi'
 import { getCoachUiConfig, patchCoachUiConfig } from '../../academy/api/academyUiApi'
+import { hasAcademyAdminCapability } from '../../auth/utils/academyAdminAccess'
+import {
+  getParentPerformanceSharing,
+  patchParentPerformanceSharing,
+} from '../api/parentPerformanceSharingApi'
+import {
+  PARENT_PERFORMANCE_SHARING_DISABLE_CONFIRM,
+  PARENT_PERFORMANCE_SHARING_ENABLE_CONFIRM,
+  PARENT_PERFORMANCE_SHARING_HELPER,
+  PARENT_PERFORMANCE_SHARING_LABEL,
+  PARENT_PERFORMANCE_SHARING_TOGGLE,
+} from '../parentPerformanceSharingCopy'
 
 export default function ManageActivitiesPage() {
   const dispatch = useDispatch()
   const user = useSelector((state) => state.auth.user)
   const role = String(user?.role || '').toLowerCase()
   const isOwner = role === 'academy_owner'
+  const canEditSharing = hasAcademyAdminCapability(user)
 
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -41,6 +55,23 @@ export default function ManageActivitiesPage() {
   const [leadStaffLoading, setLeadStaffLoading] = useState(true)
   const [defaultLeadCoachUserId, setDefaultLeadCoachUserId] = useState('')
   const [savingLeadDefault, setSavingLeadDefault] = useState(false)
+  const [sharingByActivity, setSharingByActivity] = useState({})
+  const [sharingBusyId, setSharingBusyId] = useState(null)
+
+  const loadSharing = useCallback(async (list) => {
+    const next = {}
+    await Promise.all(
+      (list || []).map(async (a) => {
+        try {
+          const setting = await getParentPerformanceSharing(a.id)
+          next[a.id] = setting?.enabled === true
+        } catch {
+          next[a.id] = false
+        }
+      }),
+    )
+    setSharingByActivity(next)
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -48,13 +79,14 @@ export default function ManageActivitiesPage() {
     try {
       const list = await listActivities()
       setItems(Array.isArray(list) ? list : [])
+      if (canEditSharing) await loadSharing(Array.isArray(list) ? list : [])
     } catch (e) {
       setError(e?.message || 'Failed to load activities')
       setItems([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [canEditSharing, loadSharing])
 
   useEffect(() => {
     void load()
@@ -152,7 +184,24 @@ export default function ManageActivitiesPage() {
     }
   }
 
-  if (!isOwner) {
+  const onToggleSharing = async (activity) => {
+    const currentlyEnabled = sharingByActivity[activity.id] === true
+    const confirmText = currentlyEnabled
+      ? PARENT_PERFORMANCE_SHARING_DISABLE_CONFIRM
+      : PARENT_PERFORMANCE_SHARING_ENABLE_CONFIRM
+    if (!window.confirm(confirmText)) return
+    setSharingBusyId(activity.id)
+    try {
+      const next = await patchParentPerformanceSharing(activity.id, !currentlyEnabled)
+      setSharingByActivity((prev) => ({ ...prev, [activity.id]: next?.enabled === true }))
+    } catch (e) {
+      window.alert(e?.message || 'Could not update parent performance sharing.')
+    } finally {
+      setSharingBusyId(null)
+    }
+  }
+
+  if (!isOwner && !canEditSharing) {
     return (
       <CCard>
         <CCardBody>
@@ -192,40 +241,59 @@ export default function ManageActivitiesPage() {
                 ) : (
                   items.map((a) => {
                     const { label, icon } = getWorkspaceDisplay(a)
+                    const sharingOn = sharingByActivity[a.id] === true
                     return (
-                      <div
-                        key={a.id}
-                        className="d-flex justify-content-between align-items-center border rounded p-3 mb-2"
-                      >
-                        <div className="d-flex align-items-center gap-2">
-                          <span className="fw-semibold">
-                            <span className="fs-5 me-1" aria-hidden>
-                              {icon}
+                      <div key={a.id} className="border rounded p-3 mb-2">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div className="d-flex align-items-center gap-2">
+                            <span className="fw-semibold">
+                              <span className="fs-5 me-1" aria-hidden>
+                                {icon}
+                              </span>
+                              {label}
                             </span>
-                            {label}
-                          </span>
+                          </div>
+                          {isOwner ? (
+                            <CButton
+                              color="secondary"
+                              size="sm"
+                              variant="outline"
+                              disabled={busyId === a.id || items.length <= 1}
+                              title={
+                                items.length <= 1
+                                  ? 'Add another activity before you can remove this one.'
+                                  : undefined
+                              }
+                              onClick={() => onDeactivate(a.id, label, a.type)}
+                            >
+                              Remove
+                            </CButton>
+                          ) : null}
                         </div>
-                        <CButton
-                          color="secondary"
-                          size="sm"
-                          variant="outline"
-                          disabled={busyId === a.id || items.length <= 1}
-                          title={
-                            items.length <= 1
-                              ? 'Add another activity before you can remove this one.'
-                              : undefined
-                          }
-                          onClick={() => onDeactivate(a.id, label, a.type)}
-                        >
-                          Remove
-                        </CButton>
+                        {canEditSharing ? (
+                          <div className="mt-3 pt-3 border-top">
+                            <div className="fw-semibold">{PARENT_PERFORMANCE_SHARING_LABEL}</div>
+                            <CFormSwitch
+                              id={`parent-performance-sharing-${a.id}`}
+                              label={PARENT_PERFORMANCE_SHARING_TOGGLE}
+                              checked={sharingOn}
+                              disabled={sharingBusyId === a.id}
+                              onChange={() => void onToggleSharing(a)}
+                            />
+                            <div className="small text-body-secondary mt-1">
+                              {PARENT_PERFORMANCE_SHARING_HELPER}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     )
                   })
                 )}
 
-                <hr className="my-4" />
-                <div className="fw-semibold mb-2">Available</div>
+                {isOwner ? (
+                  <>
+                    <hr className="my-4" />
+                    <div className="fw-semibold mb-2">Available</div>
                 {availableOptions.length === 0 ? (
                   <p className="text-body-secondary small mb-0">
                     All platform activities for this phase are already enabled.
@@ -256,12 +324,15 @@ export default function ManageActivitiesPage() {
                     </div>
                   ))
                 )}
+                  </>
+                ) : null}
               </>
             ) : null}
           </CCardBody>
         </CCard>
 
-        <CCard className="mb-4">
+        {isOwner ? (
+          <CCard className="mb-4">
           <CCardHeader>
             <strong>Default lead coach</strong>
             <div className="small text-body-secondary">
@@ -304,6 +375,7 @@ export default function ManageActivitiesPage() {
             )}
           </CCardBody>
         </CCard>
+        ) : null}
       </CCol>
     </CRow>
   )

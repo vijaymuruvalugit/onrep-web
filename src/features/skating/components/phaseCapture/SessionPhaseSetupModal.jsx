@@ -64,6 +64,8 @@ export default function SessionPhaseSetupModal({
     }
   }
 
+  if (!visible) return null
+
   return (
     <CModal visible={visible} onClose={onClose} size="lg">
       <CModalHeader>Configure phases</CModalHeader>

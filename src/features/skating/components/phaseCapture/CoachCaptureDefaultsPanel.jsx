@@ -49,6 +49,8 @@ export default function CoachCaptureDefaultsPanel({ visible, onClose }) {
     }
   }
 
+  if (!visible) return null
+
   return (
     <CModal visible={visible} onClose={onClose}>
       <CModalHeader>Coaching preferences</CModalHeader>

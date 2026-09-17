@@ -157,6 +157,8 @@ export default function EditSessionPhasesModal({
     }
   }
 
+  if (!visible) return null
+
   return (
     <CModal visible={visible} onClose={onClose} size="lg">
       <CModalHeader>Edit phases</CModalHeader>

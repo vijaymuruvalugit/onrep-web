@@ -44,6 +44,7 @@ export const API_CLASSIFICATION = Object.freeze({
     '/coaching-priority',
     '/follow-ups',
     '/progress-cards',
+    '/activity-settings',
     '/sub-activities',
   ]),
 })

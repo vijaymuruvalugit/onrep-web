@@ -90,7 +90,12 @@ http.interceptors.request.use((config) => {
   const pathForRules = normalizeApiPath(fullUrl)
   const skipHeader =
     nextConfig.skipActivityHeader === true || requestSkipsActivityHeader(pathForRules)
-  const activityId = resolveActivityIdFromStore()
+  const overrideId =
+    nextConfig.activityId && isValidUuid(String(nextConfig.activityId))
+      ? String(nextConfig.activityId).trim()
+      : null
+  delete nextConfig.activityId
+  const activityId = overrideId || resolveActivityIdFromStore()
 
   if (skipHeader) {
     delete nextConfig.headers['x-activity-id']

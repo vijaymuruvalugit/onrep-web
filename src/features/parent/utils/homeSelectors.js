@@ -12,7 +12,14 @@ export function selectParentHomeModel(state) {
   const resultsPreview = Array.isArray(dash.results) ? dash.results : []
 
   const fees = Array.isArray(p.fees) ? p.fees : []
-  const paidCount = fees.filter((f) => String(f.status || '').toUpperCase() === 'PAID').length
+  const paidCount = fees.filter((f) => {
+    const remaining = f.remaining_amount
+    if (remaining != null && remaining !== '' && Number.isFinite(Number(remaining))) {
+      return Number(remaining) <= 0
+    }
+    const st = String(f.status || '').toLowerCase()
+    return st === 'paid' || st === 'waived' || st === 'settled' || st === 'no_fee' || st === 'cancelled'
+  }).length
   const dueCount = fees.length - paidCount
 
   const presentCount = attendancePreview.filter(

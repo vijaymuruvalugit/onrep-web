@@ -73,17 +73,24 @@ export default function PhaseModeStrip({
     const activeChip = activeChipRef.current
     if (!scroller || !activeChip) return undefined
 
+    let cancelled = false
     const frameId = window.requestAnimationFrame(() => {
+      if (cancelled || !scrollRef.current || !activeChipRef.current) return
       const chipCenter = activeChip.offsetLeft + activeChip.offsetWidth / 2
       const targetLeft = chipCenter - scroller.clientWidth / 2
       const maxLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth)
-      scroller.scrollTo({
-        left: Math.min(Math.max(0, targetLeft), maxLeft),
-        behavior: 'smooth',
-      })
+      const left = Math.min(Math.max(0, targetLeft), maxLeft)
+      if (typeof scroller.scrollTo === 'function') {
+        scroller.scrollTo({ left, behavior: 'smooth' })
+      } else {
+        scroller.scrollLeft = left
+      }
     })
 
-    return () => window.cancelAnimationFrame(frameId)
+    return () => {
+      cancelled = true
+      window.cancelAnimationFrame(frameId)
+    }
   }, [activeBlockId])
 
   if (!blocks?.length) {

@@ -39,6 +39,8 @@ export default function SessionBlockAddModal({ visible, onClose, onSubmit, busy 
     setBlockType('technical')
   }
 
+  if (!visible) return null
+
   return (
     <CModal visible={visible} onClose={handleClose} alignment="center">
       <CModalHeader>

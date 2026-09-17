@@ -389,6 +389,10 @@ const SkatingOpsPage = () => {
   /** After save + auto-advance, allow debounced sync for next skater without an extra tap (repeat flow). */
   const obsChainAdvanceRef = useRef(false)
   const advanceTimerRef = useRef(null)
+  const reEntryTimerRef = useRef(null)
+  const obsPulseTimerRef = useRef(null)
+  const effortBlurbTimerRef = useRef(null)
+  const obsFlashTimerRef = useRef(null)
   /** Counts consecutive advance pauses in a flow — “Stay” or session change resets. */
   const advancePauseRhythmRef = useRef(0)
   const flowSnapRef = useRef({
@@ -556,7 +560,11 @@ const SkatingOpsPage = () => {
         ? `${snap.place ? `${snap.place} — ` : ''}You’re back. Still here with ${snap.studentName}.`
         : `${snap.place || 'Session'} — pick up calmly when you’re ready.`
       setReEntryWarmth(line)
-      window.setTimeout(() => setReEntryWarmth(null), 4200)
+      if (reEntryTimerRef.current != null) window.clearTimeout(reEntryTimerRef.current)
+      reEntryTimerRef.current = window.setTimeout(() => {
+        reEntryTimerRef.current = null
+        setReEntryWarmth(null)
+      }, 4200)
     }
   }, [])
 
@@ -631,7 +639,11 @@ const SkatingOpsPage = () => {
           lastModerateBlurbKeyRef.current = key
           const line = topName ? `Laps save as: ${topName.slice(0, 42)}` : ''
           setEffortModerateBlurb(line)
-          window.setTimeout(() => setEffortModerateBlurb(''), 9000)
+          if (effortBlurbTimerRef.current != null) window.clearTimeout(effortBlurbTimerRef.current)
+          effortBlurbTimerRef.current = window.setTimeout(() => {
+            effortBlurbTimerRef.current = null
+            setEffortModerateBlurb('')
+          }, 9000)
         } else if (band !== 'moderate') {
           setEffortModerateBlurb('')
         }
@@ -1224,6 +1236,23 @@ const SkatingOpsPage = () => {
   )
 
   const sessionObsSaveRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current != null) window.clearTimeout(advanceTimerRef.current)
+      if (reEntryTimerRef.current != null) window.clearTimeout(reEntryTimerRef.current)
+      if (obsPulseTimerRef.current != null) window.clearTimeout(obsPulseTimerRef.current)
+      if (effortBlurbTimerRef.current != null) window.clearTimeout(effortBlurbTimerRef.current)
+      if (obsFlashTimerRef.current != null) window.clearTimeout(obsFlashTimerRef.current)
+      if (sessionObsSaveRef.current != null) window.clearTimeout(sessionObsSaveRef.current)
+      advanceTimerRef.current = null
+      reEntryTimerRef.current = null
+      obsPulseTimerRef.current = null
+      effortBlurbTimerRef.current = null
+      obsFlashTimerRef.current = null
+      sessionObsSaveRef.current = null
+    }
+  }, [])
   const handleSessionObservationChange = useCallback(
     (observationKey, valueJson) => {
       if (!selectedSessionId || !activeBlockId) return
@@ -1617,7 +1646,11 @@ const SkatingOpsPage = () => {
       setObservedStudentIds((prev) => new Set(prev).add(sidKey))
       setLastObsLabel(`${sk?.full_name || 'Skater'} · ${formatClockShort(new Date())}`)
       setObsPulse(true)
-      window.setTimeout(() => setObsPulse(false), 700)
+      if (obsPulseTimerRef.current != null) window.clearTimeout(obsPulseTimerRef.current)
+      obsPulseTimerRef.current = window.setTimeout(() => {
+        obsPulseTimerRef.current = null
+        setObsPulse(false)
+      }, 700)
       if (rosterForSession.length >= 2) {
         const i = rosterForSession.findIndex((r) => String(r.id) === sidKey)
         const next = rosterForSession[(i >= 0 ? i + 1 : 0) % rosterForSession.length]
@@ -1710,7 +1743,11 @@ const SkatingOpsPage = () => {
         writeObsTemplate(selectedSessionId, scores)
         setObsSyncedAt(Date.now())
         setObsFlashKeys(new Set(Object.keys(scores)))
-        window.setTimeout(() => setObsFlashKeys(new Set()), 450)
+        if (obsFlashTimerRef.current != null) window.clearTimeout(obsFlashTimerRef.current)
+        obsFlashTimerRef.current = window.setTimeout(() => {
+          obsFlashTimerRef.current = null
+          setObsFlashKeys(new Set())
+        }, 450)
         obsAutoSaveSuppressedRef.current = true
         setObsScores({ ...scores })
         await refreshCoachingEventsSyncDomain()
@@ -2326,6 +2363,7 @@ const SkatingOpsPage = () => {
         onClose={() => setShowCoachDefaults(false)}
       />
 
+      {showAddAthletesModal ? (
       <CModal
         visible={showAddAthletesModal}
         onClose={() => setShowAddAthletesModal(false)}
@@ -2370,6 +2408,7 @@ const SkatingOpsPage = () => {
           </CButton>
         </CModalFooter>
       </CModal>
+      ) : null}
     </>
   )
 
