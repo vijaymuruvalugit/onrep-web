@@ -95,9 +95,9 @@ export const ACADEMY_SETUP_RECOMMENDED_STEPS = Object.freeze([
     id: 'connect_guardians',
     title: 'Connect parents or guardians',
     haveReady:
-      'Have ready: verified parent/guardian email or phone and the correct child relationship.',
-    ctaLabel: 'Connect parents',
-    to: '/coach/parents',
+      'Open a student and use Invite parent on their details. The Parents page only lists who is already linked or invited.',
+    ctaLabel: 'Open students',
+    to: '/coach/students',
     required: false,
   },
 ])
@@ -151,7 +151,9 @@ export function buildAcademySetupGuideModel(payload) {
   const coreCompleted = coreSteps.filter((s) => s.complete).length
   const coreTotal = coreSteps.length
   const nextCore = coreSteps.find((s) => !s.complete) || null
+  const recommendedComplete = recommendedSteps.every((s) => s.complete)
   const readyToRun = payload?.readyToRun === true || (coreCompleted === coreTotal && coreTotal > 0)
+  const allStepsComplete = readyToRun && recommendedComplete
   const noEnabledActivity = Number(facts.enabledActivityCount || 0) === 0
 
   return {
@@ -164,6 +166,7 @@ export function buildAcademySetupGuideModel(payload) {
     coreTotal,
     nextCoreId: nextCore?.id || null,
     readyToRun,
+    allStepsComplete,
     noEnabledActivity,
     generatedAt: payload?.generatedAt || null,
   }

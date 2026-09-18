@@ -119,7 +119,9 @@ export default function AcademySetupGuideCard({
 
   const progressPct =
     model.coreTotal > 0 ? Math.round((100 * model.coreCompleted) / model.coreTotal) : 0
-  const progressLabel = `${model.coreCompleted} of ${model.coreTotal} core steps complete`
+  const progressLabel = model.allStepsComplete
+    ? 'Setup complete'
+    : `${model.coreCompleted} of ${model.coreTotal} core steps complete`
 
   if (collapsed) {
     return (

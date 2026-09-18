@@ -5,13 +5,17 @@ export function academySetupGuideStorageKey(identityKey, academyId) {
   return `${STORAGE_PREFIX}:${identityKey}:${academyId}`
 }
 
+/** @returns {boolean|null} true collapsed, false expanded, null no preference */
 export function readAcademySetupGuideCollapsed(identityKey, academyId) {
   const key = academySetupGuideStorageKey(identityKey, academyId)
-  if (!key || typeof window === 'undefined') return false
+  if (!key || typeof window === 'undefined') return null
   try {
-    return window.localStorage.getItem(key) === '1'
+    const raw = window.localStorage.getItem(key)
+    if (raw === '1') return true
+    if (raw === '0') return false
+    return null
   } catch {
-    return false
+    return null
   }
 }
 
@@ -19,8 +23,7 @@ export function writeAcademySetupGuideCollapsed(identityKey, academyId, collapse
   const key = academySetupGuideStorageKey(identityKey, academyId)
   if (!key || typeof window === 'undefined') return
   try {
-    if (collapsed) window.localStorage.setItem(key, '1')
-    else window.localStorage.removeItem(key)
+    window.localStorage.setItem(key, collapsed ? '1' : '0')
   } catch {
     /* ignore quota / private mode */
   }

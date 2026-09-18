@@ -18,7 +18,6 @@ export const API_CLASSIFICATION = Object.freeze({
     '/reconciliation/',
     '/academy/',
     '/coaches',
-    '/dashboard/owner-',
     '/dashboard/summary',
     '/invites',
     '/parents/overview',
@@ -30,6 +29,8 @@ export const API_CLASSIFICATION = Object.freeze({
   exempt: Object.freeze(['/students', '/student-import']),
   scoped: Object.freeze([
     '/dashboard/coach-summary',
+    '/dashboard/owner-summary',
+    '/dashboard/owner-operations',
     '/dashboard/today',
     '/batches',
     '/batch-schedules',
@@ -46,10 +47,28 @@ export const API_CLASSIFICATION = Object.freeze({
     '/progress-cards',
     '/activity-settings',
     '/sub-activities',
+    '/academy-sub-activities',
+    '/analytics/coach',
+    '/analytics/academy',
+    '/music',
+    '/performance',
   ]),
+  /** Send x-activity-id when known; do not block the request if it is missing. */
+  optional: Object.freeze(['/dashboard/setup-status']),
 })
 
-function pathHasPrefix(pathname, prefixes) {
+function pathStartsWithAny(pathname, prefixes) {
+  return prefixes.some((prefix) => {
+    if (!prefix) return false
+    if (pathname === prefix) return true
+    if (pathname.startsWith(`${prefix}/`) || pathname.startsWith(`${prefix}?`)) return true
+    if (prefix.endsWith('/') && pathname.startsWith(prefix)) return true
+    return false
+  })
+}
+
+/** Nested operational routes (e.g. /students/:id/observations) match by segment. */
+function pathContainsAny(pathname, prefixes) {
   return prefixes.some((prefix) => pathname.includes(prefix))
 }
 
@@ -94,12 +113,27 @@ function isPlacesLookupExempt(pathname) {
   )
 }
 
-/** Paths that must never send x-activity-id (bootstrap / academy-global / exempt). */
+export const WORKSPACE_PICK_MESSAGE = 'Choose an activity in the header to continue.'
+
+function isOptionalActivityHeader(pathname) {
+  return pathStartsWithAny(pathname, API_CLASSIFICATION.optional || [])
+}
+
+export function isActivityContextUserError({ message, code } = {}) {
+  if (code === 'ACTIVITY_CONTEXT_REQUIRED' || code === 'WORKSPACE_REQUIRED') return true
+  const lower = String(message || '').toLowerCase()
+  return (
+    lower.includes('x-activity-id') ||
+    lower.includes('activity context') ||
+    lower.includes('missing activity')
+  )
+}
+
 export function requestSkipsActivityHeader(urlPath) {
   const p = normalizeApiPath(urlPath)
   if (!p) return true
-  if (pathHasPrefix(p, API_CLASSIFICATION.bootstrap)) return true
-  if (pathHasPrefix(p, API_CLASSIFICATION.global)) return true
+  if (pathStartsWithAny(p, API_CLASSIFICATION.bootstrap)) return true
+  if (pathStartsWithAny(p, API_CLASSIFICATION.global)) return true
   if (isStudentsExempt(p) || isBatchesExempt(p) || isPlacesLookupExempt(p)) return true
   return false
 }
@@ -111,7 +145,8 @@ export function requestRequiresActivityWorkspace(urlPath) {
   const p = normalizeApiPath(urlPath)
   if (!p) return false
   if (requestSkipsActivityHeader(p)) return false
-  return pathHasPrefix(p, API_CLASSIFICATION.scoped)
+  if (isOptionalActivityHeader(p)) return false
+  return pathContainsAny(p, API_CLASSIFICATION.scoped)
 }
 
 export function normalizeApiPath(url) {

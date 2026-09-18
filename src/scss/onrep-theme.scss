@@ -46,18 +46,34 @@ h3,
   color: #{onrep.$onrep-charcoal};
 }
 
-// Same wordmark as login (`AuthShell` primary-logo.png); CoreUI toggles full vs narrow
+// Brand PNG has a large empty canvas; crop to the wordmark so it reads at sidebar scale.
+.sidebar-header.onrep-sidebar-brand-header {
+  min-height: 4.85rem;
+  padding-block: 0.7rem 0.65rem;
+}
+
+.sidebar-brand.onrep-sidebar-brand {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
 .onrep-sidebar-brand-primary {
-  height: 32px;
-  width: auto;
-  max-width: min(200px, 100%);
+  width: 198px;
+  height: 50px;
+  max-width: 100%;
   display: block;
-  object-fit: contain;
-  object-position: left center;
+  object-fit: cover;
+  object-position: center;
 }
 
 .onrep-sidebar-brand-primary--narrow {
-  max-width: 44px;
+  width: 40px;
+  height: 40px;
+  max-width: 40px;
+  object-fit: contain;
 }
 
 // Charcoal sidebar (optional / legacy): coral interactive accents

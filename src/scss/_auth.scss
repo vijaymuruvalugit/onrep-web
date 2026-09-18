@@ -204,10 +204,12 @@
 }
 
 .onrep-auth-card-logo {
-  width: min(228px, 72vw);
-  height: auto;
+  width: min(268px, 78vw);
+  height: 66px;
   display: block;
   margin-inline: auto;
+  object-fit: cover;
+  object-position: center;
 }
 
 .onrep-auth-tagline {

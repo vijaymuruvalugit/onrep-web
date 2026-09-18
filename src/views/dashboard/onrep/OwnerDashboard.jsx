@@ -81,6 +81,7 @@ function fmtPct(v) {
 const OwnerDashboard = () => {
   const dispatch = useDispatch()
   const authUser = useSelector((state) => state.auth.user)
+  const activeActivityId = useSelector((state) => state.workspace.activeActivityId)
   const onboarding = normalizeOnboardingDtoFromApi(authUser?.onboarding ?? null)
 
   const dateStr = useMemo(() => formatLocalYmd(), [])
@@ -95,6 +96,7 @@ const OwnerDashboard = () => {
   }, [dispatch])
 
   const load = useCallback(async () => {
+    if (!activeActivityId) return
     setLoading(true)
     setError(null)
     try {
@@ -111,13 +113,15 @@ const OwnerDashboard = () => {
     } finally {
       setLoading(false)
     }
-  }, [dateStr])
+  }, [dateStr, activeActivityId])
 
-  /* Initial dashboard KPI fetch — intentional mount fetch pattern */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch summary/operations on mount
+    if (!activeActivityId) {
+      setLoading(false)
+      return
+    }
     load()
-  }, [load])
+  }, [load, activeActivityId])
 
   const pendingActions = useMemo(() => buildPendingActions(operations), [operations])
 

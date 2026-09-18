@@ -6,6 +6,7 @@ import {
   requestSkipsActivityHeader,
   normalizeApiPath,
   isValidUuid,
+  WORKSPACE_PICK_MESSAGE,
 } from '../core/activityWorkspace/apiActivityContext'
 
 let storeRef = null
@@ -29,6 +30,39 @@ function resolveActivityIdFromStore() {
   } catch {
     return null
   }
+}
+
+function workspaceBootstrapPending() {
+  if (!storeRef) return false
+  try {
+    const ws = storeRef.getState()?.workspace
+    if (!ws) return false
+    return !ws.bootstrapComplete || ws.status === 'idle' || ws.status === 'loading'
+  } catch {
+    return false
+  }
+}
+
+const WORKSPACE_WAIT_MS = 4000
+const WORKSPACE_POLL_MS = 40
+
+function waitForActivityId(timeoutMs = WORKSPACE_WAIT_MS) {
+  return new Promise((resolve) => {
+    const started = Date.now()
+    const tick = () => {
+      const id = resolveActivityIdFromStore()
+      if (id) {
+        resolve(id)
+        return
+      }
+      if (!workspaceBootstrapPending() || Date.now() - started >= timeoutMs) {
+        resolve(null)
+        return
+      }
+      setTimeout(tick, WORKSPACE_POLL_MS)
+    }
+    tick()
+  })
 }
 
 function debugWorkspaceRequest({ pathForRules, fullUrl, skipHeader, activityId, headerValue }) {
@@ -77,7 +111,7 @@ const http = axios.create({
   timeout: 30000,
 })
 
-http.interceptors.request.use((config) => {
+http.interceptors.request.use(async (config) => {
   const nextConfig = { ...config }
   const token = authStorage.getToken()
   nextConfig.headers = nextConfig.headers || {}
@@ -95,7 +129,7 @@ http.interceptors.request.use((config) => {
       ? String(nextConfig.activityId).trim()
       : null
   delete nextConfig.activityId
-  const activityId = overrideId || resolveActivityIdFromStore()
+  let activityId = overrideId || resolveActivityIdFromStore()
 
   if (skipHeader) {
     delete nextConfig.headers['x-activity-id']
@@ -109,6 +143,10 @@ http.interceptors.request.use((config) => {
     return nextConfig
   }
 
+  if (!activityId && workspaceBootstrapPending()) {
+    activityId = await waitForActivityId()
+  }
+
   if (activityId) {
     nextConfig.headers['x-activity-id'] = activityId
   } else {
@@ -116,7 +154,7 @@ http.interceptors.request.use((config) => {
   }
 
   if (requestRequiresActivityWorkspace(pathForRules) && !activityId) {
-    const err = new Error('Choose an activity to continue.')
+    const err = new Error(WORKSPACE_PICK_MESSAGE)
     err.code = 'WORKSPACE_REQUIRED'
     err.isWorkspaceGate = true
     return Promise.reject(err)

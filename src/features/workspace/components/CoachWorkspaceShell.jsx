@@ -38,8 +38,9 @@ export default function CoachWorkspaceShell({ children }) {
   }
 
   const path = location.pathname
-  // Block rendering until bootstrap is done so API calls never fire with a null activityId.
-  if (status === 'loading') return null
+  // Block children until bootstrap finishes (including the idle→loading gap) so
+  // activity-scoped pages never fire APIs before x-activity-id is known.
+  if (!bootstrapComplete || status === 'idle' || status === 'loading') return null
 
   const needsGate =
     coachPathRequiresWorkspace(path) &&

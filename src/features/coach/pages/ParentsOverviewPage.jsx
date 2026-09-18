@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   CAlert,
   CBadge,
@@ -52,13 +53,19 @@ const ParentsOverviewPage = () => {
         <div>
           <h2 className="mb-0">Parents</h2>
           <p className="text-body-secondary small mb-0">
-            Linked parents and pending invites (operational directory — not a CRM).
+            Directory of linked parents and pending invites. To add a parent, open the student and
+            use Invite parent — this page does not add new parents.
           </p>
         </div>
-        <CButton color="secondary" variant="outline" size="sm" onClick={retry} disabled={loading}>
-          <CIcon icon={cilReload} className="me-1" />
-          Refresh
-        </CButton>
+        <div className="d-flex flex-wrap gap-2">
+          <CButton as={Link} to="/coach/students" color="primary" variant="outline" size="sm">
+            Open students
+          </CButton>
+          <CButton color="secondary" variant="outline" size="sm" onClick={retry} disabled={loading}>
+            <CIcon icon={cilReload} className="me-1" />
+            Refresh
+          </CButton>
+        </div>
       </div>
 
       {error ? (

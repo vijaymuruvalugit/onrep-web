@@ -132,6 +132,7 @@ describe('academySetupGuide', () => {
     expect(model.coreCompleted).toBe(9)
     expect(model.nextCoreId).toBeNull()
     expect(model.recommendedSteps.every((s) => !s.complete)).toBe(true)
+    expect(model.allStepsComplete).toBe(false)
   })
 
   it('flags no enabled activity without treating it as fully unconfigured', () => {
@@ -144,5 +145,30 @@ describe('academySetupGuide', () => {
     expect(model.noEnabledActivity).toBe(true)
     expect(model.coreSteps[0].complete).toBe(true)
     expect(model.nextCoreId).toBe('enable_activity')
+  })
+
+  it('marks connect-parents complete from an invite or a linked guardian', () => {
+    expect(isStepComplete('connect_guardians', { approvedGuardianCount: 0 })).toBe(false)
+    expect(isStepComplete('connect_guardians', { approvedGuardianCount: 1 })).toBe(true)
+  })
+
+  it('flags allStepsComplete only when core and recommended steps are done', () => {
+    const model = buildAcademySetupGuideModel({
+      readyToRun: true,
+      facts: {
+        academyProfileComplete: true,
+        enabledActivityCount: 1,
+        activePlaceCount: 1,
+        activeCoachCount: 1,
+        activeStudentCount: 1,
+        activeBatchCount: 1,
+        enrolledStudentCount: 1,
+        unstaffedBatchCount: 0,
+        upcomingSessionCount: 1,
+        feePayoutConfigured: true,
+        approvedGuardianCount: 1,
+      },
+    })
+    expect(model.allStepsComplete).toBe(true)
   })
 })

@@ -1,22 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  CAlert,
-  CButton,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CCollapse,
-  CRow,
-  CSpinner,
-} from '@coreui/react'
+import { useSelector } from 'react-redux'
+import { CAlert, CCard, CCardBody, CCardHeader, CCol, CRow, CSpinner } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilChart } from '@coreui/icons'
 
 import analyticsApi from '../api/analyticsApi'
 import DashboardStatCard from '../../dashboard/components/DashboardStatCard'
 import { InsightBarChart, InsightChartCard } from './InsightChartCard'
+import { formatInr } from '../../payments/utils/formatInr'
 
 function fmtPct(v) {
   if (v == null || Number.isNaN(Number(v))) return '—'
@@ -25,15 +17,22 @@ function fmtPct(v) {
 
 /**
  * Academy admin operational metrics — dashboard-first.
+ * Only metrics backed by operational sessions, roster, or the fee ledger.
  */
 const AcademyOperationsInsights = () => {
+  const activeActivityId = useSelector((state) => state.workspace.activeActivityId)
   const [ops, setOps] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
+    if (!activeActivityId) {
+      setLoading(false)
+      return undefined
+    }
     let cancelled = false
+    setLoading(true)
+    setError(null)
     ;(async () => {
       try {
         const data = await analyticsApi.getAcademyOperations({ depth: 'embedded' })
@@ -47,7 +46,10 @@ const AcademyOperationsInsights = () => {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [activeActivityId])
+
+  const coaches = ops?.coachingOperations?.mostActiveCoaches || []
+  const presets = ops?.coachingStructure?.mostUsedPresets || []
 
   return (
     <CCard className="border-0 shadow-sm mb-3">
@@ -55,7 +57,7 @@ const AcademyOperationsInsights = () => {
         <span className="d-flex align-items-center gap-2">
           <CIcon icon={cilChart} />
           <strong>Operations</strong>
-          <span className="small text-body-secondary">Last 90 days</span>
+          <span className="small text-body-secondary">Last {ops?.windowDays ?? 90} days</span>
         </span>
         <Link className="btn btn-sm btn-link" to="/coach/academy/insights">
           View details
@@ -81,74 +83,55 @@ const AcademyOperationsInsights = () => {
               <DashboardStatCard
                 title="Participation rate"
                 value={fmtPct(ops.attendanceTrends?.attendanceRate)}
+                hint="Present or late among marked students"
                 loading={false}
               />
             </CCol>
             <CCol xs={6} md={3}>
               <DashboardStatCard
-                title="Sessions conducted"
+                title="Sessions completed"
                 value={ops.coachingOperations?.sessionsConducted ?? '—'}
+                hint="Finished sessions in this period"
                 loading={false}
               />
             </CCol>
             <CCol xs={6} md={3}>
               <DashboardStatCard
-                title="Completion rate"
-                value={fmtPct(ops.sessionReliability?.completionRate)}
+                title="Collected (month)"
+                value={
+                  ops.paymentsContinuity?.collectedThisMonthInr != null
+                    ? `₹${formatInr(ops.paymentsContinuity.collectedThisMonthInr)}`
+                    : '—'
+                }
                 loading={false}
               />
             </CCol>
-            <CCol lg={6}>
-              <InsightChartCard
-                title="Coach session load"
-                subtitle="Top coaches in this period"
-                height={180}
-              >
-                <InsightBarChart
-                  labels={(ops.coachingOperations?.mostActiveCoaches || []).map((c) => c.coachName)}
-                  values={(ops.coachingOperations?.mostActiveCoaches || []).map(
-                    (c) => c.sessionCount || 0,
-                  )}
-                  label="Sessions"
-                />
-              </InsightChartCard>
-            </CCol>
-            <CCol lg={6}>
-              <InsightChartCard title="Preset usage" subtitle="Most used templates" height={180}>
-                <InsightBarChart
-                  labels={(ops.coachingStructure?.mostUsedPresets || []).map((p) => p.label)}
-                  values={(ops.coachingStructure?.mostUsedPresets || []).map((p) => p.count || 0)}
-                  label="Sessions"
-                />
-              </InsightChartCard>
-            </CCol>
-            <CCol xs={12}>
-              <div className="d-flex align-items-center justify-content-between gap-2">
-                <p className="small mb-0">
-                  {ops.paymentsContinuity?.overdueStudents?.length
-                    ? `${ops.paymentsContinuity.overdueStudents.length} continuity alerts`
-                    : 'No continuity alerts'}
-                  {' · '}
-                  {ops.paymentsContinuity?.upcomingRenewals?.length
-                    ? `${ops.paymentsContinuity.upcomingRenewals.length} renewals soon`
-                    : 'No upcoming renewals'}
-                </p>
-                <CButton
-                  color="link"
-                  size="sm"
-                  className="p-0"
-                  onClick={() => setExpanded((v) => !v)}
+            {coaches.length ? (
+              <CCol lg={presets.length ? 6 : 12}>
+                <InsightChartCard
+                  title="Coach session load"
+                  subtitle="Completed sessions by coach"
+                  height={180}
                 >
-                  {expanded ? 'Hide details' : 'Show details'}
-                </CButton>
-              </div>
-              <CCollapse visible={expanded}>
-                <div className="small text-body-secondary mt-2">
-                  Keep this focused on continuity and reliability. Use the drill-down only when a
-                  metric needs follow-up.
-                </div>
-              </CCollapse>
-            </CCol>
+                  <InsightBarChart
+                    labels={coaches.map((c) => c.coachName)}
+                    values={coaches.map((c) => c.sessionCount || 0)}
+                    label="Sessions"
+                  />
+                </InsightChartCard>
+              </CCol>
+            ) : null}
+            {presets.length ? (
+              <CCol lg={coaches.length ? 6 : 12}>
+                <InsightChartCard title="Preset usage" subtitle="Named session templates" height={180}>
+                  <InsightBarChart
+                    labels={presets.map((p) => p.label)}
+                    values={presets.map((p) => p.count || 0)}
+                    label="Sessions"
+                  />
+                </InsightChartCard>
+              </CCol>
+            ) : null}
           </CRow>
         ) : null}
       </CCardBody>

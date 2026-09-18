@@ -18,9 +18,7 @@ function AcademySetupGuideInner({ storageIdentity, academyId }) {
   const [payload, setPayload] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [collapsed, setCollapsed] = useState(() =>
-    readAcademySetupGuideCollapsed(storageIdentity, academyId),
-  )
+  const [collapsed, setCollapsed] = useState(() => readAcademySetupGuideCollapsed(storageIdentity, academyId) === true)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -52,6 +50,14 @@ function AcademySetupGuideInner({ storageIdentity, academyId }) {
   }, [load])
 
   const model = useMemo(() => (payload ? buildAcademySetupGuideModel(payload) : null), [payload])
+
+  useEffect(() => {
+    if (!model?.allStepsComplete) return
+    const stored = readAcademySetupGuideCollapsed(storageIdentity, academyId)
+    if (stored === false) return
+    setCollapsed(true)
+    if (stored !== true) writeAcademySetupGuideCollapsed(storageIdentity, academyId, true)
+  }, [model?.allStepsComplete, storageIdentity, academyId])
 
   const onToggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {

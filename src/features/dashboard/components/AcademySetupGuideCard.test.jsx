@@ -120,9 +120,9 @@ describe('AcademySetupGuideCard', () => {
       'href',
       '/coach/payments/settings',
     )
-    expect(screen.getByRole('link', { name: /connect parents/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /open students/i })).toHaveAttribute(
       'href',
-      '/coach/parents',
+      '/coach/students',
     )
   })
 

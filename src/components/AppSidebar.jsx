@@ -52,8 +52,8 @@ const AppSidebar = () => {
         dispatch(setSidebarShow(visible))
       }}
     >
-      <CSidebarHeader className="border-bottom">
-        <CSidebarBrand to={brandTo}>
+      <CSidebarHeader className="border-bottom onrep-sidebar-brand-header">
+        <CSidebarBrand to={brandTo} className="onrep-sidebar-brand">
           <img
             src={primaryLogo}
             alt="OnRep"
