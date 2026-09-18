@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   CAlert,
   CBadge,
@@ -22,6 +22,7 @@ import { SESSION_TYPE_OPTIONS } from '../constants/sessionTypes'
 import { SESSION_MODE_OPTIONS } from '../../../domain/operationalSessions/constants/sessionModes'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 import SessionPresetSetup from './SessionPresetSetup'
+import AdditionalCoachCheckbox from './AdditionalCoachCheckbox'
 import { DEFAULT_SESSION_PRESET_ID } from '../constants/sessionPresets'
 import PlaceSelect from '../../places/components/PlaceSelect'
 
@@ -130,17 +131,39 @@ export default function CreateOneTimeSessionDrawer({
   const [addOpen, setAddOpen] = useState(false)
   const [addQuery, setAddQuery] = useState('')
 
+  const leadCoachId = String(batch?.leadCoachUserId ?? batch?.lead_coach_user_id ?? '')
+  const rosterSourceKey = Array.isArray(batch?.activeStudentIds)
+    ? batch.activeStudentIds.map(String).join(',')
+    : Array.isArray(batch?.active_student_ids)
+      ? batch.active_student_ids.map(String).join(',')
+      : Array.isArray(batch?.studentIds)
+        ? batch.studentIds.map(String).join(',')
+        : ''
+
+  const wasVisibleRef = useRef(false)
   useEffect(() => {
+    const opened = visible && !wasVisibleRef.current
+    wasVisibleRef.current = Boolean(visible)
     if (!visible || !batchId) return
-    setPlaceId(defaultPlaceId ? String(defaultPlaceId) : '')
-    const lead = batch?.leadCoachUserId ?? batch?.lead_coach_user_id
-    setCoachId(lead ? String(lead) : '')
-    setAdditionalCoachIds([])
-    setRecurringPatternId('')
-    setError(null)
-    setAddOpen(false)
-    setAddQuery('')
-  }, [visible, batchId, batch, defaultPlaceId])
+    /* eslint-disable react-hooks/set-state-in-effect -- seed one-off draft when the drawer opens */
+    if (opened) {
+      setPlaceId(defaultPlaceId ? String(defaultPlaceId) : '')
+      setCoachId(leadCoachId || '')
+      setAdditionalCoachIds([])
+      setRecurringPatternId('')
+      setError(null)
+      setAddOpen(false)
+      setAddQuery('')
+      return
+    }
+    if (defaultPlaceId) {
+      setPlaceId((curr) => curr || String(defaultPlaceId))
+    }
+    if (leadCoachId) {
+      setCoachId((curr) => curr || leadCoachId)
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [visible, batchId, leadCoachId, defaultPlaceId])
 
   useEffect(() => {
     if (!visible) return
@@ -149,8 +172,8 @@ export default function CreateOneTimeSessionDrawer({
 
   useEffect(() => {
     if (!visible || !batchId) return
-    const ids = batch?.activeStudentIds ?? batch?.active_student_ids ?? batch?.studentIds
-    if (!Array.isArray(ids) || ids.length === 0) {
+    const ids = rosterSourceKey ? rosterSourceKey.split(',').filter(Boolean) : []
+    if (ids.length === 0) {
       setRoster(new Map())
       return
     }
@@ -162,7 +185,7 @@ export default function CreateOneTimeSessionDrawer({
       }
       return next
     })
-  }, [visible, batchId, batch])
+  }, [visible, batchId, rosterSourceKey])
 
   useEffect(() => {
     if (!visible) return
@@ -239,11 +262,13 @@ export default function CreateOneTimeSessionDrawer({
     [coachOptions, coachId],
   )
 
-  const toggleAdditionalCoach = (id) => {
+  const toggleAdditionalCoach = (id, checked) => {
     const sid = String(id)
-    setAdditionalCoachIds((prev) =>
-      prev.includes(sid) ? prev.filter((coachId) => coachId !== sid) : [...prev, sid],
-    )
+    setAdditionalCoachIds((prev) => {
+      const has = prev.includes(sid)
+      if (checked) return has ? prev : [...prev, sid]
+      return has ? prev.filter((coachId) => coachId !== sid) : prev
+    })
   }
 
   const handleCoachChange = (nextCoachId) => {
@@ -377,12 +402,12 @@ export default function CreateOneTimeSessionDrawer({
               </CFormLabel>
               <div className="d-flex flex-column gap-1">
                 {additionalCoachOptions.map((coach) => (
-                  <CFormCheck
+                  <AdditionalCoachCheckbox
                     key={coach.id}
                     id={`one-time-additional-coach-${coach.id}`}
                     label={coach.name || 'Coach'}
                     checked={additionalCoachIds.includes(String(coach.id))}
-                    onChange={() => toggleAdditionalCoach(coach.id)}
+                    onCheckedChange={(checked) => toggleAdditionalCoach(coach.id, checked)}
                     disabled={busy}
                   />
                 ))}

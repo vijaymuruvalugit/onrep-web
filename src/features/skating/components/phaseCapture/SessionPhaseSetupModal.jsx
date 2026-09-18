@@ -72,7 +72,7 @@ export default function SessionPhaseSetupModal({
       <CModalBody>
         <p className="small text-body-secondary">
           Each phase tracks what matters for that part of practice. Add tools, metrics, or
-          observations — not more than a few on athlete cards.
+          observations — not more than a few on student cards.
         </p>
         {error ? <CAlert color="warning">{error}</CAlert> : null}
         <div className="mb-3">

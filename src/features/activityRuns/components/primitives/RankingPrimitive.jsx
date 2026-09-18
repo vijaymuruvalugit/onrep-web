@@ -43,7 +43,7 @@ export default function RankingPrimitive({ athletes = [], disabled, busy, onSubm
               onClick={() => toggle(sid)}
             >
               {selected ? <span className="me-1 fw-bold">{pos + 1}</span> : null}
-              {a.fullName || a.full_name || 'Athlete'}
+              {a.fullName || a.full_name || 'Student'}
             </CButton>
           )
         })}

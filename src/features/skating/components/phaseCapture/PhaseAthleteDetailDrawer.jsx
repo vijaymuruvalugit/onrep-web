@@ -20,7 +20,7 @@ export default function PhaseAthleteDetailDrawer({
   onValueChange,
 }) {
   const athleteId = athlete ? String(athlete.id) : ''
-  const name = athlete?.full_name || athlete?.fullName || 'Athlete'
+  const name = athlete?.full_name || athlete?.fullName || 'Student'
 
   const drawerItems = useMemo(
     () => drawerCaptureItems(captureItems, inlineItemIds),

@@ -23,7 +23,7 @@ export default function AthleteSelectionGrid({
       {athletes.map((a) => {
         const sid = String(a.studentId || a.id)
         const active = selectedSet.has(sid)
-        const name = a.fullName || a.full_name || 'Athlete'
+        const name = a.fullName || a.full_name || 'Student'
         return (
           <button
             key={sid}

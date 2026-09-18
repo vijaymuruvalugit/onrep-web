@@ -76,7 +76,7 @@ export default function OperationalSessionCard({
             <dd>{s.coachName || '—'}</dd>
           </div>
           <div className="op-session-card__meta-row">
-            <dt>Athletes</dt>
+            <dt>Students</dt>
             <dd>{s.athleteCount > 0 ? s.athleteCount : '—'}</dd>
           </div>
         </dl>

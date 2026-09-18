@@ -19,7 +19,7 @@ export default function LiveLeaderboard({ leaderboard }) {
         <CTableHead>
           <CTableRow>
             <CTableHeaderCell>#</CTableHeaderCell>
-            <CTableHeaderCell>Athlete</CTableHeaderCell>
+            <CTableHeaderCell>Student</CTableHeaderCell>
             <CTableHeaderCell>Time</CTableHeaderCell>
           </CTableRow>
         </CTableHead>
@@ -31,7 +31,7 @@ export default function LiveLeaderboard({ leaderboard }) {
               <CTableRow key={row.id || `${row.studentId}-${row.finishRank}`}>
                 <CTableDataCell>{row.finishRank ?? '—'}</CTableDataCell>
                 <CTableDataCell>
-                  {row.studentName || 'Athlete'}
+                  {row.studentName || 'Student'}
                   {row.isPersonalBest ? (
                     <span className="badge bg-success-subtle text-success-emphasis ms-1">PB</span>
                   ) : null}

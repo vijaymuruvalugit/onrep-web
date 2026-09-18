@@ -75,7 +75,7 @@ export default function RaceTimingWorkspace({
           if (stopwatchTargetId) void handleManual(stopwatchTargetId, sec)
         }}
       />
-      <p className="small text-body-secondary mb-2">Optional: pick athlete then stopwatch fills their row.</p>
+      <p className="small text-body-secondary mb-2">Optional: pick a student then stopwatch fills their row.</p>
       {athletes.map((a) => {
         const sid = String(a.studentId || a.id)
         return (
@@ -91,7 +91,7 @@ export default function RaceTimingWorkspace({
               className="btn btn-link btn-sm p-0 ms-2 small"
               onClick={() => setStopwatchTargetId(sid)}
             >
-              Use stopwatch for this athlete
+              Use stopwatch for this student
             </button>
           </div>
         )

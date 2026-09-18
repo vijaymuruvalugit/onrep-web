@@ -25,7 +25,7 @@ export function athleteInitials(name) {
 
 export function shortAthleteLabel(name, cohortNames = []) {
   const { first, last } = parseAthleteNameParts(name)
-  if (!first) return 'Athlete'
+  if (!first) return 'Student'
   const firstLower = first.toLowerCase()
   const sameFirst = (cohortNames || []).filter((n) => {
     const other = parseAthleteNameParts(n)

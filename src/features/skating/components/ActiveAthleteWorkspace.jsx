@@ -81,7 +81,7 @@ export default function ActiveAthleteWorkspace({
             <div className="active-athlete-workspace__header-row">
               <div className="active-athlete-workspace__identity">
                 <h2 className="active-athlete-workspace__name mb-0">
-                  {athleteName || 'Athlete'}
+                  {athleteName || 'Student'}
                 </h2>
                 {contextLine ? (
                   <p className="active-athlete-workspace__context mb-0">{contextLine}</p>

@@ -249,8 +249,8 @@ export default function SkatingRaceWorkspace({
   const stageTitle = activePreset ? `${launchMeta?.emoji || '🏁'} ${activePreset.title}`.trim() : ''
   const stageSubtitle =
     heatNumber != null
-      ? `Race ${raceSequence} · ${athletes.length} athletes`
-      : `${athletes.length} athletes`
+      ? `Race ${raceSequence} · ${athletes.length} students`
+      : `${athletes.length} students`
 
   const flowProps = {
     definition,

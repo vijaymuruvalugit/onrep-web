@@ -46,7 +46,7 @@ const ResetPasswordPage = () => {
   return (
     <AuthShell
       title="Create a new password"
-      subtitle="Use a strong password to keep your athlete and academy data secure."
+      subtitle="Use a strong password to keep your student and academy data secure."
       badge="PASSWORD RESET"
     >
       {!token ? (

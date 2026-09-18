@@ -73,7 +73,7 @@ export default function SkillsPhaseWorkspace({
             <div>
               <h2 className="skills-phase-section__title">Assessments</h2>
               <p className="small text-body-secondary mb-0">
-                Rate the selected athlete without leaving this screen.
+                Rate the selected student without leaving this screen.
               </p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export default function SkillsPhaseWorkspace({
           </button>
           <p className="fw-semibold mb-1">Lap Timing</p>
           <p className="small text-body-secondary mb-0">
-            Select an athlete in the Students strip, then open Lap Timing again.
+            Select a student in the Students strip, then open Lap Timing again.
           </p>
         </div>
       )

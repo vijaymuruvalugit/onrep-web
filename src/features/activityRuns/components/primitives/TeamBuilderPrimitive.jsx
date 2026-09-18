@@ -45,7 +45,7 @@ export default function TeamBuilderPrimitive({ athletes = [], disabled, onTeamsC
                   disabled={disabled}
                   onClick={() => toggleMember(ti, sid)}
                 >
-                  {a.fullName || a.full_name || 'Athlete'}
+                  {a.fullName || a.full_name || 'Student'}
                 </CButton>
               )
             })}

@@ -15,7 +15,7 @@ const CHOICES = [
     id: 'coach',
     icon: cilPeople,
     label: 'Coach',
-    description: 'Run sessions, track athletes, capture observations. Best if you are on the ice.',
+    description: 'Run sessions, track students, capture observations. Best if you are on the ice.',
   },
   {
     id: 'admin',

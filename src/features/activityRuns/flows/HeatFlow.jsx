@@ -11,7 +11,7 @@ function formatMs(ms) {
 }
 
 function athleteName(athlete) {
-  return athlete?.fullName || athlete?.full_name || athlete?.name || 'Athlete'
+  return athlete?.fullName || athlete?.full_name || athlete?.name || 'Student'
 }
 
 function finishMarksFromPayload(payload) {

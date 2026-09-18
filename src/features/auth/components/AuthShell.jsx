@@ -7,7 +7,7 @@ import primaryLogo from '../../../assets/brand/primary-logo.png'
 const DEFAULT_HERO_SUBHEAD =
   'Schedules, attendance, and skating progress — built for academies that take training seriously.'
 
-const DEFAULT_HERO_CHIPS = ['Scheduling & attendance', 'Athlete progress', 'Operational clarity']
+const DEFAULT_HERO_CHIPS = ['Scheduling & attendance', 'Student progress', 'Operational clarity']
 
 /**
  * Isolated auth canvas: optional split hero (desktop) + card panel.

@@ -45,7 +45,7 @@ export default function AthletesInPhasePanel({
   if (!phaseId) {
     return (
       <div className="athletes-in-phase-panel border rounded p-2 bg-body-tertiary">
-        <p className="small text-body-secondary mb-0">Select a phase to see athletes in this phase.</p>
+        <p className="small text-body-secondary mb-0">Select a phase to see students in this phase.</p>
       </div>
     )
   }
@@ -54,10 +54,10 @@ export default function AthletesInPhasePanel({
     <section
       className="athletes-in-phase-panel border rounded p-2 mb-3"
       data-testid="athletes-in-phase-panel"
-      aria-label="Athletes in this phase"
+      aria-label="Students in this phase"
     >
       <div className="d-flex justify-content-between align-items-baseline gap-2 mb-2">
-        <h3 className="h6 fw-semibold mb-0">Athletes in this phase</h3>
+        <h3 className="h6 fw-semibold mb-0">Students in this phase</h3>
         {phaseTitle ? (
           <span className="small text-body-secondary text-truncate">{phaseTitle}</span>
         ) : null}

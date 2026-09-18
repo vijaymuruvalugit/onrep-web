@@ -27,7 +27,7 @@ const CHOICES = [
     id: 'coach',
     icon: cilPeople,
     label: 'Coach',
-    description: 'Run sessions, track athletes, capture observations.',
+    description: 'Run sessions, track students, capture observations.',
   },
   {
     id: 'admin',

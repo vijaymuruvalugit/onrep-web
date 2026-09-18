@@ -1508,7 +1508,7 @@ const SkatingOpsPage = () => {
 
   const todaySummaryParts = useMemo(() => {
     const parts = []
-    if (todaySummary.athleteCount) parts.push(`${todaySummary.athleteCount} athletes`)
+    if (todaySummary.athleteCount) parts.push(`${todaySummary.athleteCount} students`)
     if (sessionObservationCount > 0)
       parts.push(
         `${sessionObservationCount} observation${sessionObservationCount === 1 ? '' : 's'}`,
@@ -2124,7 +2124,7 @@ const SkatingOpsPage = () => {
       await loadBundle(selectedSessionId)
       await loadDayBoard()
     } catch (e) {
-      setLapError(e?.message || 'Could not update athletes.')
+      setLapError(e?.message || 'Could not update students.')
     } finally {
       setAddAthletesSaving(false)
     }
@@ -2369,10 +2369,10 @@ const SkatingOpsPage = () => {
         onClose={() => setShowAddAthletesModal(false)}
         alignment="center"
       >
-        <CModalHeader>Add athletes to session</CModalHeader>
+        <CModalHeader>Add students to session</CModalHeader>
         <CModalBody>
           <p className="small text-body-secondary">
-            Select athletes to add to this session roster.
+            Select students to add to this session roster.
           </p>
           <div className="d-flex flex-column gap-1" style={{ maxHeight: 280, overflow: 'auto' }}>
             {skaters.map((s) => (

@@ -73,6 +73,48 @@ import './BatchWorkspacePage.scss'
 const VALID_TABS = new Set(['schedule', 'students', 'settings'])
 const WORKSPACE_REQUIRED = 'WORKSPACE_REQUIRED'
 
+function sortedIdList(ids) {
+  return [...(ids || [])].map(String).filter(Boolean).sort()
+}
+
+function canonicalFee(feeInr) {
+  const raw = String(feeInr ?? '').trim()
+  if (raw === '') return ''
+  const n = Number(raw)
+  return Number.isFinite(n) ? String(Math.round(n)) : raw
+}
+
+function batchSettingsFingerprint({
+  name,
+  feeInr,
+  defaultPlaceId,
+  coachIds,
+  subActivityIds,
+  musicWorkspace,
+  musicTradition,
+  musicDiscipline,
+  musicInstrument,
+  musicLevel,
+  musicFormat,
+}) {
+  return JSON.stringify({
+    name: String(name || '').trim(),
+    fee: canonicalFee(feeInr),
+    place: String(defaultPlaceId || ''),
+    coaches: sortedIdList(coachIds),
+    subs: musicWorkspace ? [] : sortedIdList(subActivityIds),
+    music: musicWorkspace
+      ? {
+          tradition: String(musicTradition || '').trim(),
+          discipline: String(musicDiscipline || ''),
+          instrument: String(musicInstrument || '').trim(),
+          level: String(musicLevel || '').trim(),
+          format: String(musicFormat || ''),
+        }
+      : null,
+  })
+}
+
 const BatchWorkspacePage = () => {
   const activities = useSelector((s) => s.workspace.activities)
   const bootstrapComplete = useSelector((s) => s.workspace.bootstrapComplete)
@@ -127,6 +169,8 @@ const BatchWorkspacePage = () => {
   const [musicLevel, setMusicLevel] = useState('')
   const [musicFormat, setMusicFormat] = useState('private')
   const [musicSyncedBatchId, setMusicSyncedBatchId] = useState(null)
+  const [settingsName, setSettingsName] = useState('')
+  const [settingsFee, setSettingsFee] = useState('')
 
   // Adjust form state when the selected offering changes (React render-time sync).
   const musicSourceId = selectedBatch?.id ?? null
@@ -266,6 +310,15 @@ const BatchWorkspacePage = () => {
     selectedBatch?.leadCoachUserId,
     selectedBatch?.lead_coach_user_id,
   ])
+
+  useEffect(() => {
+    setSettingsName(selectedBatch?.name || '')
+    setSettingsFee(
+      selectedBatch?.feeInr != null && selectedBatch?.feeInr !== ''
+        ? String(selectedBatch.feeInr)
+        : '',
+    )
+  }, [selectedBatch?.id, selectedBatch?.name, selectedBatch?.feeInr])
 
   useEffect(() => {
     const pid = selectedBatch?.defaultPlaceId ?? selectedBatch?.default_place_id
@@ -556,16 +609,13 @@ const BatchWorkspacePage = () => {
   }, [operationalFocus])
 
   const handleSettingsSave = () => {
-    if (!settingsFormRef.current) return
     if (batchWorkspaceMismatch) {
       window.alert(
         `Switch to “${batchWorkspaceMismatch.batchActivityName}” in the header before saving this batch.`,
       )
       return
     }
-    const formData = new FormData(settingsFormRef.current)
-    const feeRaw = String(formData.get('feeInr') ?? '').trim()
-    const name = String(formData.get('name') || '').trim()
+    const name = String(settingsName || '').trim()
     if (!name) {
       window.alert(`${copy.offeringName} is required.`)
       return
@@ -607,12 +657,73 @@ const BatchWorkspacePage = () => {
         return
       }
     }
+    const feeRaw = String(settingsFee ?? '').trim()
     if (feeRaw !== '') {
       const n = Number(feeRaw)
       if (Number.isFinite(n) && n >= 0) payload.feeInr = Math.round(n)
     }
     saveBatchSettings(batchId, payload)
   }
+
+  const savedSettingsFingerprint = useMemo(() => {
+    if (!selectedBatch) return ''
+    const savedCoachIds = Array.isArray(selectedBatch.coachUserIds)
+      ? selectedBatch.coachUserIds
+      : selectedBatch.leadCoachUserId || selectedBatch.lead_coach_user_id
+        ? [selectedBatch.leadCoachUserId || selectedBatch.lead_coach_user_id]
+        : []
+    const savedSubs = Array.isArray(selectedBatch.subActivityIds)
+      ? selectedBatch.subActivityIds
+      : selectedBatch.subActivityId || selectedBatch.sub_activity_id
+        ? [selectedBatch.subActivityId || selectedBatch.sub_activity_id]
+        : []
+    return batchSettingsFingerprint({
+      name: selectedBatch.name,
+      feeInr: selectedBatch.feeInr,
+      defaultPlaceId: selectedBatch.defaultPlaceId ?? selectedBatch.default_place_id,
+      coachIds: savedCoachIds,
+      subActivityIds: savedSubs,
+      musicWorkspace,
+      musicTradition: selectedBatch.tradition,
+      musicDiscipline: selectedBatch.discipline,
+      musicInstrument: selectedBatch.instrument,
+      musicLevel: selectedBatch.levelLabel,
+      musicFormat: selectedBatch.format,
+    })
+  }, [selectedBatch, musicWorkspace])
+
+  const currentSettingsFingerprint = useMemo(
+    () =>
+      batchSettingsFingerprint({
+        name: settingsName,
+        feeInr: settingsFee,
+        defaultPlaceId,
+        coachIds: selectedCoachIds,
+        subActivityIds: selectedSubActivityIds,
+        musicWorkspace,
+        musicTradition,
+        musicDiscipline,
+        musicInstrument,
+        musicLevel,
+        musicFormat,
+      }),
+    [
+      settingsName,
+      settingsFee,
+      defaultPlaceId,
+      selectedCoachIds,
+      selectedSubActivityIds,
+      musicWorkspace,
+      musicTradition,
+      musicDiscipline,
+      musicInstrument,
+      musicLevel,
+      musicFormat,
+    ],
+  )
+
+  const settingsDirty =
+    Boolean(selectedBatch) && currentSettingsFingerprint !== savedSettingsFingerprint
 
   const loading = detailLoading && !selectedBatch
 
@@ -885,7 +996,11 @@ const BatchWorkspacePage = () => {
                 <CRow className="g-3">
                   <CCol md={6}>
                     <CFormLabel>{copy.offeringName}</CFormLabel>
-                    <CFormInput name="name" defaultValue={selectedBatch?.name || ''} />
+                    <CFormInput
+                      name="name"
+                      value={settingsName}
+                      onChange={(e) => setSettingsName(e.target.value)}
+                    />
                   </CCol>
                   <CCol md={6}>
                     <CFormLabel htmlFor="batch-fee-inr">Monthly fee (INR)</CFormLabel>
@@ -895,11 +1010,8 @@ const BatchWorkspacePage = () => {
                       type="number"
                       min="0"
                       step="1"
-                      defaultValue={
-                        selectedBatch?.feeInr != null && selectedBatch?.feeInr !== ''
-                          ? String(selectedBatch.feeInr)
-                          : ''
-                      }
+                      value={settingsFee}
+                      onChange={(e) => setSettingsFee(e.target.value)}
                       placeholder="e.g. 3000"
                     />
                     <div className="small text-body-secondary mt-1">
@@ -1103,12 +1215,13 @@ const BatchWorkspacePage = () => {
                   color="primary"
                   disabled={
                     mutationLoading ||
+                    !settingsDirty ||
                     (!musicWorkspace && selectedSubActivityIds.size === 0) ||
                     Boolean(batchWorkspaceMismatch)
                   }
                   onClick={handleSettingsSave}
                 >
-                  {mutationLoading ? 'Saving…' : 'Save settings'}
+                  {mutationLoading ? 'Saving…' : settingsDirty ? 'Save settings' : 'Saved'}
                 </CButton>
               </div>
             </CCardBody>

@@ -92,7 +92,7 @@ export default function StudentProgressCardsCard({ studentId }) {
           </CAlert>
         ) : cards.length === 0 ? (
           <div className="small text-body-secondary fst-italic">
-            No progress cards for this athlete yet.
+            No progress cards for this student yet.
           </div>
         ) : (
           <CTable small responsive hover className="mb-0">

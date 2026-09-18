@@ -60,7 +60,7 @@ const LoginPage = () => {
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Sign in to run schedules, attendance, and athlete progress in one place."
+      subtitle="Sign in to run schedules, attendance, and student progress in one place."
     >
       <>
         <CForm onSubmit={handleSubmit(onSubmit)} noValidate className="onrep-auth-form">

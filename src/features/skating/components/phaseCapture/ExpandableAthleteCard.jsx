@@ -31,7 +31,7 @@ export default function ExpandableAthleteCard({
   onValueChange,
 }) {
   const athleteId = String(athlete?.id ?? athlete?.studentId ?? '')
-  const name = athleteNameOf(athlete) || 'Athlete'
+  const name = athleteNameOf(athlete) || 'Student'
   const displayName = shortAthleteLabel(name, cohortNames.length ? cohortNames : [name])
 
   const quickItems = useMemo(() => quickLayerItems(captureItems), [captureItems])

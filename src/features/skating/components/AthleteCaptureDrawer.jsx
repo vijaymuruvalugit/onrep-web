@@ -183,7 +183,7 @@ export default function AthleteCaptureDrawer({
       </COffcanvasHeader>
       <COffcanvasBody className="d-flex flex-column gap-2">
         <div>
-          <div className="small text-body-secondary mb-1">Athlete</div>
+          <div className="small text-body-secondary mb-1">Student</div>
           <div className="fw-semibold">{studentName || '—'}</div>
           {studentId ? (
             <div className="small text-muted font-monospace">{studentId.slice(0, 8)}…</div>

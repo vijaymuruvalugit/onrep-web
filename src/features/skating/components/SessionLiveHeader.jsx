@@ -29,7 +29,7 @@ export default function SessionLiveHeader({
   canEnd,
   onRaceFocus,
 }) {
-  const skaterWord = athleteCount === 1 ? 'athlete' : 'athletes'
+  const skaterWord = athleteCount === 1 ? 'student' : 'students'
 
   const showTimeRange = timeRangeLabel && String(timeRangeLabel).trim() && timeRangeLabel !== '—'
   const coachLine = Array.isArray(coachNames) && coachNames.length ? coachNames.join(', ') : ''

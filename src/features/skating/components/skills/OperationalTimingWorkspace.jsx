@@ -170,7 +170,7 @@ export default function OperationalTimingWorkspace({
   if (!mod || !studentId) {
     return (
       <div className="operational-timing-workspace operational-timing-workspace--prompt">
-        <p className="fw-semibold mb-1">Choose an athlete</p>
+        <p className="fw-semibold mb-1">Choose a student</p>
         <p className="small text-body-secondary mb-2">
           Select a student above, then open this drill again.
         </p>
@@ -215,7 +215,7 @@ export default function OperationalTimingWorkspace({
         <CButton color="link" size="sm" className="px-0 mb-2" onClick={onClose}>
           ← Back to Skills
         </CButton>
-        <p className="fw-semibold mb-1">Lap Timing — {athleteName || 'Athlete'}</p>
+        <p className="fw-semibold mb-1">Lap Timing — {athleteName || 'Student'}</p>
         <p className="small text-body-secondary mb-3">Choose a preset to start timing.</p>
         <RacePickerSheet
           presets={lapPresets}

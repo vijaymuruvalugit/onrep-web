@@ -48,7 +48,7 @@ export default function PhaseAthleteChip({
       data-testid={`phase-athlete-chip-${athlete.studentId}`}
     >
       <span className="phase-athlete-chip__name text-truncate" title={athlete.fullName}>
-        {athlete.fullName || 'Athlete'}
+        {athlete.fullName || 'Student'}
       </span>
       {isRacePhase ? (
         <div className="phase-athlete-chip__race-fields">

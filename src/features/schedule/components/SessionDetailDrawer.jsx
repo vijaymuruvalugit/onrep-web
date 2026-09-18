@@ -700,7 +700,7 @@ export default function SessionDetailDrawer({
                             {placeLabel}
                           </span>
                           <span className="flex-grow-1">
-                            {r.studentName || r.student_full_name || studentId || 'Athlete'}
+                            {r.studentName || r.student_full_name || studentId || 'Student'}
                             {ambiguityNote ? (
                               <span className="text-body-secondary ms-2">{ambiguityNote}</span>
                             ) : null}

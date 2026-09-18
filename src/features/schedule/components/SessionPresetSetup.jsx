@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { CBadge, CButton, CCollapse, CFormLabel, CFormSelect } from '@coreui/react'
 import SessionPresetPhasePreview from './SessionPresetPhasePreview'
 import {
@@ -65,9 +65,11 @@ export default function SessionPresetSetup({
     [sessionPresetId, customized],
   )
 
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
   useEffect(() => {
-    onChange?.(buildSessionPresetPayload(sessionPresetId, previewPhases))
-  }, [sessionPresetId, previewPhases, onChange])
+    onChangeRef.current?.(buildSessionPresetPayload(sessionPresetId, previewPhases))
+  }, [sessionPresetId, previewPhases])
 
   const handlePresetChange = (nextId) => {
     setSessionPresetId(nextId)

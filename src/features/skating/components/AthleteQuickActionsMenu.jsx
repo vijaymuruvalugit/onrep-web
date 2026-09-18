@@ -47,7 +47,7 @@ export default function AthleteQuickActionsMenu({
         className="athlete-actions-menu__toggle"
         disabled={disabled || busy}
         caret={false}
-        aria-label="Athlete actions"
+        aria-label="Student actions"
         data-testid="athlete-quick-actions-toggle"
       >
         ⋮

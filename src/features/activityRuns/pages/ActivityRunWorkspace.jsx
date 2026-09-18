@@ -49,7 +49,7 @@ export default function ActivityRunWorkspace({
   const isLive = Boolean(selectedRunType && FlowComponent)
 
   const liveSubtitle =
-    heatNumber != null ? `Heat ${heatNumber} · ${athletes.length} athletes` : `${athletes.length} athletes`
+    heatNumber != null ? `Heat ${heatNumber} · ${athletes.length} students` : `${athletes.length} students`
 
   return (
     <div

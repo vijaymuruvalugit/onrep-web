@@ -21,7 +21,7 @@ export default function PhaseAthleteCaptureList({
   if (!roster.length) {
     return (
       <p className="phase-capture-list__empty small text-body-secondary mb-0">
-        Add athletes to capture observations for this phase.
+        Add students to capture observations for this phase.
       </p>
     )
   }

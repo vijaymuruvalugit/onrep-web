@@ -1,13 +1,13 @@
-/** Coach-facing copy — session/athlete-centric; avoid lane jargon in user-visible strings. */
+/** Coach-facing copy — session/student-centric; avoid lane jargon in user-visible strings. */
 export const SESSION_OPS_COPY = {
   pageTitle: 'Skating ops',
   pageSubtitle: 'Today’s sessions — pick one to coach on the floor.',
   emptyDayBoardBody:
     'No scheduled sessions on this day. Sessions from recurring schedules appear here automatically.',
-  emptyRosterTitle: 'No athletes yet',
-  emptyRosterBody: 'Add athletes to coach on the ice.',
-  emptyRosterCta: 'Add athletes',
-  captureDrawerTitle: 'Athlete',
+  emptyRosterTitle: 'No students yet',
+  emptyRosterBody: 'Add students to coach on the ice.',
+  emptyRosterCta: 'Add students',
+  captureDrawerTitle: 'Student',
   markPresentSoon: 'Roster check-in — coming soon.',
   focusPlaceholder: 'Today note (short)',
   focusSave: 'Save',
@@ -30,8 +30,8 @@ export const SESSION_OPS_COPY = {
   startSegmentationHint:
     'Only use when you run multiple timing lanes. Hidden until you add a lane.',
   startBatchLabel: 'Batch',
-  startAthletesOptional: 'Athletes (optional before start)',
-  startAthletesHint: 'You can start empty and add athletes on the ice.',
+  startAthletesOptional: 'Students (optional before start)',
+  startAthletesHint: 'You can start empty and add students on the ice.',
   cancel: 'Cancel',
   switchSession: 'Switch session',
   minimizeList: 'Minimize list',
@@ -41,9 +41,9 @@ export const SESSION_OPS_COPY = {
   attendanceLink: 'Session participation',
 
   liveSessionTitle: 'Live',
-  recordingFor: 'Athlete',
-  selectAthletePrompt: 'Pick athlete',
-  addAthletesToRecord: 'Add athletes',
+  recordingFor: 'Student',
+  selectAthletePrompt: 'Pick student',
+  addAthletesToRecord: 'Add students',
   lapEntryTitle: 'Save',
   timingSectionTitle: 'Time',
   timingSectionHint: 'Lap times and effort tag.',
@@ -53,12 +53,12 @@ export const SESSION_OPS_COPY = {
   quickObservationsSubtitle: 'Tap score — saves on its own.',
   quickNoticeTitle: 'Tags',
   recentLapsTitle: 'Recent laps',
-  athletesInSession: 'Athletes',
+  athletesInSession: 'Students',
   rosterFilterPlaceholder: 'Filter…',
   timingLaneColumn: 'Lane',
   addDefaultLaneLegacy: 'Default lane',
   addTimingLane: 'Add lane',
-  guidancePickAthlete: 'Pick athlete',
+  guidancePickAthlete: 'Pick student',
   guidanceNoObsYet: 'Tap score',
   observationSavedThisSession: 'Saved',
 

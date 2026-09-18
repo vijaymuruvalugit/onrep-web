@@ -14,7 +14,7 @@ export default function RaceTimeEntryRow({ studentName, disabled, busy, onSave }
   return (
     <div className="race-time-entry-row d-flex flex-wrap align-items-center gap-2 mb-2">
       <span className="small fw-medium text-truncate" style={{ minWidth: 100 }}>
-        {studentName || 'Athlete'}
+        {studentName || 'Student'}
       </span>
       <CFormInput
         type="number"

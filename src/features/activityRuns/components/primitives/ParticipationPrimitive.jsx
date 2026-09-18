@@ -17,7 +17,7 @@ export default function ParticipationPrimitive({
             key={sid}
             type="checkbox"
             id={`part-${sid}`}
-            label={a.fullName || a.full_name || 'Athlete'}
+            label={a.fullName || a.full_name || 'Student'}
             checked={checked}
             disabled={disabled}
             onChange={() => {

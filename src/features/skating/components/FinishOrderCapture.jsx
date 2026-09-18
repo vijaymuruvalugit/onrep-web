@@ -54,7 +54,7 @@ export default function FinishOrderCapture({
               {selected ? (
                 <span className="finish-order-athlete-btn__rank">{pos + 1}</span>
               ) : null}
-              <span className="text-truncate">{a.fullName || a.full_name || 'Athlete'}</span>
+              <span className="text-truncate">{a.fullName || a.full_name || 'Student'}</span>
             </CButton>
           )
         })}

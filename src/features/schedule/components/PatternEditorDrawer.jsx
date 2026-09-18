@@ -20,6 +20,7 @@ import { SESSION_MODE_OPTIONS } from '../../../domain/operationalSessions/consta
 import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 import SessionPresetSetup from './SessionPresetSetup'
+import AdditionalCoachCheckbox from './AdditionalCoachCheckbox'
 import { DEFAULT_SESSION_PRESET_ID } from '../constants/sessionPresets'
 
 const FOCUS_SUGGESTIONS = [
@@ -145,7 +146,25 @@ export default function PatternEditorDrawer({
       sessionPresetId: DEFAULT_SESSION_PRESET_ID,
       phaseOverrides: EMPTY_PHASE_OVERRIDES,
     }
-  }, [isEdit, pattern, batch])
+  }, [
+    isEdit,
+    pattern?.id,
+    pattern?.name,
+    pattern?.slotName,
+    pattern?.startTime,
+    pattern?.endTime,
+    pattern?.placeId,
+    pattern?.coachId,
+    pattern?.sessionFocus,
+    pattern?.sessionMode,
+    pattern?.sessionPresetId,
+    Array.isArray(pattern?.daysOfWeek) ? pattern.daysOfWeek.join(',') : '',
+    Array.isArray(pattern?.additionalCoachIds) ? pattern.additionalCoachIds.map(String).join(',') : '',
+    Array.isArray(pattern?.phaseOverrides) ? JSON.stringify(pattern.phaseOverrides) : '',
+    batch?.id,
+    batch?.defaultPlaceId,
+    batch?.default_place_id,
+  ])
 
   const [name, setName] = useState(seed.name)
   const [days, setDays] = useState(() => apiDaysToUiLabels(seed.daysOfWeek))
@@ -197,11 +216,13 @@ export default function PatternEditorDrawer({
     [coachOptions, coachId],
   )
 
-  const toggleAdditionalCoach = (id) => {
+  const toggleAdditionalCoach = (id, checked) => {
     const sid = String(id)
-    setAdditionalCoachIds((prev) =>
-      prev.includes(sid) ? prev.filter((coachId) => coachId !== sid) : [...prev, sid],
-    )
+    setAdditionalCoachIds((prev) => {
+      const has = prev.includes(sid)
+      if (checked) return has ? prev : [...prev, sid]
+      return has ? prev.filter((coachId) => coachId !== sid) : prev
+    })
   }
 
   const handleCoachChange = (nextCoachId) => {
@@ -389,12 +410,12 @@ export default function PatternEditorDrawer({
               </CFormLabel>
               <div className="d-flex flex-column gap-1">
                 {additionalCoachOptions.map((coach) => (
-                  <CFormCheck
+                  <AdditionalCoachCheckbox
                     key={coach.id}
                     id={`pattern-additional-coach-${coach.id}`}
                     label={coach.name || 'Coach'}
                     checked={additionalCoachIds.includes(String(coach.id))}
-                    onChange={() => toggleAdditionalCoach(coach.id)}
+                    onCheckedChange={(checked) => toggleAdditionalCoach(coach.id, checked)}
                     disabled={saving}
                   />
                 ))}

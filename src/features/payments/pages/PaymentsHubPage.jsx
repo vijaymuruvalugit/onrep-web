@@ -187,7 +187,7 @@ function ParentPaymentsView({ hub }) {
     <>
       <h2 className="mb-1">{hub?.title || 'Payments'}</h2>
       <p className="text-body-secondary small mb-3">
-        Simple, supportive billing for your athletes.
+        Simple, supportive billing for your students.
       </p>
       {children.map((c) => (
         <CCard key={c.studentId} className="shadow-sm mb-3">

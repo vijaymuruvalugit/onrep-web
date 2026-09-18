@@ -22,6 +22,7 @@ import { stripDemoSuffix } from '../../batches/utils/batchDisplayUtils'
 import { todayIsoLocal } from '../../batches/utils/batchWorkspaceOperations'
 import { formatSessionClock } from '../../classes/utils/sessionDisplay'
 import SessionPresetSetup from './SessionPresetSetup'
+import AdditionalCoachCheckbox from './AdditionalCoachCheckbox'
 import { DEFAULT_SESSION_PRESET_ID } from '../constants/sessionPresets'
 import scheduleApi from '../api/scheduleApi'
 import { friendlyScheduleApiMessage } from '../utils/scheduleUserMessages'
@@ -179,7 +180,20 @@ export default function RecurringSetupWizard({
   const [sessionFocus, setSessionFocus] = useState('')
   const [sessionMode, setSessionMode] = useState('practice')
   const [presetPayload, setPresetPayload] = useState(null)
-  const handlePresetPayload = useCallback((payload) => setPresetPayload(payload), [])
+  const handlePresetPayload = useCallback((payload) => {
+    setPresetPayload((prev) => {
+      if (
+        prev &&
+        payload &&
+        prev.sessionPresetId === payload.sessionPresetId &&
+        prev.presetVersion === payload.presetVersion &&
+        JSON.stringify(prev.phaseOverrides || []) === JSON.stringify(payload.phaseOverrides || [])
+      ) {
+        return prev
+      }
+      return payload
+    })
+  }, [])
 
   const [localError, setLocalError] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -214,10 +228,17 @@ export default function RecurringSetupWizard({
   useEffect(() => {
     if (!visible) return
     onEnsurePlaces?.()
-    /* eslint-disable react-hooks/set-state-in-effect -- reset wizard draft when drawer opens */
+  }, [visible, onEnsurePlaces])
+
+  const wasVisibleRef = useRef(false)
+  useEffect(() => {
+    const opened = visible && !wasVisibleRef.current
+    wasVisibleRef.current = Boolean(visible)
+    if (!opened) return
+    /* eslint-disable react-hooks/set-state-in-effect -- reset wizard draft only when the drawer opens */
     resetDraft()
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [visible, onEnsurePlaces, resetDraft])
+  }, [visible, resetDraft])
 
   const coachOptions = useMemo(() => uniqueCoachOptions(coaches), [coaches])
   const additionalCoachOptions = useMemo(
@@ -295,11 +316,13 @@ export default function RecurringSetupWizard({
     invalidatePreview()
   }
 
-  const toggleAdditionalCoach = (id) => {
+  const toggleAdditionalCoach = (id, checked) => {
     const sid = String(id)
-    setAdditionalCoachIds((prev) =>
-      prev.includes(sid) ? prev.filter((coachId) => coachId !== sid) : [...prev, sid],
-    )
+    setAdditionalCoachIds((prev) => {
+      const has = prev.includes(sid)
+      if (checked) return has ? prev : [...prev, sid]
+      return has ? prev.filter((coachId) => coachId !== sid) : prev
+    })
     invalidatePreview()
   }
 
@@ -646,12 +669,12 @@ export default function RecurringSetupWizard({
                 </CFormLabel>
                 <div className="d-flex flex-column gap-1">
                   {additionalCoachOptions.map((coach) => (
-                    <CFormCheck
+                    <AdditionalCoachCheckbox
                       key={coach.id}
                       id={`wizard-additional-coach-${coach.id}`}
                       label={coach.name || 'Coach'}
                       checked={additionalCoachIds.includes(String(coach.id))}
-                      onChange={() => toggleAdditionalCoach(coach.id)}
+                      onCheckedChange={(checked) => toggleAdditionalCoach(coach.id, checked)}
                       disabled={confirming}
                     />
                   ))}
@@ -678,11 +701,7 @@ export default function RecurringSetupWizard({
             {visible ? (
               <SessionPresetSetup
                 initialPresetId={DEFAULT_SESSION_PRESET_ID}
-                initialPhaseOverrides={[]}
-                onChange={(payload) => {
-                  handlePresetPayload(payload)
-                  invalidatePreview()
-                }}
+                onChange={handlePresetPayload}
                 disabled={confirming}
               />
             ) : null}
@@ -724,6 +743,20 @@ export default function RecurringSetupWizard({
                   {effectiveUntil ? ` to ${effectiveUntil}` : ' (open-ended)'}
                 </div>
               ) : null}
+              {(() => {
+                const lead =
+                  coachOptions.find((c) => String(c.id) === String(coachId || ''))?.name ||
+                  (coachId ? 'Selected coach' : 'Batch lead')
+                const extras = additionalCoachOptions
+                  .filter((c) => additionalCoachIds.includes(String(c.id)))
+                  .map((c) => c.name || 'Coach')
+                return (
+                  <div className="text-body-secondary mt-2">
+                    Coach: {lead}
+                    {extras.length ? ` · Additional: ${extras.join(', ')}` : ''}
+                  </div>
+                )
+              })()}
             </div>
 
             {previewLoading ? (

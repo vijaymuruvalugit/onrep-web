@@ -16,7 +16,7 @@ function bestTimeFromPayload(payload) {
 function athleteNameFor(row, athleteMap) {
   const id = String(row?.student_id || row?.studentId || '')
   const athlete = athleteMap.get(id)
-  return athlete?.full_name || athlete?.fullName || athlete?.name || id || 'Athlete'
+  return athlete?.full_name || athlete?.fullName || athlete?.name || id || 'Student'
 }
 
 function eventTimeLabel(event) {
@@ -61,7 +61,7 @@ function RaceRunDetails({ run, athletes = [] }) {
 
       {orderedResults.length ? (
         <div className="session-run-timeline__detail-section">
-          <p className="session-run-timeline__detail-label">Athletes</p>
+          <p className="session-run-timeline__detail-label">Students</p>
           {orderedResults.map((row, index) => {
             const events = Array.isArray(row.progress_events) ? row.progress_events : []
             const time = row.time_ms ?? row.completion_time_ms
@@ -185,7 +185,7 @@ export default function SessionRunTimeline({
                         {formatDurationMs(best)}
                       </span>
                     ) : (
-                      <span className="session-run-timeline__athletes">{n} athletes</span>
+                      <span className="session-run-timeline__athletes">{n} students</span>
                     )}
                     <span className="session-run-timeline__check" aria-hidden>
                       ✓

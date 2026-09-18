@@ -62,7 +62,7 @@ const ParentSchedulePage = () => {
         <CCol>
           <h2 className="mb-0">Schedule</h2>
           <p className="text-body-secondary small mb-0">
-            Upcoming training sessions for linked athletes (next two weeks in this view).
+            Upcoming training sessions for linked students (next two weeks in this view).
           </p>
         </CCol>
         <CCol xs="auto">
@@ -110,7 +110,7 @@ const ParentSchedulePage = () => {
                 <CTableRow>
                   <CTableHeaderCell scope="col">When</CTableHeaderCell>
                   <CTableHeaderCell scope="col">Session</CTableHeaderCell>
-                  <CTableHeaderCell scope="col">Athlete</CTableHeaderCell>
+                  <CTableHeaderCell scope="col">Student</CTableHeaderCell>
                   <CTableHeaderCell scope="col">Place</CTableHeaderCell>
                   <CTableHeaderCell scope="col">Status</CTableHeaderCell>
                 </CTableRow>

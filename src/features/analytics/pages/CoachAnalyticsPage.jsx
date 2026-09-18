@@ -70,7 +70,7 @@ const CoachAnalyticsPage = () => {
           <CCol xl={8}>
             <InsightChartCard
               title="Participation trend"
-              subtitle="Present athletes vs roster marks"
+              subtitle="Present students vs roster marks"
               height={280}
             >
               <InsightLineChart
@@ -104,7 +104,7 @@ const CoachAnalyticsPage = () => {
             <CCard className="shadow-sm h-100">
               <CCardHeader className="fw-semibold">Participation consistency</CCardHeader>
               <CCardBody className="small">
-                <div className="mb-2 text-body-secondary">Most consistent athletes</div>
+                <div className="mb-2 text-body-secondary">Most consistent students</div>
                 <ul className="mb-3 ps-3">
                   {(dd.attendanceTrends?.mostConsistentAthletes || []).map((a) => (
                     <li key={a.studentId}>
@@ -112,7 +112,7 @@ const CoachAnalyticsPage = () => {
                     </li>
                   ))}
                 </ul>
-                <div className="mb-2 text-body-secondary">Athletes to check in with</div>
+                <div className="mb-2 text-body-secondary">Students to check in with</div>
                 <ul className="mb-0 ps-3">
                   {(dd.attendanceTrends?.athletesToCheckIn || []).map((a) => (
                     <li key={a.studentId}>
@@ -187,7 +187,7 @@ const CoachAnalyticsPage = () => {
           </CCol>
           <CCol lg={6}>
             <CCard className="shadow-sm h-100">
-              <CCardHeader className="fw-semibold">Athlete focus</CCardHeader>
+              <CCardHeader className="fw-semibold">Student focus</CCardHeader>
               <CCardBody className="small">
                 <div className="mb-2 text-body-secondary">Coaching emphasis</div>
                 <ul className="mb-3 ps-3">

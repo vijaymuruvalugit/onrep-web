@@ -50,7 +50,7 @@ const ParentHomePage = () => {
         <CCol>
           <h2 className="mb-0">Overview</h2>
           <p className="text-body-secondary small mb-0">
-            Calm visibility into schedule, participation, and coaching highlights for your athletes.
+            Calm visibility into schedule, participation, and coaching highlights for your students.
           </p>
         </CCol>
         <CCol xs="auto">
@@ -108,7 +108,7 @@ const ParentHomePage = () => {
           <CCard className="h-100">
             <CCardHeader>
               <CIcon icon={cilChild} className="me-2" />
-              Athletes on your account
+              Students on your account
             </CCardHeader>
             <CCardBody>
               {linkedStudentNames.length ? (

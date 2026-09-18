@@ -22,7 +22,7 @@ function rosterFromPhaseAthletes(phaseAthletes = [], rosterForSession = []) {
     const id = String(a.studentId || a.id)
     return {
       id,
-      full_name: a.fullName || a.full_name || nameById.get(id) || 'Athlete',
+      full_name: a.fullName || a.full_name || nameById.get(id) || 'Student',
     }
   })
 }
@@ -190,7 +190,7 @@ function CoachLiveSessionView({
             aria-labelledby="coach-live-students-heading"
           >
             <h2 id="coach-live-students-heading" className="coach-live-nav-section__heading">
-              Active athletes
+              Active students
             </h2>
             <AthleteCardStrip
               variant="tiles"

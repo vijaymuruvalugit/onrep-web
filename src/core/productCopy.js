@@ -27,7 +27,7 @@ export const NAV_LABELS = Object.freeze({
 export const COACH_PARTICIPATION_COPY = Object.freeze({
   rosterCheckIn: 'Roster check-in',
   sessionParticipation: 'Session participation',
-  activeAthletes: 'Active athletes',
+  activeAthletes: 'Active students',
   participationStatus: 'Participation status',
   participationPending: 'Participation pending',
   openLiveSession: 'Open live session',
@@ -38,7 +38,7 @@ export const COACH_PARTICIPATION_COPY = Object.freeze({
 /** Family-facing participation history. */
 export const FAMILY_PARTICIPATION_COPY = Object.freeze({
   pageTitle: 'Participation',
-  pageSubtitle: 'Session participation and consistency for your athletes.',
+  pageSubtitle: 'Session participation and consistency for your students.',
   snapshotTitle: 'Participation snapshot',
   consistency: 'Consistency',
 })

@@ -171,7 +171,7 @@ export default function ParticipantProgressionFlow({
     return (
       <div className="participant-progression-flow participant-progression-flow--ready">
         <p className="small text-white-50 mb-2">
-          Ready when the athlete is set. Start begins the attempt timer.
+          Ready when the student is set. Start begins the attempt timer.
         </p>
         <CButton
           type="button"
