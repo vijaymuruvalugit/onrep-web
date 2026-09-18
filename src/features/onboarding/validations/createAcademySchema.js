@@ -1,10 +1,15 @@
 import * as yup from 'yup'
 import { ACTIVITY_TYPES } from '@onrep/contracts'
+import { isValidIndiaLocal } from '../../../utils/indiaPhone'
 
 export const createAcademySchema = yup.object({
   academyName: yup.string().trim().required('Academy name is required').max(200),
   name: yup.string().trim().required('Your name is required').max(120),
   email: yup.string().trim().email('Enter a valid email').required('Email is required'),
+  phone: yup
+    .string()
+    .required('Phone number is required')
+    .test('india-mobile', 'Enter a 10-digit mobile number', (value) => isValidIndiaLocal(value)),
   password: yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
   billing_choice: yup
     .string()

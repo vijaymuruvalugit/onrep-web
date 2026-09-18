@@ -22,11 +22,14 @@ import AuthShell from '../../auth/components/AuthShell'
 import normalizeApiError from '../../../api/normalizeApiError'
 import { createAcademySchema } from '../validations/createAcademySchema'
 import { ACTIVITY_UI_OPTIONS, getDefaultSignupActivityType } from '@onrep/contracts'
+import IndiaPhoneField from '../../../components/IndiaPhoneField'
+import { toE164India } from '../../../utils/indiaPhone'
 
 const SIGNUP_ACTIVITY_OPTIONS = ACTIVITY_UI_OPTIONS.filter((o) => o.implemented)
 
 /**
- * Canonical academy creation — POST /auth/signup only (no extra persisted fields).
+ * Canonical academy creation — POST /auth/signup. Owner phone is required so
+ * the same account can sign in on the mobile app with OTP.
  */
 const CreateAcademyPage = () => {
   const [done, setDone] = useState(null)
@@ -43,6 +46,7 @@ const CreateAcademyPage = () => {
       academyName: '',
       name: '',
       email: '',
+      phone: '',
       password: '',
       billing_choice: 'trial',
       discount_code: '',
@@ -55,11 +59,17 @@ const CreateAcademyPage = () => {
   const onSubmit = async (values) => {
     setSubmitError(null)
     try {
+      const phoneE164 = toE164India(values.phone)
+      if (!phoneE164) {
+        setSubmitError('Enter a 10-digit mobile number.')
+        return
+      }
       const body = {
         email: values.email.trim(),
         password: values.password,
         name: values.name.trim(),
         academyName: values.academyName.trim(),
+        phone_number: phoneE164,
         billing_choice: values.billing_choice,
         activities: values.activities || [],
       }
@@ -157,6 +167,22 @@ const CreateAcademyPage = () => {
             <div className="small text-danger mt-1">{errors.email.message}</div>
           ) : null}
         </div>
+
+        <Controller
+          name="phone"
+          control={control}
+          render={({ field }) => (
+            <IndiaPhoneField
+              id="signup-phone"
+              value={field.value}
+              onChange={field.onChange}
+              required
+              invalid={Boolean(errors.phone)}
+              errorHint={errors.phone?.message || 'Enter a 10-digit mobile number.'}
+              hint="You will use this number to sign in on the mobile app with OTP."
+            />
+          )}
+        />
 
         <div className="mb-3">
           <CFormLabel htmlFor="signup-password">Password</CFormLabel>
