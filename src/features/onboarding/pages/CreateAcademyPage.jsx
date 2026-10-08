@@ -222,16 +222,21 @@ const CreateAcademyPage = () => {
           ) : null}
         </div>
 
-        {billingChoice === 'subscribe' ? (
-          <div className="mb-3">
-            <CFormLabel htmlFor="discount">Discount code (optional)</CFormLabel>
-            <CFormInput
-              id="discount"
-              {...register('discount_code')}
-              placeholder="If you have one"
-            />
+        <div className="mb-3">
+          <CFormLabel htmlFor="discount">
+            {billingChoice === 'trial' ? 'Trial code (optional)' : 'Discount code (optional)'}
+          </CFormLabel>
+          <CFormInput
+            id="discount"
+            {...register('discount_code')}
+            placeholder={billingChoice === 'trial' ? 'Sets the trial length' : 'If you have one'}
+          />
+          <div className="small text-body-secondary mt-1">
+            {billingChoice === 'trial'
+              ? 'Leave blank for the standard trial. A trial code sets a different number of days.'
+              : 'A price code reduces the subscription charge.'}
           </div>
-        ) : null}
+        </div>
 
         <div className="mb-3">
           <CFormLabel>Activities</CFormLabel>

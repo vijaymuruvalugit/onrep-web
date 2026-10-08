@@ -57,4 +57,23 @@ describe('CreateAcademyPage', () => {
     )
     expect(await screen.findByText(/check your email/i)).toBeInTheDocument()
   })
+
+  it('sends a trial code with a trial signup', async () => {
+    const user = userEvent.setup()
+    signupMock.mockResolvedValue({
+      data: { needs_email_verification: true, billing_choice: 'trial' },
+    })
+    renderWithProviders(<CreateAcademyPage />)
+    await fillOwnerFields(user, { phone: '9876543210' })
+    expect(screen.getByLabelText(/trial code/i)).toBeInTheDocument()
+    await user.type(screen.getByLabelText(/trial code/i), 'FIRST60')
+    await user.click(screen.getByRole('button', { name: /create academy/i }))
+    expect(signupMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        billing_choice: 'trial',
+        discount_code: 'FIRST60',
+        phone_number: '+919876543210',
+      }),
+    )
+  })
 })
