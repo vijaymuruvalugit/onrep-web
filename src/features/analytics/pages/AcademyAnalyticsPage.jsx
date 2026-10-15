@@ -51,6 +51,7 @@ const AcademyAnalyticsPage = () => {
   const mostActiveCoaches = ops?.coachingOperations?.mostActiveCoaches || []
   const mostUsedPresets = ops?.coachingStructure?.mostUsedPresets || []
   const overdueStudents = ops?.paymentsContinuity?.overdueStudents || []
+  const overdueExternal = ops?.paymentsContinuity?.overdueExternalCustomers || []
   const upcomingRenewals = ops?.paymentsContinuity?.upcomingRenewals || []
 
   return (
@@ -118,6 +119,7 @@ const AcademyAnalyticsPage = () => {
                 </p>
                 <p>Overdue amount: ₹{formatInr(ops.paymentsContinuity?.overdueAmountInr ?? 0)}</p>
                 <p className="mb-0">Overdue students: {overdueStudents.length}</p>
+                <p className="mb-0">Overdue external customers: {overdueExternal.length}</p>
               </CCardBody>
             </CCard>
           </CCol>

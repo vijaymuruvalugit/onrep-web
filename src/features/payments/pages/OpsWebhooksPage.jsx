@@ -85,7 +85,11 @@ function ResolveOrphanModal({ orphan, onClose, onResolved }) {
             <code>{orphan.razorpay_payment_id}</code>
           </dd>
           <dt className="col-sm-4">Amount</dt>
-          <dd className="col-sm-8">₹{(Number(orphan.paid_paise) / 100).toFixed(2)}</dd>
+          <dd className="col-sm-8">
+            Received {orphan.paid_paise ?? '—'} paise · Applied {orphan.applied_paise ?? 0} paise · Unresolved {orphan.unresolved_paise ?? orphan.paid_paise ?? 0} paise
+          </dd>
+          <dt className="col-sm-4">Reason</dt>
+          <dd className="col-sm-8">{orphan.reason || '—'}</dd>
           <dt className="col-sm-4">Academy</dt>
           <dd className="col-sm-8">{orphan.academy_id || '—'}</dd>
         </dl>
@@ -181,6 +185,8 @@ export default function OpsWebhooksPage() {
                   <CTableHeaderCell>Received</CTableHeaderCell>
                   <CTableHeaderCell>Payment ID</CTableHeaderCell>
                   <CTableHeaderCell>Amount</CTableHeaderCell>
+                  <CTableHeaderCell>Unresolved</CTableHeaderCell>
+                  <CTableHeaderCell>Reason</CTableHeaderCell>
                   <CTableHeaderCell>Academy</CTableHeaderCell>
                   <CTableHeaderCell>Action</CTableHeaderCell>
                 </CTableRow>
@@ -192,15 +198,34 @@ export default function OpsWebhooksPage() {
                     <CTableDataCell>
                       <code className="small">{o.razorpay_payment_id}</code>
                     </CTableDataCell>
-                    <CTableDataCell>₹{(Number(o.paid_paise) / 100).toFixed(2)}</CTableDataCell>
+                    <CTableDataCell>{o.paid_paise ?? '—'} paise</CTableDataCell>
+                    <CTableDataCell>{o.unresolved_paise ?? '—'} paise</CTableDataCell>
+                    <CTableDataCell>{o.reason || o.source || '—'}</CTableDataCell>
                     <CTableDataCell>{o.academy_id ? o.academy_id.slice(0, 8) : '—'}</CTableDataCell>
                     <CTableDataCell>
                       {o.resolved_at ? (
                         <CBadge color="success">{o.resolution_action || 'resolved'}</CBadge>
                       ) : (
-                        <CButton size="sm" color="primary" onClick={() => setResolving(o)}>
-                          Resolve
-                        </CButton>
+                        <div className="d-flex gap-1">
+                          <CButton
+                            size="sm"
+                            color="secondary"
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                await opsApi.reprocessOrphan(o.id)
+                                await reload()
+                              } catch (err) {
+                                setError(err?.message || 'Reprocess failed')
+                              }
+                            }}
+                          >
+                            Reprocess
+                          </CButton>
+                          <CButton size="sm" color="primary" onClick={() => setResolving(o)}>
+                            Resolve
+                          </CButton>
+                        </div>
                       )}
                     </CTableDataCell>
                   </CTableRow>

@@ -12,6 +12,10 @@ export const opsApi = {
     const { data } = await http.get('/ops/webhooks/orphans', { params })
     return data?.orphans || []
   },
+  async reprocessOrphan(id) {
+    const { data } = await http.post(`/ops/webhooks/orphans/${id}/reprocess`)
+    return data || {}
+  },
   async resolveOrphan(id, { action, obligationId = null, notes = null }) {
     const { data } = await http.post(`/ops/webhooks/orphans/${id}/resolve`, {
       action,

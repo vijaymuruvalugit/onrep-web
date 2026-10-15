@@ -18,6 +18,7 @@ import usePayments from '../../payments/hooks/usePayments'
 import { fetchParentSummary } from '../../payments/slices/paymentsSlice'
 import { formatInr } from '../../payments/utils/formatInr'
 import { formatDueLong } from '../../payments/utils/formatDueShort'
+import InvoicesPanel from '../../payments/components/InvoicesPanel'
 
 /**
  * Lightweight parent fees overview. Uses **only** `GET /payments/parent-summary`
@@ -124,6 +125,10 @@ const ParentFeesPage = () => {
           </CCard>
         </CCol>
       </CRow>
+
+      {(summaryStudents || []).map((student) => (
+        <InvoicesPanel key={student.studentId} readOnly studentId={student.studentId} />
+      ))}
 
       {parent.summaryLoading && !parent.summary ? (
         <div className="text-center py-4">

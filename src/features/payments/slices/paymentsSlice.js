@@ -6,6 +6,7 @@ import dashboardApi from '../api/dashboardApi'
 const initialState = {
   coachPayments: {
     obligations: [],
+    configurationIssues: [],
     obligationsLoading: false,
     obligationsError: null,
     feeUpi: '',
@@ -50,8 +51,12 @@ export const fetchObligations = createAsyncThunk(
   'payments/fetchObligations',
   async ({ studentId } = {}, { rejectWithValue }) => {
     try {
-      const obligations = await paymentsApi.getObligations({ studentId })
-      return { obligations, studentId: studentId || null }
+      const loaded = await paymentsApi.getObligations({ studentId })
+      return {
+        obligations: loaded.obligations || [],
+        configurationIssues: loaded.configurationIssues || [],
+        studentId: studentId || null,
+      }
     } catch (error) {
       return rejectWithValue(normalizeApiError(error))
     }
@@ -95,10 +100,16 @@ export const createObligation = createAsyncThunk(
 
 export const bulkMarkObligationsPaid = createAsyncThunk(
   'payments/bulkMarkPaid',
-  async (obligationIds, { rejectWithValue }) => {
+  async (arg, { rejectWithValue }) => {
     try {
-      const data = await paymentsApi.bulkMarkPaid(obligationIds)
-      return { obligationIds, updatedIds: data?.updatedIds || obligationIds }
+      const obligationIds = Array.isArray(arg) ? arg : arg.obligationIds
+      const data = await paymentsApi.bulkMarkPaid({
+        obligationIds,
+        method: arg.method,
+        reference: arg.reference,
+        clientMutationId: arg.clientMutationId,
+      })
+      return { obligationIds, updatedIds: data?.updatedIds || data?.result?.updatedIds || obligationIds }
     } catch (error) {
       return rejectWithValue(normalizeApiError(error))
     }
@@ -256,6 +267,7 @@ const paymentsSlice = createSlice({
       .addCase(fetchObligations.fulfilled, (state, action) => {
         state.coachPayments.obligationsLoading = false
         state.coachPayments.obligations = action.payload.obligations
+        state.coachPayments.configurationIssues = action.payload.configurationIssues || []
       })
       .addCase(fetchObligations.rejected, (state, action) => {
         state.coachPayments.obligationsLoading = false

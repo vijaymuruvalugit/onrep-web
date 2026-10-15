@@ -2,7 +2,8 @@ import { parseDate } from './formatDueShort'
 
 /** Maps backend `payment_status` to a Bootstrap color used by `CBadge`. */
 export function statusBadgeColor(status) {
-  if (status === 'PAID') return 'success'
+  if (status === 'PAID' || status === 'paid') return 'success'
+  if (status === 'WAIVED' || status === 'waived') return 'info'
   if (status === 'OVERDUE') return 'danger'
   if (status === 'PARTIAL' || status === 'PENDING') return 'warning'
   return 'secondary'

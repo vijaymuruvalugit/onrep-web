@@ -17,6 +17,7 @@ import { paymentsHubApi } from '../api/paymentsHubApi'
 import { useAuth } from '../../auth/hooks/useAuth'
 import { resolveUserRole } from '../../auth/utils/roleRedirect'
 import CoachPaymentsPage from './CoachPaymentsPage'
+import InvoicesPanel from '../components/InvoicesPanel'
 import { formatMoney } from '../utils/formatInr'
 
 const PaymentsHubPage = () => {
@@ -65,6 +66,7 @@ const PaymentsHubPage = () => {
     return (
       <>
         <AdminPaymentsOverview hub={hub} />
+        <InvoicesPanel />
         <CoachPaymentsPage onDataChanged={handleCoachDataChanged} />
       </>
     )
@@ -148,6 +150,7 @@ function CoachContinuityView({ hub }) {
       <p className="text-body-secondary small mb-3">
         Continuity signals only — use academy admin Payments for collections.
       </p>
+      <InvoicesPanel />
       <CCard className="shadow-sm">
         <CCardHeader className="fw-semibold">Students</CCardHeader>
         <CCardBody className="p-0">

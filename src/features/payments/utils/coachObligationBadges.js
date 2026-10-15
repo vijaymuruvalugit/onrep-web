@@ -3,14 +3,22 @@
  */
 
 export function coachObligationBadges(ob) {
-  const remaining = Math.max(
-    0,
-    (Number(ob.amount_due) || 0) - (Number(ob.amount_paid) || 0),
-  )
-  const paid = remaining <= 0 || String(ob.payment_status || '').toUpperCase() === 'PAID'
+  const state = String(ob.fee_state || ob.payment_status || '').toLowerCase()
+  const outstanding =
+    ob.outstanding_amount != null && ob.outstanding_amount !== ''
+      ? Number(ob.outstanding_amount)
+      : Math.max(0, (Number(ob.amount_due) || 0) - (Number(ob.amount_paid) || 0))
+  const cash = Number(ob.cash_collected ?? ob.amount_paid) || 0
   const pendingReport = ob.has_pending_parent_report === true
 
   const badges = []
+
+  if (state === 'waived') {
+    badges.push({ key: 'waived', color: 'info', text: 'Waived' })
+    return badges
+  }
+
+  const paid = state === 'paid' || (outstanding <= 0 && cash > 0)
 
   if (pendingReport) {
     badges.push({

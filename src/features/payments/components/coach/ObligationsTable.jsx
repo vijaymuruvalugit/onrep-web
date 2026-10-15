@@ -41,7 +41,16 @@ const ObligationsTable = ({
   refreshDisabled,
 }) => {
   const allSelectableIds = useMemo(
-    () => obligations.filter((ob) => ob.payment_status !== 'PAID').map((ob) => ob.id),
+    () =>
+      obligations
+        .filter((ob) => {
+          const remaining = ob.outstanding_amount || ob.remaining_amount
+          const state = ob.fee_state || ob.payment_status
+          if (state === 'paid' || state === 'waived' || state === 'PAID' || state === 'WAIVED') return false
+          if (remaining === '0.00' || remaining === '0') return false
+          return true
+        })
+        .map((ob) => ob.id),
     [obligations],
   )
   const allSelected =
@@ -136,11 +145,11 @@ const ObligationsTable = ({
               ) : null}
 
               {obligations.map((ob) => {
-                const remaining = Math.max(
-                  0,
-                  (Number(ob.amount_due) || 0) - (Number(ob.amount_paid) || 0),
-                )
-                const isPaid = ob.payment_status === 'PAID'
+                const remaining = ob.outstanding_amount || ob.remaining_amount || '0.00'
+                const collected = ob.cash_collected || ob.amount_paid || '0.00'
+                const waived = ob.waived_amount || '0.00'
+                const feeState = ob.fee_state || ob.payment_status
+                const isPaid = feeState === 'paid' || feeState === 'waived' || feeState === 'PAID' || feeState === 'WAIVED' || remaining === '0.00' || remaining === '0'
                 const checkboxId = `select-${ob.id}`
                 const remindBusy = !!remindBusyById?.[ob.id]
                 return (
@@ -160,13 +169,13 @@ const ObligationsTable = ({
                     <CTableDataCell>{ob.period_month || '—'}</CTableDataCell>
                     <CTableDataCell>{formatDueShort(ob.due_date)}</CTableDataCell>
                     <CTableDataCell className="text-end">
-                      <div className="fw-semibold">₹{formatInr(ob.amount_due)}</div>
+                      <div className="fw-semibold">₹{formatInr(ob.effective_amount_due || ob.amount_due)}</div>
                       <div className="text-body-secondary small">
-                        Paid ₹{formatInr(ob.amount_paid)} · Remaining ₹{formatInr(remaining)}
+                        Collected ₹{formatInr(collected)} · Waived ₹{formatInr(waived)} · Outstanding ₹{formatInr(remaining)}
                       </div>
                     </CTableDataCell>
                     <CTableDataCell>
-                      <StatusBadge status={ob.payment_status} dueDate={ob.due_date} />
+                      <StatusBadge status={feeState} dueDate={ob.due_date} />
                     </CTableDataCell>
                     <CTableDataCell>
                       <div className="d-flex flex-wrap gap-1 align-items-center">

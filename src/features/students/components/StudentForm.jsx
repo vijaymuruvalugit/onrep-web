@@ -165,6 +165,9 @@ const StudentForm = ({ title, subtitle, submitLabel, initialValues, saving, erro
                 <option value="pending">Pending</option>
                 <option value="inactive">Inactive</option>
               </CFormSelect>
+              <div className="small text-body-secondary mt-1">
+                Withdraw a student by setting Inactive. Deleting a student who has fees, collections, or event payments is blocked so that financial history stays on the academy.
+              </div>
             </CCol>
           </CRow>
 
@@ -186,7 +189,8 @@ const StudentForm = ({ title, subtitle, submitLabel, initialValues, saving, erro
               ) : (
                 <div className="small text-body-secondary mt-1">
                   Set to 0 to use the batch fee. Unpaid fees for the current month update
-                  immediately; already-paid months stay as billed.
+                  immediately; already-paid months stay as billed. A student in two batches of the
+                  same activity cannot use one override for both; that is reported as a configuration issue.
                 </div>
               )}
             </CCol>

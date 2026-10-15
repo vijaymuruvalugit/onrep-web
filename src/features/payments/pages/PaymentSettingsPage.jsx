@@ -13,6 +13,7 @@ import {
 import { paymentSettingsApi } from '../api/paymentSettingsApi'
 import paymentsApi from '../api/paymentsApi'
 import FeePayoutSetupCard from '../components/coach/FeePayoutSetupCard'
+import BillingModeCard from '../components/BillingModeCard'
 import { monthStr } from '../utils/formatDueShort'
 
 function defaultGenerateMonth() {
@@ -88,6 +89,7 @@ export default function PaymentSettingsPage() {
       {error ? <CAlert color="danger">{error}</CAlert> : null}
 
       <FeePayoutSetupCard />
+      <BillingModeCard />
 
       <CButton
         color="link"

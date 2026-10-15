@@ -17,6 +17,8 @@ import ObligationsTable from '../components/coach/ObligationsTable'
 import PendingReportsPanel from '../components/coach/PendingReportsPanel'
 import PayModal from '../components/PayModal'
 import BulkMarkPaidModal from '../components/BulkMarkPaidModal'
+import ConfigurationIssuesBanner from '../components/ConfigurationIssuesBanner'
+import { classifyCollectionResult } from '../utils/submissionOutcome'
 
 /**
  * Operational payments — fees are generated automatically from academy due-day
@@ -32,7 +34,11 @@ const CoachPaymentsPage = ({ onDataChanged } = {}) => {
 
   const [selectedIds, setSelectedIds] = useState([])
   const [payModal, setPayModal] = useState(null)
+  const [payError, setPayError] = useState('')
   const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkKey, setBulkKey] = useState(null)
+  const [bulkError, setBulkError] = useState('')
+  const [bulkOutcome, setBulkOutcome] = useState(null)
   const [toasts, setToasts] = useState([])
 
   const pushToast = useCallback((message, color = 'primary') => {
@@ -108,38 +114,64 @@ const CoachPaymentsPage = ({ onDataChanged } = {}) => {
   )
 
   const handleRecordPayment = useCallback((obligation) => {
+    setPayError('')
     setPayModal(obligation)
   }, [])
 
   const handleSubmitPayment = useCallback(
-    async ({ amount, method }) => {
-      if (!payModal) return
+    async ({ amount, method, reference, recordedAt, clientMutationId }) => {
+      if (!payModal) return null
+      setPayError('')
       const action = await dispatch(
-        recordObligationPayment({ obligationId: payModal.id, amount, method }),
+        recordObligationPayment({
+          obligationId: payModal.id,
+          amount,
+          method,
+          reference,
+          recordedAt,
+          clientMutationId,
+        }),
       )
       if (action?.error) {
-        pushToast(action.payload?.message || 'Unable to record payment.', 'danger')
-        return
+        const message = action.payload?.message || 'Unable to record payment.'
+        setPayError(message)
+        return action.payload || { message }
       }
       pushToast('Payment recorded.', 'success')
       setPayModal(null)
       await reload()
+      return null
     },
     [dispatch, payModal, pushToast, reload],
   )
 
-  const handleBulkConfirm = useCallback(async () => {
-    if (validSelectedIds.length === 0) return
-    const action = await dispatch(bulkMarkObligationsPaid([...validSelectedIds]))
-    if (action?.error) {
-      pushToast(action.payload?.message || 'Bulk mark paid failed.', 'danger')
-      return
-    }
-    pushToast(`Marked ${validSelectedIds.length} fee(s) as paid.`, 'success')
-    setBulkOpen(false)
-    setSelectedIds([])
-    await reload()
-  }, [dispatch, pushToast, reload, validSelectedIds])
+  const handleBulkConfirm = useCallback(
+    async ({ method, reference }) => {
+      if (validSelectedIds.length === 0) return
+      setBulkError('')
+      const action = await dispatch(
+        bulkMarkObligationsPaid({
+          obligationIds: [...validSelectedIds],
+          method,
+          reference,
+          clientMutationId: bulkKey,
+        }),
+      )
+      if (action?.error) {
+        const message = action.payload?.message || 'Bulk mark paid failed.'
+        setBulkError(message)
+        setBulkOutcome(classifyCollectionResult(action.payload || {}))
+        return
+      }
+      setBulkOutcome(null)
+      pushToast(`Marked ${validSelectedIds.length} fee(s) as paid.`, 'success')
+      setBulkOpen(false)
+      setBulkKey(null)
+      setSelectedIds([])
+      await reload()
+    },
+    [bulkKey, dispatch, pushToast, reload, validSelectedIds],
+  )
 
   const handleConfirmReport = useCallback(
     async (transactionId) => {
@@ -179,6 +211,8 @@ const CoachPaymentsPage = ({ onDataChanged } = {}) => {
         </CAlert>
       ) : null}
 
+      <ConfigurationIssuesBanner issues={coach.configurationIssues} onResolved={reload} />
+
       {coach.remindError ? (
         <CAlert color="danger" className="py-2">
           {coach.remindError.message || 'Reminder failed.'}
@@ -207,7 +241,11 @@ const CoachPaymentsPage = ({ onDataChanged } = {}) => {
         onClearSelection={handleClearSelection}
         onRecordPayment={handleRecordPayment}
         onRemind={handleRemind}
-        onBulkClick={() => setBulkOpen(true)}
+        onBulkClick={() => {
+          setBulkError('')
+          setBulkKey(globalThis.crypto?.randomUUID?.() || `bulk-${Date.now()}`)
+          setBulkOpen(true)
+        }}
         remindBusyById={coach.remindBusyById}
         bulkLoading={coach.bulkPaidLoading}
         onRefresh={reload}
@@ -218,6 +256,7 @@ const CoachPaymentsPage = ({ onDataChanged } = {}) => {
         visible={!!payModal}
         obligation={payModal}
         submitting={coach.recordPaymentLoading}
+        error={payError}
         onClose={() => setPayModal(null)}
         onSubmit={handleSubmitPayment}
       />
@@ -226,6 +265,12 @@ const CoachPaymentsPage = ({ onDataChanged } = {}) => {
         visible={bulkOpen}
         obligations={selectedObligations}
         submitting={coach.bulkPaidLoading}
+        error={bulkError}
+        outcome={bulkOutcome}
+        onStartNew={() => {
+          setBulkOutcome(null)
+          setBulkKey(globalThis.crypto?.randomUUID?.() || `bulk-${Date.now()}`)
+        }}
         onClose={() => setBulkOpen(false)}
         onConfirm={handleBulkConfirm}
       />
