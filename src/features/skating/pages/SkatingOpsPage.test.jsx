@@ -9,6 +9,14 @@ const SKATING_ACTIVITY_ID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 
 function skatingTestStore() {
   return createTestStore({
+    auth: {
+      isAuthenticated: true,
+      isRestored: true,
+      user: {
+        id: 'coach-test',
+        modules: { skating: true, music: false },
+      },
+    },
     workspace: {
       activeActivityId: SKATING_ACTIVITY_ID,
       activities: [
@@ -188,6 +196,8 @@ describe('SkatingOpsPage (operational command center)', () => {
           sessionMode: 'practice',
           title: 'Morning',
           sessionDate: '2026-05-18',
+          specialistModule: 'skating',
+          activityType: 'skating',
         },
       ],
     })
@@ -254,6 +264,8 @@ describe('SkatingOpsPage (operational command center)', () => {
           sessionMode: 'practice',
           title: 'Upcoming',
           sessionDate: '2026-05-18',
+          specialistModule: 'skating',
+          activityType: 'skating',
         },
       ],
     })
@@ -262,6 +274,8 @@ describe('SkatingOpsPage (operational command center)', () => {
       placeName: 'Upcoming Rink',
       sessionMode: 'practice',
       state: 'scheduled',
+      specialistModule: 'skating',
+      activityType: 'skating',
     })
 
     sessionBlocksApi.listBlocks.mockResolvedValue([
@@ -313,12 +327,16 @@ describe('SkatingOpsPage (operational command center)', () => {
           sessionMode: 'practice',
           title: 'Shell first',
           sessionDate: '2026-05-18',
+          specialistModule: 'skating',
+          activityType: 'skating',
         },
       ],
     })
     operationalSessionsApi.getSession.mockResolvedValue({
       id: '44444444-4444-4444-4444-444444444444',
       placeName: 'Test Rink',
+      specialistModule: 'skating',
+      activityType: 'skating',
     })
 
     let resolveBundle
@@ -418,12 +436,22 @@ describe('SkatingOpsPage (operational command center)', () => {
 
   it('Music Live sessions does not open floor ops from a session query', async () => {
     const MUSIC_ID = '1efd1ddd-ad57-4b13-83c6-e2f7072cf5ca'
+    const sessionId = 'c6035d49-b355-4349-b0f5-334e041dd21e'
     renderWithProviders(
       <Routes>
         <Route path="/coach/skating" element={<SkatingOpsPage />} />
+        <Route
+          path="/coach/ops/sessions/:sessionId"
+          element={<div data-testid="core-ops-redirect">core ops</div>}
+        />
       </Routes>,
       {
         store: createTestStore({
+          auth: {
+            isAuthenticated: true,
+            isRestored: true,
+            user: { id: 'music-coach', modules: { skating: false, music: false } },
+          },
           workspace: {
             activeActivityId: MUSIC_ID,
             activities: [
@@ -440,14 +468,14 @@ describe('SkatingOpsPage (operational command center)', () => {
             error: null,
           },
         }),
-        initialEntries: ['/coach/skating?session=c6035d49-b355-4349-b0f5-334e041dd21e'],
+        initialEntries: [`/coach/skating?session=${sessionId}`],
       },
     )
 
+    // Tools off + session query → leave skating live floor for Core ops deep-link.
     await waitFor(() => {
-      expect(screen.getByTestId('skating-ops-day-board')).toBeInTheDocument()
+      expect(screen.getByTestId('core-ops-redirect')).toBeInTheDocument()
     })
-    expect(screen.getByText(/Music lessons are run from Home/i)).toBeInTheDocument()
     expect(screen.queryByTestId('coach-live-session-view')).not.toBeInTheDocument()
     expect(screen.queryByTestId('active-session-workspace-shell')).not.toBeInTheDocument()
     const { skatingOpsApi } = await import('../api/skatingOpsApi')

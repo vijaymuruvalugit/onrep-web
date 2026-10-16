@@ -214,6 +214,22 @@ const SchedulePage = () => {
     }
   }, [batches, effectiveBatchId, searchParams, setSearchParams])
 
+  // Core ops deep-link: `/coach/schedule?openSession=<id>` opens the session drawer.
+  useEffect(() => {
+    const openId = searchParams.get('openSession')
+    if (!openId || !isValidUuid(openId)) return
+    setDrawerSessionId(openId)
+    setDrawerSeedRow(null)
+    setSearchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev)
+        n.delete('openSession')
+        return n
+      },
+      { replace: true },
+    )
+  }, [searchParams, setSearchParams])
+
   useEffect(() => {
     if (!effectiveBatchId) return
     fetchSchedule(effectiveBatchId)
@@ -391,6 +407,7 @@ const SchedulePage = () => {
     (row) => {
       const sid = row.sessionId || row.id
       if (!sid) return
+      // Resolve via session-effective redirect (modules ∩ stamp).
       navigate(`/coach/ops/sessions/${encodeURIComponent(sid)}`)
     },
     [navigate],
@@ -400,10 +417,7 @@ const SchedulePage = () => {
     (row) => {
       const sid = row.sessionId || row.id
       if (!sid) return
-      if (canMarkSessionAttendance(row)) {
-        navigate(`/coach/skating?session=${encodeURIComponent(sid)}`)
-        return
-      }
+      // Same deep link — redirect chooses Core schedule vs Skating live floor.
       navigate(`/coach/ops/sessions/${encodeURIComponent(sid)}`)
     },
     [navigate],
@@ -441,7 +455,7 @@ const SchedulePage = () => {
   }, [patternDrawerSeed, nextSessionByPatternId])
 
   const handleSavePattern = useCallback(
-    async ({ payload, editMode, effectiveFrom, occurrenceCutoverDate }) => {
+    async ({ payload, editMode, effectiveFrom, occurrenceCutoverDate, notifyParents = true, clientMutationId }) => {
       if (!effectiveBatchId || !patternDrawerSeed?.id) return
       try {
         const response = await updatePattern({
@@ -454,6 +468,8 @@ const SchedulePage = () => {
               ? occurrenceCutoverDate || undefined
               : undefined,
           changes: payload,
+          notifyParents,
+          clientMutationId,
         }).unwrap()
         const deleted = response?.deletedFutureSessions ?? 0
         const kept = response?.keptFutureSessions ?? 0
@@ -593,12 +609,12 @@ const SchedulePage = () => {
   )
 
   const handleAdjustNextSave = useCallback(
-    async ({ sessionId, startTime, endTime }) => {
+    async ({ sessionId, startTime, endTime, notifyParents = true, clientMutationId }) => {
       if (!sessionId) return
       setAdjustNextBusy(true)
       setAdjustNextError(null)
       try {
-        await batchesApi.patchSession(sessionId, { startTime, endTime })
+        await batchesApi.patchSession(sessionId, { startTime, endTime, notifyParents, clientMutationId })
         setAdjustNextOpen(false)
         setAdjustNextSession(null)
         setPageNotice({ type: 'success', text: 'Session time updated.' })

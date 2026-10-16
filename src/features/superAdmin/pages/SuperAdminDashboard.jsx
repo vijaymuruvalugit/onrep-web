@@ -50,7 +50,7 @@ export default function SuperAdminDashboard() {
       detail: 'Check system health',
     },
     h.notification_failures > 0 && {
-      label: `${h.notification_failures} notification failures`,
+      label: `${h.notification_failures} push attempts not fully accepted (24h)`,
     },
     h.api_errors > 0 && { label: `${h.api_errors} open payment webhook orphans` },
   ].filter(Boolean)

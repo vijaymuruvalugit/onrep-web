@@ -644,7 +644,11 @@ export default function InvoicesPanel({ readOnly = false, studentId = null }) {
                 <div className="mt-2">
                   {(inv.lines || []).map((line) => (
                     <div key={line.id} className="small">
-                      {line.description} · {line.category} · qty {line.quantity} · due {formatDueShort(line.dueDate)} · {money(line.amount)} · remaining {money(line.outstandingAmount)}
+                      {line.description} · {line.category} · qty {line.quantity} · due {formatDueShort(line.dueDate)}
+                      {line.servicePeriodStart && line.servicePeriodEnd
+                        ? ` · ${formatDueShort(line.servicePeriodStart)}–${formatDueShort(line.servicePeriodEnd)}`
+                        : ''}
+                      {' '}· {money(line.amount)} · remaining {money(line.outstandingAmount)}
                     </div>
                   ))}
                   {inv.status === 'issued' ? (

@@ -88,6 +88,9 @@ const OnboardingCompletePage = React.lazy(
 const ManageActivitiesPage = React.lazy(
   () => import('../features/activities/pages/ManageActivitiesPage'),
 )
+const SpecialistHistoryPage = React.lazy(
+  () => import('../features/history/pages/SpecialistHistoryPage'),
+)
 const SkatingOpsPage = React.lazy(() => import('../features/skating/pages/SkatingOpsPage'))
 const SkatingIntelligenceSettingsPage = React.lazy(
   () => import('../features/skating/pages/SkatingIntelligenceSettingsPage'),
@@ -138,6 +141,7 @@ export const DASHBOARD_PAGE_REGISTRATION = Object.freeze([
   { path: '/coach/insights', component: CoachAnalyticsPage },
   { path: '/coach/academy/insights', component: AcademyAnalyticsPage },
   { path: '/coach/skating', component: SkatingOpsPage },
+  { path: '/coach/history', component: SpecialistHistoryPage },
   { path: '/coach/skating/intelligence', component: SkatingIntelligenceSettingsPage },
   { path: '/coach/ops/sessions/:sessionId', component: CoachOpsSessionRedirectPage },
   { path: '/coach/batches', component: BatchesListPage },

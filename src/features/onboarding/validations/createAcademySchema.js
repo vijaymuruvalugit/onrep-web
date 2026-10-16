@@ -1,5 +1,4 @@
 import * as yup from 'yup'
-import { ACTIVITY_TYPES } from '@onrep/contracts'
 import { isValidIndiaLocal } from '../../../utils/indiaPhone'
 
 export const createAcademySchema = yup.object({
@@ -16,8 +15,4 @@ export const createAcademySchema = yup.object({
     .oneOf(['trial', 'subscribe'], 'Choose trial or subscribe')
     .required(),
   discount_code: yup.string().trim().max(64),
-  activities: yup
-    .array()
-    .of(yup.string().oneOf([...ACTIVITY_TYPES]))
-    .min(1, 'Select at least one activity'),
 })

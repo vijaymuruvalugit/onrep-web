@@ -6,6 +6,7 @@ import {
   CButton,
   CCollapse,
   CFormLabel,
+  CFormCheck,
   CFormInput,
   CFormTextarea,
   COffcanvas,
@@ -104,6 +105,7 @@ export default function SessionDetailDrawer({
   )
   const [cancelReasonDraft, setCancelReasonDraft] = useState('')
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [notifyParents, setNotifyParents] = useState(true)
   const [timingOpen, setTimingOpen] = useState(false)
   const [actualStartLocal, setActualStartLocal] = useState(
     toDatetimeLocalValue(seedNormalized?.actualStartTime),
@@ -280,6 +282,8 @@ export default function SessionDetailDrawer({
     await patchOperational({
       isCancelled: true,
       cancelReason: cancelReasonDraft.trim() || null,
+      notifyParents,
+      clientMutationId: crypto.randomUUID(),
     })
     setShowCancelConfirm(false)
     setCancelReasonDraft('')
@@ -348,8 +352,9 @@ export default function SessionDetailDrawer({
     [row?.actualStartTime, row?.actualEndTime],
   )
 
+  // Resolve via session-effective redirect (modules ∩ stamp), not activity type.
   const liveSessionHref = sessionId
-    ? `/coach/skating?session=${encodeURIComponent(sessionId)}`
+    ? `/coach/ops/sessions/${encodeURIComponent(sessionId)}`
     : null
 
   const sessionStarted = Boolean(row?.actualStartTime ?? row?.actual_start_time)
@@ -481,6 +486,12 @@ export default function SessionDetailDrawer({
                         onChange={(e) => setCancelReasonDraft(e.target.value)}
                         placeholder="e.g. Rink maintenance"
                         className="mb-2"
+                      />
+                      <CFormCheck
+                        className="mb-2"
+                        label="Notify parents"
+                        checked={notifyParents}
+                        onChange={(e) => setNotifyParents(e.target.checked)}
                       />
                       <div className="d-flex flex-wrap gap-2">
                         <CButton

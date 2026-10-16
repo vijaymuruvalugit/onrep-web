@@ -585,13 +585,10 @@ const BatchWorkspacePage = () => {
     (row) => {
       const sessionId = String(row?.sessionId || row?.id || '').trim()
       if (!sessionId) return
-      if (canMarkSessionAttendance(row)) {
-        navigate(`/coach/skating?session=${encodeURIComponent(sessionId)}`)
-        return
-      }
+      // Session-effective redirect chooses Core schedule vs Skating live floor.
       openSessionPage(sessionId)
     },
-    [navigate, openSessionPage],
+    [openSessionPage],
   )
 
   /** Lightweight same-day status — not a dashboard; bridges the gap after a session ends. */

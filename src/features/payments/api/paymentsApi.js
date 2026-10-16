@@ -179,6 +179,28 @@ export const paymentsApi = {
     return data
   },
 
+  async getBillingBasis() {
+    const { data } = await http.get('/payments/billing-basis')
+    return data
+  },
+
+  async previewBillingBasis(body) {
+    const { data } = await http.post('/payments/billing-basis/preview', body)
+    return data?.preview
+  },
+
+  async setBillingBasis(body) {
+    const { data } = await http.post('/payments/billing-basis', body)
+    return data
+  },
+
+  async getEnrolmentBilling({ studentId, batchId, asOfYmd } = {}) {
+    const { data } = await http.get('/payments/enrolment-billing', {
+      params: { studentId, batchId, asOfYmd: asOfYmd || undefined },
+    })
+    return data?.enrolment
+  },
+
   async searchInvoiceRecipients(params) {
     const { data } = await http.get('/payments/invoice-recipients', { params })
     return data

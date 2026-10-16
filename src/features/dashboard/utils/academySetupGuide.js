@@ -17,15 +17,16 @@ export const ACADEMY_SETUP_CORE_STEPS = Object.freeze([
   },
   {
     id: 'enable_activity',
-    title: 'Enable your activity',
-    haveReady: 'Have ready: the activity your academy will operate (OnRep is skating-first).',
-    ctaLabel: 'Enable activity',
+    title: 'Name your activity workspace',
+    haveReady:
+      'Have ready: a short name for your first class programme (for example Calisthenics). You can add more workspaces later; specialist tools stay optional.',
+    ctaLabel: 'Open activities',
     to: '/coach/activities',
     required: true,
   },
   {
     id: 'create_places',
-    title: 'Add training venues',
+    title: 'Add venues',
     haveReady: 'Have ready: venue name and address or location. Batches and schedules use these later.',
     ctaLabel: 'Add a venue',
     to: '/coach/places',

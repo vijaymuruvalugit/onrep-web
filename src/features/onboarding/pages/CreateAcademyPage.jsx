@@ -6,7 +6,6 @@ import {
   CAlert,
   CButton,
   CForm,
-  CFormCheck,
   CFormInput,
   CFormLabel,
   CFormSelect,
@@ -21,11 +20,8 @@ import { authApi } from '../../auth/api/authApi'
 import AuthShell from '../../auth/components/AuthShell'
 import normalizeApiError from '../../../api/normalizeApiError'
 import { createAcademySchema } from '../validations/createAcademySchema'
-import { ACTIVITY_UI_OPTIONS, getDefaultSignupActivityType } from '@onrep/contracts'
 import IndiaPhoneField from '../../../components/IndiaPhoneField'
 import { toE164India } from '../../../utils/indiaPhone'
-
-const SIGNUP_ACTIVITY_OPTIONS = ACTIVITY_UI_OPTIONS.filter((o) => o.implemented)
 
 /**
  * Canonical academy creation — POST /auth/signup. Owner phone is required so
@@ -50,7 +46,6 @@ const CreateAcademyPage = () => {
       password: '',
       billing_choice: 'trial',
       discount_code: '',
-      activities: [getDefaultSignupActivityType()],
     },
   })
 
@@ -71,7 +66,6 @@ const CreateAcademyPage = () => {
         academyName: values.academyName.trim(),
         phone_number: phoneE164,
         billing_choice: values.billing_choice,
-        activities: values.activities || [],
       }
       if (values.discount_code?.trim()) {
         body.discount_code = values.discount_code.trim()
@@ -238,39 +232,9 @@ const CreateAcademyPage = () => {
           </div>
         </div>
 
-        <div className="mb-3">
-          <CFormLabel>Activities</CFormLabel>
-          <Controller
-            name="activities"
-            control={control}
-            render={({ field }) => (
-              <div className="d-flex flex-column gap-2">
-                {SIGNUP_ACTIVITY_OPTIONS.map((opt) => (
-                  <CFormCheck
-                    key={opt.type}
-                    id={`act-${opt.type}`}
-                    label={`${opt.icon ? `${opt.icon} ` : ''}${opt.label}`}
-                    checked={Boolean(field.value?.includes(opt.type))}
-                    onChange={(e) => {
-                      const next = new Set(field.value || [])
-                      if (e.target.checked) next.add(opt.type)
-                      else next.delete(opt.type)
-                      if (next.size === 0) next.add(getDefaultSignupActivityType())
-                      field.onChange([...next])
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          />
-          {errors.activities ? (
-            <div className="small text-danger mt-1">{errors.activities.message}</div>
-          ) : (
-            <div className="small text-body-secondary mt-1">
-              Platform-defined activities only — pick what you run today (more types ship over
-              time).
-            </div>
-          )}
+        <div className="mb-3 small text-body-secondary">
+          You start with one neutral Activity workspace. Rename it, add venues and classes, then
+          enable Skating or Music tools later when you need them.
         </div>
 
         <CButton color="primary" className="w-100 mb-2" type="submit" disabled={isSubmitting}>

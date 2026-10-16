@@ -18,6 +18,22 @@ import PendingReportsPanel from '../components/coach/PendingReportsPanel'
 import PayModal from '../components/PayModal'
 import BulkMarkPaidModal from '../components/BulkMarkPaidModal'
 import ConfigurationIssuesBanner from '../components/ConfigurationIssuesBanner'
+
+function reminderOutcomeMessage(data) {
+  const outcome = data?.outcome
+  if (outcome === 'skipped' && data?.reason === 'no_guardian') return 'No parent linked to this student.'
+  if (outcome === 'skipped') return 'Reminder skipped. This fee is no longer outstanding.'
+  if (outcome === 'no_device') return 'Saved in the inbox. No parent device is registered for push.'
+  if (outcome === 'accepted') return 'Accepted by the push provider. Delivery is not confirmed.'
+  if (outcome === 'partial') return 'Accepted on some devices. Other devices were not accepted.'
+  if (outcome === 'failed') {
+    return data?.inbox?.stored ? 'Saved in the inbox. Push was not accepted.' : 'Push was not accepted.'
+  }
+  if (outcome === 'uncertain') return 'Push acceptance is unknown. This was not confirmed as a failure.'
+  if (outcome === 'throttled') return 'A reminder was already accepted recently.'
+  if (outcome === 'in_progress') return 'A reminder is already being sent.'
+  return 'Reminder not sent.'
+}
 import { classifyCollectionResult } from '../utils/submissionOutcome'
 
 /**
@@ -98,17 +114,13 @@ const CoachPaymentsPage = ({ onDataChanged } = {}) => {
         return
       }
       const data = action.payload || {}
-      if (data.sent > 0) {
-        pushToast(`Reminder sent to ${data.sent} parent(s).`, 'success')
-      } else if (data.reason === 'no_parent') {
-        pushToast('No parent linked to this student.', 'warning')
-      } else if (data.reason === 'no_tokens') {
-        pushToast('Parent has no device registered for notifications.', 'warning')
-      } else if (data.reason === 'throttled') {
-        pushToast('Reminder already sent recently.', 'warning')
-      } else {
-        pushToast('Reminder not sent.', 'secondary')
-      }
+      const text = reminderOutcomeMessage(data)
+      const tone = data.outcome === 'accepted' || data.outcome === 'partial' || data.outcome === 'no_device'
+        ? 'success'
+        : data.outcome === 'failed'
+          ? 'danger'
+          : 'warning'
+      pushToast(text, data.outcome === 'skipped' || data.outcome === 'throttled' || data.outcome === 'in_progress' || data.outcome === 'uncertain' ? 'warning' : tone)
     },
     [dispatch, pushToast],
   )

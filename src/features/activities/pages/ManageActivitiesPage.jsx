@@ -18,6 +18,7 @@ import {
   createActivity,
   deactivateActivity,
   listActivities,
+  renameActivity,
 } from '../../workspace/api/activitiesApi'
 import { bootstrapWorkspace } from '../../workspace/slices/workspaceSlice'
 import { getWorkspaceDisplay } from '../../../core/activityWorkspace/activityDisplay'
@@ -147,7 +148,13 @@ export default function ManageActivitiesPage() {
   )
 
   const availableOptions = useMemo(
-    () => ACTIVITY_UI_OPTIONS.filter((o) => o.implemented && !enabledTypes.has(o.type)),
+    () =>
+      ACTIVITY_UI_OPTIONS.filter((o) => {
+        if (!o.implemented) return false
+        // Multiple Core workspaces allowed; specialty types remain one-per-academy.
+        if (o.type === 'core') return true
+        return !enabledTypes.has(o.type)
+      }),
     [enabledTypes]
   )
 
@@ -174,13 +181,32 @@ export default function ManageActivitiesPage() {
   const onAdd = async (type) => {
     setAddingType(type)
     try {
-      await createActivity({ type })
+      const body = type === 'core' ? { type: 'core', name: 'Activity' } : { type }
+      await createActivity(body)
       await load()
       dispatch(bootstrapWorkspace())
     } catch (e) {
       window.alert(e?.message || 'Could not add activity.')
     } finally {
       setAddingType(null)
+    }
+  }
+
+  const onRename = async (a) => {
+    const { label } = getWorkspaceDisplay(a)
+    const next = window.prompt('Rename workspace', label)
+    if (next == null) return
+    const trimmed = String(next).trim()
+    if (!trimmed || trimmed === label) return
+    setBusyId(a.id)
+    try {
+      await renameActivity(a.id, trimmed)
+      await load()
+      dispatch(bootstrapWorkspace())
+    } catch (e) {
+      window.alert(e?.message || 'Could not rename.')
+    } finally {
+      setBusyId(null)
     }
   }
 
@@ -221,7 +247,7 @@ export default function ManageActivitiesPage() {
           <CCardHeader>
             <strong>Academy activities</strong>
             <div className="small text-body-secondary">
-              Platform-defined verticals — skating-first today. Enable what your academy runs; each activity is a
+              Workspaces are labels for your programmes. Core starts neutral; enable Skating or Music tools when ready. Each activity is a
               separate workspace for schedules, places, and coaching data.
             </div>
           </CCardHeader>
@@ -254,20 +280,31 @@ export default function ManageActivitiesPage() {
                             </span>
                           </div>
                           {isOwner ? (
-                            <CButton
-                              color="secondary"
-                              size="sm"
-                              variant="outline"
-                              disabled={busyId === a.id || items.length <= 1}
-                              title={
-                                items.length <= 1
-                                  ? 'Add another activity before you can remove this one.'
-                                  : undefined
-                              }
-                              onClick={() => onDeactivate(a.id, label, a.type)}
-                            >
-                              Remove
-                            </CButton>
+                            <div className="d-flex gap-2">
+                              <CButton
+                                color="secondary"
+                                size="sm"
+                                variant="outline"
+                                disabled={busyId === a.id}
+                                onClick={() => onRename(a)}
+                              >
+                                Rename
+                              </CButton>
+                              <CButton
+                                color="secondary"
+                                size="sm"
+                                variant="outline"
+                                disabled={busyId === a.id || items.length <= 1}
+                                title={
+                                  items.length <= 1
+                                    ? 'Add another activity before you can remove this one.'
+                                    : undefined
+                                }
+                                onClick={() => onDeactivate(a.id, label, a.type)}
+                              >
+                                Remove
+                              </CButton>
+                            </div>
                           ) : null}
                         </div>
                         {canEditSharing ? (

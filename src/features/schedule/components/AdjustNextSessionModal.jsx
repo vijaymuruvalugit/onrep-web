@@ -3,6 +3,7 @@ import {
   CAlert,
   CButton,
   CCol,
+  CFormCheck,
   CFormInput,
   CFormLabel,
   CModal,
@@ -29,6 +30,7 @@ export default function AdjustNextSessionModal({
 }) {
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
+  const [notifyParents, setNotifyParents] = useState(true)
   const [localError, setLocalError] = useState(null)
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function AdjustNextSessionModal({
       return
     }
     setLocalError(null)
-    await onSave({ sessionId: session?.id, startTime, endTime })
+    await onSave({ sessionId: session?.id, startTime, endTime, notifyParents, clientMutationId: crypto.randomUUID() })
   }
 
   return (
@@ -87,6 +89,12 @@ export default function AdjustNextSessionModal({
             <CFormInput type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
           </CCol>
         </CRow>
+        <CFormCheck
+          className="mt-3"
+          label="Notify parents"
+          checked={notifyParents}
+          onChange={(e) => setNotifyParents(e.target.checked)}
+        />
       </CModalBody>
       <CModalFooter>
         <CButton color="secondary" variant="outline" onClick={onClose} disabled={busy}>

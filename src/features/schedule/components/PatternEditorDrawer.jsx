@@ -169,6 +169,7 @@ export default function PatternEditorDrawer({
   const [name, setName] = useState(seed.name)
   const [days, setDays] = useState(() => apiDaysToUiLabels(seed.daysOfWeek))
   const [startTime, setStartTime] = useState(seed.startTime)
+  const [notifyParents, setNotifyParents] = useState(true)
   const [endTime, setEndTime] = useState(seed.endTime || '')
   const [placeId, setPlaceId] = useState(seed.placeId || '')
   const [coachId, setCoachId] = useState(seed.coachId || '')
@@ -286,6 +287,8 @@ export default function PatternEditorDrawer({
     await onSubmit({
       payload: basePayload,
       editMode,
+      notifyParents,
+      clientMutationId: crypto.randomUUID(),
       effectiveFrom: isEdit
         ? editMode === RECURRING_PATTERN_EDIT_MODE.NEW_FROM
           ? effectiveFromDate
@@ -514,6 +517,12 @@ export default function PatternEditorDrawer({
         ) : null}
 
         <div className="mt-auto d-grid gap-2 pt-3 border-top border-light-subtle">
+          <CFormCheck
+            className="mb-3"
+            label="Notify parents"
+            checked={notifyParents}
+            onChange={(e) => setNotifyParents(e.target.checked)}
+          />
           <CButton color="primary" disabled={saving} onClick={handleSubmit}>
             {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add recurring session'}
           </CButton>

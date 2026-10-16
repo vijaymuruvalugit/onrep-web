@@ -22,6 +22,7 @@ import { getStudentActivity, getStudentBatch, getStudentDisplayName } from '../u
 import { sanitizeStudentNotesForDisplay } from '../../batches/utils/batchDisplayUtils'
 import { formatDisplayDateDmy } from '../../dashboard/utils/calendarDate'
 import studentsApi from '../api/studentsApi'
+import EnrolmentBillingCard from '../../payments/components/EnrolmentBillingCard'
 
 const initialsFromName = (name) =>
   String(name || '')
@@ -165,6 +166,14 @@ const StudentDetailPage = () => {
         <CCol lg={6}>
           <StudentParentsCard studentId={studentId} studentName={name} />
           <StudentLoginCard studentId={studentId} studentName={name} />
+          <EnrolmentBillingCard
+            studentId={studentId}
+            batchIds={Array.isArray(selectedStudent.batch_ids)
+              ? selectedStudent.batch_ids.map(String)
+              : Array.isArray(selectedStudent.batchIds)
+                ? selectedStudent.batchIds.map(String)
+                : []}
+          />
         </CCol>
         <CCol lg={6}>
           <CCard>

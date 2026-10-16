@@ -34,7 +34,7 @@ export default function SuperAdminSystemHealthPage() {
       {error ? <CAlert color="danger">{error}</CAlert> : null}
       {loading ? (
         <CSpinner size="sm" />
-      ) : (
+      ) : error ? null : (
         <CRow className="g-3">
           <CCol sm={6} md={4}>
             <Signal label="Failed jobs (webhooks)" value={health?.failed_jobs} warn={health?.failed_jobs > 0} />
@@ -50,7 +50,11 @@ export default function SuperAdminSystemHealthPage() {
             <Signal label="Import failures" value={health?.import_failures} warn={health?.import_failures > 0} />
           </CCol>
           <CCol sm={6} md={4}>
-            <Signal label="Notification failures" value={health?.notification_failures} warn={health?.notification_failures > 0} />
+            <Signal
+              label="Push attempts not fully accepted (24h)"
+              value={health?.notification_failures == null ? 'unavailable' : health.notification_failures}
+              warn={health?.notification_failures > 0}
+            />
           </CCol>
           <CCol sm={6} md={4}>
             <Signal label="Open payment orphans" value={health?.api_errors} warn={health?.api_errors > 0} />

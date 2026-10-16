@@ -17,3 +17,11 @@ export async function deactivateActivity(activityId) {
   })
   return data?.activity || null
 }
+
+/** Rename in place — updates name only; type and id unchanged. */
+export async function renameActivity(activityId, name) {
+  const { data } = await http.patch(`/activities/${encodeURIComponent(activityId)}`, {
+    name: String(name || '').trim(),
+  })
+  return data?.activity || null
+}

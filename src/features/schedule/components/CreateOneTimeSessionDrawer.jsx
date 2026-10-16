@@ -112,6 +112,7 @@ export default function CreateOneTimeSessionDrawer({
   const [title, setTitle] = useState('')
   const [sessionDate, setSessionDate] = useState(() => todayIsoLocal())
   const [startTime, setStartTime] = useState('18:00')
+  const [notifyParents, setNotifyParents] = useState(true)
   const [endTime, setEndTime] = useState('19:30')
   const [coachId, setCoachId] = useState('')
   const [additionalCoachIds, setAdditionalCoachIds] = useState([])
@@ -317,6 +318,8 @@ export default function CreateOneTimeSessionDrawer({
         sessionPresetId: presetPayload?.sessionPresetId || DEFAULT_SESSION_PRESET_ID,
         phaseOverrides: presetPayload?.phaseOverrides || [],
         presetVersion: presetPayload?.presetVersion,
+        notifyParents,
+        clientMutationId: crypto.randomUUID(),
       })
       onCreated?.()
       onClose?.()
@@ -579,11 +582,11 @@ export default function CreateOneTimeSessionDrawer({
             onChange={(e) => setVisibilityEnabled(e.target.checked)}
           />
           <CFormCheck
-            id="one-att"
+            id="one-notify"
             className="mt-2"
-            label="Allow attendance tracking"
-            checked={attendanceEnabled}
-            onChange={(e) => setAttendanceEnabled(e.target.checked)}
+            label="Notify parents"
+            checked={notifyParents}
+            onChange={(e) => setNotifyParents(e.target.checked)}
           />
         </section>
 

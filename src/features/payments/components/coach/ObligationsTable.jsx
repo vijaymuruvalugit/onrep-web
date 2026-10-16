@@ -166,7 +166,11 @@ const ObligationsTable = ({
                     <CTableDataCell>
                       <div className="fw-semibold">{ob.student_name || ob.student_id}</div>
                     </CTableDataCell>
-                    <CTableDataCell>{ob.period_month || '—'}</CTableDataCell>
+                    <CTableDataCell>
+                      {ob.servicePeriodStart && ob.servicePeriodEnd
+                        ? `${formatDueShort(ob.servicePeriodStart)}–${formatDueShort(ob.servicePeriodEnd)}`
+                        : ob.description || ob.period_month || '—'}
+                    </CTableDataCell>
                     <CTableDataCell>{formatDueShort(ob.due_date)}</CTableDataCell>
                     <CTableDataCell className="text-end">
                       <div className="fw-semibold">₹{formatInr(ob.effective_amount_due || ob.amount_due)}</div>

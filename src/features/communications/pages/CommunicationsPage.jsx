@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   CAlert,
   CBadge,
@@ -28,6 +28,16 @@ import {
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
 import { cilPaperPlane, cilEnvelopeOpen, cilEnvelopeLetter, cilCloudUpload } from '@coreui/icons'
+
+function deliveryNote(result) {
+  const push = result?.push
+  if (!push) return 'Saved in the inbox.'
+  if (push.outcome === 'accepted') return 'Saved in the inbox. Accepted by the push provider. Delivery is not confirmed.'
+  if (push.outcome === 'partial') return 'Saved in the inbox. Accepted on some devices.'
+  if (push.outcome === 'no_device') return 'Saved in the inbox. No registered device for push.'
+  if (push.outcome === 'failed') return 'Saved in the inbox. Push was not accepted.'
+  return 'Saved in the inbox.'
+}
 import { communicationsApi } from '../api/communicationsApi'
 import { useAuth } from '../../auth/hooks/useAuth'
 
@@ -67,16 +77,28 @@ function formatDate(iso) {
 function InboxTab() {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
   const [selected, setSelected] = useState(null)
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true)
     communicationsApi.getInbox({ limit: 50 })
-      .then(setMessages)
-      .catch(() => {})
+      .then((rows) => { setMessages(rows); setLoadError(null) })
+      .catch((err) => setLoadError(err?.message || 'Could not load the inbox.'))
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => { load() }, [load])
+
   if (loading) return <div className="text-center p-4"><CSpinner /></div>
+  if (loadError) {
+    return (
+      <div className="text-center mt-4">
+        <p className="text-danger">{loadError}</p>
+        <CButton color="link" onClick={load}>Try again</CButton>
+      </div>
+    )
+  }
 
   if (selected) {
     return (
@@ -276,7 +298,7 @@ function ComposeTab({ onSent }) {
     if (!body.trim()) { setError('Message body is required.'); return }
     setSending(true)
     try {
-      await communicationsApi.sendMessage({
+      const result = await communicationsApi.sendMessage({
         messageType,
         title: title.trim(),
         body: body.trim(),
@@ -286,7 +308,7 @@ function ComposeTab({ onSent }) {
         scheduledFor: scheduledFor || undefined,
         attachments: attachments.map((a) => ({ fileUrl: a.key, fileName: a.fileName, mimeType: a.mimeType })),
       })
-      onSent?.()
+      onSent?.(result)
       setTitle(''); setBody(''); setAttachments([]); setScheduledFor('')
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || 'Failed to send')
@@ -418,7 +440,7 @@ function ComposeTab({ onSent }) {
 
 export default function CommunicationsPage() {
   const [activeTab, setActiveTab] = useState('inbox')
-  const [sentAt, setSentAt] = useState(null)
+  const [sentNote, setSentNote] = useState(null)
 
   return (
     <CRow>
@@ -428,9 +450,9 @@ export default function CommunicationsPage() {
             <h5 className="mb-0 fw-bold">Communications</h5>
           </CCardHeader>
           <CCardBody>
-            {sentAt && (
-              <CAlert color="success" dismissible onClose={() => setSentAt(null)} className="mb-3">
-                Message sent successfully.
+            {sentNote && (
+              <CAlert color="success" dismissible onClose={() => setSentNote(null)} className="mb-3">
+                {sentNote}
               </CAlert>
             )}
             <CNav variant="tabs" className="mb-4">
@@ -454,7 +476,7 @@ export default function CommunicationsPage() {
             {activeTab === 'inbox'   && <InboxTab />}
             {activeTab === 'sent'    && <SentTab />}
             {activeTab === 'compose' && (
-              <ComposeTab onSent={() => { setSentAt(Date.now()); setActiveTab('sent') }} />
+              <ComposeTab onSent={(result) => { setSentNote(deliveryNote(result)); setActiveTab('sent') }} />
             )}
           </CCardBody>
         </CCard>

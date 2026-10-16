@@ -6,6 +6,7 @@ import {
   CCardBody,
   CCardHeader,
   CForm,
+  CFormCheck,
   CFormInput,
   CFormLabel,
   CSpinner,
@@ -14,6 +15,7 @@ import { paymentSettingsApi } from '../api/paymentSettingsApi'
 import paymentsApi from '../api/paymentsApi'
 import FeePayoutSetupCard from '../components/coach/FeePayoutSetupCard'
 import BillingModeCard from '../components/BillingModeCard'
+import BillingBasisCard from '../components/BillingBasisCard'
 import { monthStr } from '../utils/formatDueShort'
 
 function defaultGenerateMonth() {
@@ -25,6 +27,11 @@ export default function PaymentSettingsPage() {
   const [error, setError] = useState(null)
   const [form, setForm] = useState({
     default_fee_due_day: 31,
+    fee_reminder_auto_enabled: false,
+    fee_reminder_days_before: 3,
+    fee_reminder_on_due: true,
+    fee_reminder_days_after: 7,
+    timezone: 'Asia/Kolkata',
   })
   const [generateMonth, setGenerateMonth] = useState(defaultGenerateMonth)
   const [generating, setGenerating] = useState(false)
@@ -39,6 +46,11 @@ export default function PaymentSettingsPage() {
         if (cancelled || !data) return
         setForm({
           default_fee_due_day: Number(data.default_fee_due_day || 31),
+          fee_reminder_auto_enabled: data.fee_reminder_auto_enabled === true,
+          fee_reminder_days_before: Number(data.fee_reminder_days_before ?? 3),
+          fee_reminder_on_due: data.fee_reminder_on_due !== false,
+          fee_reminder_days_after: Number(data.fee_reminder_days_after ?? 7),
+          timezone: data.timezone || 'Asia/Kolkata',
         })
       })
       .catch((e) => {
@@ -55,6 +67,10 @@ export default function PaymentSettingsPage() {
     try {
       await paymentSettingsApi.updateSettings({
         default_fee_due_day: Number(form.default_fee_due_day) || 31,
+        fee_reminder_auto_enabled: form.fee_reminder_auto_enabled === true,
+        fee_reminder_days_before: Number(form.fee_reminder_days_before),
+        fee_reminder_on_due: form.fee_reminder_on_due !== false,
+        fee_reminder_days_after: Number(form.fee_reminder_days_after),
       })
     } catch (e) {
       setError(e?.message || 'Failed to save')
@@ -90,6 +106,7 @@ export default function PaymentSettingsPage() {
 
       <FeePayoutSetupCard />
       <BillingModeCard />
+      <BillingBasisCard />
 
       <CButton
         color="link"
@@ -154,8 +171,49 @@ export default function PaymentSettingsPage() {
                     }
                   />
                 </div>
+                <div className="mb-3">
+                  <CFormCheck
+                    id="feeReminderAuto"
+                    label="Automatic fee reminders"
+                    checked={form.fee_reminder_auto_enabled === true}
+                    onChange={(e) => setForm((p) => ({ ...p, fee_reminder_auto_enabled: e.target.checked }))}
+                  />
+                  <div className="small text-body-secondary mt-1">
+                    Off until you turn it on. Sends at 9:00 am ({form.timezone}). Amounts and student names stay off the lock screen.
+                  </div>
+                </div>
+                <div className="mb-3">
+                  <CFormLabel htmlFor="feeReminderBefore">Days before due date</CFormLabel>
+                  <CFormInput
+                    id="feeReminderBefore"
+                    type="number"
+                    min={0}
+                    max={30}
+                    value={form.fee_reminder_days_before}
+                    onChange={(e) => setForm((p) => ({ ...p, fee_reminder_days_before: Number(e.target.value) }))}
+                  />
+                </div>
+                <div className="mb-3">
+                  <CFormCheck
+                    id="feeReminderOnDue"
+                    label="On the due date"
+                    checked={form.fee_reminder_on_due !== false}
+                    onChange={(e) => setForm((p) => ({ ...p, fee_reminder_on_due: e.target.checked }))}
+                  />
+                </div>
+                <div className="mb-3">
+                  <CFormLabel htmlFor="feeReminderAfter">Days after due date</CFormLabel>
+                  <CFormInput
+                    id="feeReminderAfter"
+                    type="number"
+                    min={0}
+                    max={30}
+                    value={form.fee_reminder_days_after}
+                    onChange={(e) => setForm((p) => ({ ...p, fee_reminder_days_after: Number(e.target.value) }))}
+                  />
+                </div>
                 <CButton color="primary" onClick={handleSaveDueDay} disabled={saving}>
-                  {saving ? <CSpinner size="sm" /> : 'Save due date'}
+                  {saving ? <CSpinner size="sm" /> : 'Save settings'}
                 </CButton>
               </CForm>
             </CCardBody>

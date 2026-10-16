@@ -1,6 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
+import {
+  sessionOpensSkatingLiveTools,
+} from '../../../domain/operationalSessions/helpers/sessionEffectiveSkating'
 import {
   CAlert,
   CButton,
@@ -78,11 +81,13 @@ import CoachCaptureDefaultsPanel from '../components/phaseCapture/CoachCaptureDe
 import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
 import '../skating-ops.css'
 
-function activeActivityHasSkatingCapability(activity) {
-  if (!activity) return false
-  const caps = activity.capabilities
-  if (caps && typeof caps === 'object' && caps.skatingRoutes) return true
-  return String(activity.type || '').toLowerCase() === 'skating'
+/**
+ * Workspace may host Skating day-board chrome only when academy modules.skating is on.
+ * Individual sessions still require specialistModule stamp (see sessionOpensSkatingLiveTools).
+ * Legacy activity.type === 'skating' alone must NOT open LiveSessionWorkspace when tools are off.
+ */
+function academySkatingToolsEnabled(modules) {
+  return modules != null && typeof modules === 'object' && modules.skating === true
 }
 
 const SK_LAST_PLACE = 'onrep.skating.lastPlaceId'
@@ -298,6 +303,8 @@ function isFullObservationSet(obsScores) {
 const SkatingOpsPage = () => {
   const auth = useAuth()
   const currentUserId = auth?.user?.id || auth?.user?.sub || ''
+  const academyModules = auth?.user?.modules
+  const skatingToolsOn = academySkatingToolsEnabled(academyModules)
   const activeActivity = useSelector(selectActiveActivity)
   const activeActivityId = useSelector((s) => s.workspace.activeActivityId)
   const [searchParams, setSearchParams] = useSearchParams()
@@ -402,9 +409,8 @@ const SkatingOpsPage = () => {
     place: '',
   })
 
-  const selectedSessionId = activeActivityHasSkatingCapability(activeActivity)
-    ? sessionParam || ''
-    : ''
+  // Day-board chrome requires modules.skating; live floor also needs session stamp.
+  const selectedSessionId = skatingToolsOn ? sessionParam || '' : ''
 
   const liveRefresh = useLiveSessionRefresh(selectedSessionId, activeActivityId)
   const {
@@ -428,7 +434,28 @@ const SkatingOpsPage = () => {
     () => sortDayBoardSessions(dayBoard?.sessions || []),
     [dayBoard?.sessions],
   )
-  const selSession = sessions.find((s) => String(s.id) === String(selectedSessionId))
+  const [fetchedSession, setFetchedSession] = useState(null)
+  const boardSession = sessions.find((s) => String(s.id) === String(selectedSessionId))
+  const selSession = boardSession || fetchedSession
+
+  useEffect(() => {
+    if (!selectedSessionId || boardSession) {
+      setFetchedSession(null)
+      return undefined
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const session = await operationalSessionsApi.getSession(selectedSessionId)
+        if (!cancelled) setFetchedSession(session)
+      } catch {
+        if (!cancelled) setFetchedSession(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedSessionId, boardSession])
 
   const liveShell = useLiveSessionShell({
     sessionId: selectedSessionId,
@@ -508,7 +535,7 @@ const SkatingOpsPage = () => {
 
   const loadDayBoard = useCallback(
     async (opts = {}) => {
-      if (!activeActivityId || !activeActivityHasSkatingCapability(activeActivity)) {
+      if (!activeActivityId || !skatingToolsOn) {
         if (!opts.silent) {
           setDayBoard(null)
           setSnapError(null)
@@ -534,7 +561,7 @@ const SkatingOpsPage = () => {
         if (!silent) setSnapLoading(false)
       }
     },
-    [activeActivityId, activeActivity, dateYmd],
+    [activeActivityId, skatingToolsOn, dateYmd],
   )
 
   const loadBundle = useCallback(
@@ -687,7 +714,7 @@ const SkatingOpsPage = () => {
   }, [activeActivityId])
 
   useEffect(() => {
-    if (!activeActivityId || !activeActivityHasSkatingCapability(activeActivity)) {
+    if (!activeActivityId || !skatingToolsOn) {
       setSkaters([])
       return undefined
     }
@@ -1083,16 +1110,27 @@ const SkatingOpsPage = () => {
 
   const dayBoardEmptyVariant = useMemo(() => {
     if (!activeActivityId) return 'no_workspace'
-    if (!activeActivityHasSkatingCapability(activeActivity)) return 'wrong_capability'
+    if (!skatingToolsOn) return 'wrong_capability'
     return 'default'
-  }, [activeActivityId, activeActivity])
+  }, [activeActivityId, skatingToolsOn])
 
   const workspaceDisplayName = useMemo(() => {
     if (!activeActivity) return null
     return activeActivity.label || activeActivity.name || null
   }, [activeActivity])
 
-  const skatingCapable = activeActivityHasSkatingCapability(activeActivity)
+  // Live floor requires modules.skating ∩ selected session stamp.
+  // null = eligibility not yet known (session row still loading).
+  const sessionOpensLive = !selectedSessionId
+    ? false
+    : selSession
+      ? sessionOpensSkatingLiveTools({
+          modules: academyModules,
+          session: selSession,
+          activityType: selSession?.activityType || activeActivity?.type,
+        })
+      : null
+  const skatingCapable = skatingToolsOn
   const sessionCancelled = isOperationalSessionCancelled(selSession)
   const legacyOpsFromCanonical = selSession?.state
     ? operationalStateToLegacyOpsState(selSession.state)
@@ -1101,7 +1139,11 @@ const SkatingOpsPage = () => {
     ? 'ended'
     : syncPrimitives.sessionOpsState || legacyOpsFromCanonical || 'upcoming'
   /** Session workspace uses unified vertical live coaching (not legacy 3-column). */
-  const unifiedLiveCoaching = Boolean(selectedSessionId) && !sessionCancelled && skatingCapable
+  const unifiedLiveCoaching =
+    Boolean(selectedSessionId) &&
+    !sessionCancelled &&
+    skatingCapable &&
+    sessionOpensLive === true
   const coachSessionActive =
     unifiedLiveCoaching &&
     (syncPrimitives.sessionOpsState === 'active' ||
@@ -2427,6 +2469,16 @@ const SkatingOpsPage = () => {
         </div>
         <div className="p-3">{inner}</div>
       </div>
+    )
+  }
+
+  // Tools off, or loaded session is Core / stamp mismatch → Core ops (not live floor).
+  if (sessionParam && (!skatingToolsOn || sessionOpensLive === false)) {
+    return (
+      <Navigate
+        to={`/coach/ops/sessions/${encodeURIComponent(sessionParam)}`}
+        replace
+      />
     )
   }
 

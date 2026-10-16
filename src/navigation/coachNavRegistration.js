@@ -8,6 +8,7 @@ import {
   cilDollar,
   cilLayers,
   cilLocationPin,
+  cilHistory,
   cilMediaPlay,
   cilPeople,
   cilPuzzle,
@@ -21,6 +22,7 @@ export const COACH_NAV_REGISTRATION = Object.freeze([
   { name: 'Home', to: '/coach/dashboard', icon: cilSpeedometer },
   /** Plain path (no ?session=) — day board overview; open a session from a card. */
   { name: 'Live sessions', to: { pathname: '/coach/skating', search: '' }, icon: cilMediaPlay },
+  { name: 'History', to: '/coach/history', icon: cilHistory },
   { name: 'Batches', to: '/coach/batches', icon: cilLayers },
   { name: 'Places', to: '/coach/places', icon: cilLocationPin },
   { name: 'Schedule', to: '/coach/schedule', icon: cilCalendar },
