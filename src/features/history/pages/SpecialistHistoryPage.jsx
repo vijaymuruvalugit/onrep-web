@@ -5,6 +5,7 @@ import { CAlert, CCard, CCardBody, CCardHeader, CSpinner } from '@coreui/react'
 import http from '../../../api/http'
 import { selectActiveActivity } from '../../workspace/slices/workspaceSlice'
 import { getWorkspaceDisplay } from '../../../core/activityWorkspace/activityDisplay'
+import { getStudentDisplayName } from '../../students/utils/studentMappers'
 
 /**
  * Minimal History entry for CORE-PILOT: authorised specialist results remain readable
@@ -29,7 +30,13 @@ export default function SpecialistHistoryPage() {
       .then(({ data }) => {
         if (cancelled) return
         const list = Array.isArray(data?.students) ? data.students : Array.isArray(data) ? data : []
-        setStudents(list)
+        setStudents(
+          [...list].sort((a, b) =>
+            getStudentDisplayName(a).localeCompare(getStudentDisplayName(b), undefined, {
+              sensitivity: 'base',
+            }),
+          ),
+        )
       })
       .catch((e) => {
         if (!cancelled) setError(e?.message || 'Failed to load students')
@@ -103,7 +110,7 @@ export default function SpecialistHistoryPage() {
               <option value="">Select a student…</option>
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name || s.fullName || s.id}
+                  {getStudentDisplayName(s)}
                 </option>
               ))}
             </select>
