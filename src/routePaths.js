@@ -11,6 +11,8 @@ export const ONREP_ROUTE_DEFS = [
   { path: '/coach/insights', name: 'Session trends', exact: true },
   { path: '/coach/academy/insights', name: 'Academy operations', exact: true },
   { path: '/coach/skating', name: 'Skating ops', exact: true },
+  { path: '/coach/history', name: 'History', exact: true },
+  { path: '/coach/skating/intelligence', name: 'Skating intelligence', exact: true },
   { path: '/coach/ops/sessions/:sessionId', name: 'Session', exact: true },
   { path: '/coach/batches', name: 'Batches', exact: true },
   { path: '/coach/batches/:batchId', name: 'Batch Workspace', exact: true },
