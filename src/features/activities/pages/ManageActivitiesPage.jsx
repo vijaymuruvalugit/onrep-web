@@ -181,7 +181,7 @@ export default function ManageActivitiesPage() {
   const onAdd = async (type) => {
     setAddingType(type)
     try {
-      const body = type === 'core' ? { type: 'core', name: 'Activity' } : { type }
+      const body = type === 'core' ? { type: 'core', name: 'Skating' } : { type }
       await createActivity(body)
       await load()
       dispatch(bootstrapWorkspace())
